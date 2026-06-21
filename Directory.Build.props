@@ -6,6 +6,7 @@
         <Company>Fated Creations</Company>
         <Deterministic>true</Deterministic>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
+        <RepositoryUrl>https://github.com/FatedCreations/Tabliq</RepositoryUrl>
         <PackageReadmeFile>README.md</PackageReadmeFile>
     </PropertyGroup>
 
