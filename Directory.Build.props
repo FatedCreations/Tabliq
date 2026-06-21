@@ -1,0 +1,18 @@
+<Project >
+
+    <PropertyGroup>
+        <Nullable>enable</Nullable>
+        <Authors>tocsoft</Authors>
+        <Company>Fated Creations</Company>
+        <Deterministic>true</Deterministic>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <None Include="..\README.md">
+            <Pack>True</Pack>
+            <PackagePath>\</PackagePath>
+        </None>
+    </ItemGroup>
+</Project>

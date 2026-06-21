@@ -1,0 +1,14 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <Title>Tabliq.Sql</Title>
+    <Description>The SQL parser for Tabliq. A .NET remote query engine, connects and queries against a virtual schema thats securly rewritten such that you can safely run external queries without providing data outside the scope of the virtual schema.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Tabliq.Tests" />
+  </ItemGroup>
+
+</Project>

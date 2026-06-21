@@ -1,0 +1,18 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <Title>Tabliq</Title>
+    <Description>A .NET remote query engine, connects and queries against a virtual schema thats securly rewritten such that you can safely run external queries without providing data outside the scope of the virtual schema.</Description>
+  </PropertyGroup>
+
+
+
+  <ItemGroup>
+    <ProjectReference Include="..\Tabliq.RemoteExecuter\Tabliq.RemoteExecuter.csproj" />
+    <ProjectReference Include="..\Tabliq.Sql\Tabliq.Sql.csproj" />
+  </ItemGroup>
+
+</Project>

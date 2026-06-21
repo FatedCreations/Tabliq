@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="Tabliq.RemoteExecuter/Tabliq.RemoteExecuter.csproj" Id="57c92b18-9bd8-4b11-8f58-303333e39de5" />
+  <Project Path="Tabliq.Sql/Tabliq.Sql.csproj" />
+  <Project Path="Tabliq.Tests/Tabliq.Tests.csproj" Id="62fd9d5f-5ff0-4f6c-aecd-2cce0108a8ee" />
+  <Project Path="Tabliq/Tabliq.csproj" Id="75b45a9d-a82d-4de8-9294-5c3664a15ba7" />
+</Solution>
