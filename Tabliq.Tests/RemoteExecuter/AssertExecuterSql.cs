@@ -107,7 +107,7 @@ public class AssertExecuterSql
                     var fakeDataExecuter = new FakeDataExecuter();
                     var ex = new RemoteSqlExecuter(_databaseSchema, fakeDataExecuter);
 
-                    _ = ex.ExecuteAsync(underTest, _parameters, default).GetAwaiter().GetResult();
+                    _ = ex.ExecuteAsync(underTest.Replace("\r\n", "\n"), _parameters, default).GetAwaiter().GetResult();
 
                     var cmd = Assert.Single(fakeDataExecuter.ExecutedCommands);
 
@@ -149,7 +149,7 @@ public class AssertExecuterSql
                        var fakeDataExecuter = new FakeDataExecuter();
                        var ex = new RemoteSqlExecuter(_databaseSchema, fakeDataExecuter);
 
-                       _ = ex.ExecuteAsync(underTest, _parameters, default).GetAwaiter().GetResult();
+                       _ = ex.ExecuteAsync(underTest.Replace("\r\n", "\n"), _parameters, default).GetAwaiter().GetResult();
                    }, new CancellationTokenSource(100).Token).GetAwaiter().GetResult();
                }
                catch (TaskCanceledException)

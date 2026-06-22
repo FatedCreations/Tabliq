@@ -109,11 +109,11 @@ public class QueryRewiterTests
             ORDER BY year, quarter
             """,
             "ColumnNotFound: [25:12] : Column 'Shipped Date' not found in the current scope",
-            "ColumnNotFound: [80:12] : Column 'Shipped Date' not found in the current scope",
-            "ColumnNotFound: [135:12] : Column 'Shipped Date' not found in the current scope",
-            "ColumnNotFound: [183:12] : Column 'Shipped Date' not found in the current scope",
-            "ColumnNotFound: [320:12] : Column 'Shipped Date' not found in the current scope",
-            "ColumnNotFound: [358:12] : Column 'Shipped Date' not found in the current scope"
+            "ColumnNotFound: [79:12] : Column 'Shipped Date' not found in the current scope",
+            "ColumnNotFound: [133:12] : Column 'Shipped Date' not found in the current scope",
+            "ColumnNotFound: [181:12] : Column 'Shipped Date' not found in the current scope",
+            "ColumnNotFound: [315:12] : Column 'Shipped Date' not found in the current scope",
+            "ColumnNotFound: [353:12] : Column 'Shipped Date' not found in the current scope"
             );
 
     [Fact]
