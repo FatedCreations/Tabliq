@@ -1,7 +1,9 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Text;
+using System.Text.RegularExpressions;
 using Tabliq.Sql.Ast;
 using Tabliq.Sql.Binding;
 using Tabliq.Sql.Parsing;
@@ -94,33 +96,55 @@ public class QueryRewiterTests
             """);
 
     // "Shipped Date" does not exist in  "Shipments & Returns" should generate a binding error where it can't find the column in the table
-    //[Fact]
-    //public void Issue6()
-    //    => AssertExecuterSql.Errors(
-    //        """
-    //        SELECT EXTRACT(YEAR FROM "Shipped Date") AS year,
-    //                EXTRACT(QUARTER FROM "Shipped Date") AS quarter,
-    //                EXTRACT(YEAR FROM "Shipped Date") || '-Q' || EXTRACT(QUARTER FROM "Shipped Date") AS year_quarter,
-    //                SUM("Shipped Quantity") AS shipped_qty
-    //        FROM "Shipments & Returns"
-    //        GROUP BY EXTRACT(YEAR FROM "Shipped Date"), EXTRACT(QUARTER FROM "Shipped Date")
-    //        ORDER BY year, quarter
-    //        """);
+    [Fact]
+    public void Issue6()
+        => AssertExecuterSql.Errors(
+            """
+            SELECT EXTRACT(YEAR FROM "Shipped Date") AS year,
+                    EXTRACT(QUARTER FROM "Shipped Date") AS quarter,
+                    EXTRACT(YEAR FROM "Shipped Date") || '-Q' || EXTRACT(QUARTER FROM "Shipped Date") AS year_quarter,
+                    SUM("Shipped Quantity") AS shipped_qty
+            FROM "Shipments & Returns"
+            GROUP BY EXTRACT(YEAR FROM "Shipped Date"), EXTRACT(QUARTER FROM "Shipped Date")
+            ORDER BY year, quarter
+            """,
+            "ColumnNotFound: [25:12] : Column 'Shipped Date' not found in the current scope",
+            "ColumnNotFound: [80:12] : Column 'Shipped Date' not found in the current scope",
+            "ColumnNotFound: [135:12] : Column 'Shipped Date' not found in the current scope",
+            "ColumnNotFound: [183:12] : Column 'Shipped Date' not found in the current scope",
+            "ColumnNotFound: [320:12] : Column 'Shipped Date' not found in the current scope",
+            "ColumnNotFound: [358:12] : Column 'Shipped Date' not found in the current scope"
+            );
 
-    //[Fact]
-    //public void Issue7()
-    //    => AssertSqlDoeNotGenerate(
-    //        TestSchema.SchemaFriendlyNames,
-    //        """
-    //        SELECT EXTRACT(YEAR FROM ac."Shipped Date") AS year,
-    //               EXTRACT(QUARTER FROM ac."Shipped Date") AS quarter,
-    //               EXTRACT(YEAR FROM ac."Shipped Date") || '-Q' || EXTRACT(QUARTER FROM ac."Shipped Date") AS year_quarter,
-    //               SUM(sr."Shipped Quantity") AS shipped_qty
-    //        FROM "Shipments & Returns" sr
-    //        JOIN "All Components" ac ON sr."Serial Number" = ac."Serial Number"
-    //        GROUP BY EXTRACT(YEAR FROM ac."Shipped Date"), EXTRACT(QUARTER FROM ac."Shipped Date")
-    //        ORDER BY year, quarter
-    //        """);
+    [Fact]
+    public void Issue7()
+        => AssertExecuterSql.Equal(
+            """
+            SELECT EXTRACT(YEAR FROM ac."Shipped Date") AS year,
+                   EXTRACT(QUARTER FROM ac."Shipped Date") AS quarter,
+                   EXTRACT(YEAR FROM ac."Shipped Date") || '-Q' || EXTRACT(QUARTER FROM ac."Shipped Date") AS year_quarter,
+                   SUM(sr."Shipped Quantity") AS shipped_qty
+            FROM "Shipments & Returns" sr
+            JOIN "All Components" ac ON sr."Serial Number" = ac."Serial Number"
+            GROUP BY EXTRACT(YEAR FROM ac."Shipped Date"), EXTRACT(QUARTER FROM ac."Shipped Date")
+            ORDER BY year, quarter
+            """,
+            """
+            SELECT
+                DATEPART(YEAR, ac.PH_SHI) AS year,
+                DATEPART(QUARTER, ac.PH_SHI) AS quarter,
+                CONCAT(DATEPART(YEAR, ac.PH_SHI), '-Q', DATEPART(QUARTER, ac.PH_SHI)) AS year_quarter,
+                SUM(sr.MA_SHI) AS shipped_qty
+            FROM landscapeQuery_strategy_A.MA AS sr
+            JOIN landscapeQuery_strategy_A.PH AS ac
+                ON sr.MA_SER = ac.PH_SER
+            GROUP BY
+                DATEPART(YEAR, ac.PH_SHI),
+                DATEPART(QUARTER, ac.PH_SHI)
+            ORDER BY
+                year,
+                quarter
+            """);
 
     [Fact]
     public void Issue7_2()
@@ -301,7 +325,6 @@ public class QueryRewiterTests
                 AND (@selectedFamily = 'All' OR [Assigned Product Family] = @selectedFamily)
                 AND (@selectedStatus = 'All' OR [Incident Status] = @selectedStatus)
             GROUP BY [Assigned Product Family]
-            ORDER BY SR_Count DESC
 
             UNION ALL
 
@@ -337,7 +360,6 @@ public class QueryRewiterTests
                     [TAC SRs].SE_NCI = @selectedStatus
                 )
             GROUP BY [TAC SRs].SE_IGN
-            ORDER BY SR_Count DESC
             UNION ALL
             SELECT
                 'Other' AS [Assigned Product Family],
@@ -362,6 +384,17 @@ public class QueryRewiterTests
                 ORDER BY SR_Count DESC OFFSET 10 ROWS
             ) AS Others
             """);
+
+    [Fact]
+    public void Issue13()
+        => AssertExecuterSql
+        .WithParameters("selectedTech", "selectedFamily", "selectedStatus")
+        .Errors(
+            """
+            SELECT TOP 10 [Assigned Product Family], COUNT(*) as SR_Count FROM[TAC SRs] WHERE(@selectedTech = 'All' OR[Assigned Technology] = @selectedTech) AND(@selectedFamily = 'All' OR[Assigned Product Family] = @selectedFamily) AND(@selectedStatus = 'All' OR[Incident Status] = @selectedStatus) GROUP BY[Assigned Product Family] ORDER BY SR_Count DESC UNION ALL SELECT 'Other' AS[Assigned Product Family], SUM(SR_Count) FROM(SELECT COUNT(*) as SR_Count FROM [TAC SRs] WHERE (@selectedTech = 'All' OR[Assigned Technology] = @selectedTech) AND(@selectedFamily = 'All' OR[Assigned Product Family] = @selectedFamily) AND(@selectedStatus = 'All' OR[Incident Status] = @selectedStatus) GROUP BY[Assigned Product Family] ORDER BY SR_Count DESC OFFSET 10 ROWS) AS Others
+            """,
+            "UnexpectedToken: [344:9] : 'UNION' was unexpected");
+
 
     [Fact]
     public void OrderByColumnAlias()

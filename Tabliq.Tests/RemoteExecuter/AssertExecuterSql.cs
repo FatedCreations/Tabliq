@@ -17,6 +17,8 @@ public class AssertExecuterSql
 
     public static void Equal(string underTest, string expected)
         => new Asserter().Equal(underTest, expected);
+    public static void Errors(string underTest, params string[] expectedDiagnostics)
+        => new Asserter().Errors(underTest, expectedDiagnostics);
 
     //public static void WithErrors(string underTest, List<string>? errors = null)
     //    => new Asserter().WithErrors(underTest, errors ?? []);
@@ -132,6 +134,40 @@ public class AssertExecuterSql
             {
                 Assert.Fail("The test timed out. This may indicate an infinite loop or a long-running operation in the parser or binder.");
             }
+        }
+        public void Errors(string underTest, params string[] expectedDiagnostics)
+        {
+            var ex = Assert.Throws<CompilationDiagnosticsException>(() =>
+           {
+               try
+               {
+                   Task.Run(() =>
+                   {
+                       var fakeDataExecuter = new FakeDataExecuter();
+                       var ex = new RemoteSqlExecuter(_databaseSchema, fakeDataExecuter);
+
+                       _ = ex.ExecuteAsync(underTest, _parameters, default).GetAwaiter().GetResult();
+                   }, new CancellationTokenSource(100).Token).GetAwaiter().GetResult();
+               }
+               catch (TaskCanceledException)
+               {
+                   Assert.Fail("The test timed out. This may indicate an infinite loop or a long-running operation in the parser or binder.");
+               }
+           });
+
+            var messages = ex.Diagnostics.Select(x => $"{x.Id}: [{x.Start}:{x.Length}] : {x.Message}");
+
+            Console.WriteLine("--- ASSERTSQL DIAGNOSTIC START ---");
+            Console.WriteLine("EXPECTED (messages):");
+            Console.WriteLine(string.Empty);
+            Console.WriteLine(string.Join("\n", expectedDiagnostics));
+            Console.WriteLine("-----");
+            Console.WriteLine("ACTUAL:");
+            Console.WriteLine(string.Empty);
+            Console.WriteLine(string.Join("\n", messages));
+            Console.WriteLine("--- ASSERTSQL DIAGNOSTIC END ---");
+
+            Assert.Equal(expectedDiagnostics, messages);
         }
     }
 }

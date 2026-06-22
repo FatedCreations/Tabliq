@@ -180,7 +180,7 @@ public sealed class Parser
         if (!loc.HasTokens)
             return null;
 
-        _diagnostics.Report("UnexpectedToken", $"Expected token", loc.Span);
+        _diagnostics.Report("UnexpectedToken", $"'{loc.Span.StartToken.Text}' was unexpected", loc.Span);
 
         return new BadStatement(loc.Span);
     }
@@ -388,13 +388,6 @@ public sealed class Parser
             havingClause = new HavingClause(condition).WithLocation(havingLoc);
         }
 
-        OrderByClause? orderByClause = null;
-        if (IsMatch([SyntaxKind.OrderKeyword, SyntaxKind.ByKeyword]))
-        {
-            orderByClause = ParseOrderBy();
-        }
-        // option
-
         var unions = new List<UnionStatement>();
         if (Current.Kind == SyntaxKind.UnionKeyword)
         {
@@ -409,6 +402,13 @@ public sealed class Parser
 
             var selectExpression = ParseSelectExpression();
             unions.Add(new UnionStatement(isAll, selectExpression).WithLocation(unionLoc));
+        }
+
+        // have to process unions first, can't have an order by before a union
+        OrderByClause? orderByClause = null;
+        if (IsMatch([SyntaxKind.OrderKeyword, SyntaxKind.ByKeyword]))
+        {
+            orderByClause = ParseOrderBy();
         }
 
         return new SelectExpression(false, top, distinctness, projections, fromClause, whereClause, groupByClause, havingClause, orderByClause, unions).WithLocation(loc);

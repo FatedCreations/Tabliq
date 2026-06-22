@@ -1,6 +1,7 @@
 using Tabliq.Sql.Ast;
 using Tabliq.Sql.Diagnostics;
 using Tabliq.Sql.Printer;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace Tabliq.Sql.Core;
 
@@ -32,7 +33,18 @@ public sealed class CompilationResult
     {
         if (Diagnostics.Any())
         {
-            throw new Exception($"Invalid SQL: {Text}. Diagnostics: {string.Join(", ", Diagnostics.Select(d => d.Message))}");
+            throw new CompilationDiagnosticsException(Text, Diagnostics);
         }
+    }
+}
+
+
+public class CompilationDiagnosticsException : Exception
+{
+    public IReadOnlyList<Diagnostic> Diagnostics { get; }
+    public CompilationDiagnosticsException(string text, IReadOnlyList<Diagnostic> diagnostics)
+        : base($"Invalid SQL: {text}. Diagnostics: {string.Join(", ", diagnostics.Select(d => d.Message))}")
+    {
+        Diagnostics = diagnostics;
     }
 }
