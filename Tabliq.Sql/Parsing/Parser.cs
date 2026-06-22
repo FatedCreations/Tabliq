@@ -610,7 +610,27 @@ public sealed class Parser
         } while (TryMatchToken(SyntaxKind.CommaToken));
         // we now parse expression with options DESC ASC or DESCENDING ASCENDING
 
-        return new OrderByClause(entries).WithLocation(loc);
+        OffsetClause? offsetClause = null;
+        if (TryMatchToken(SyntaxKind.OffsetKeyword))
+        {
+            var offsetLoc = Track();
+            var offsetCount = ParseExpression();
+            TryMatchToken(SyntaxKind.RowKeyword);// optional keyword that mean nothing, just consume if they exist
+            TryMatchToken(SyntaxKind.RowsKeyword);// optional keyword that mean nothing, just consume if they exist
+
+            Expression? fetchCount = null;
+            if (TryMatchToken(SyntaxKind.FetchKeyword))
+            {
+                TryMatchToken(SyntaxKind.FirstKeyword);// optional keyword that mean nothing, just consume if they exist
+                TryMatchToken(SyntaxKind.NextKeyword); // optional keyword that mean nothing, just consume if they exist
+                fetchCount = ParseExpression();
+                TryMatchToken(SyntaxKind.RowKeyword);// optional keyword that mean nothing, just consume if they exist
+                TryMatchToken(SyntaxKind.RowsKeyword);// optional keyword that mean nothing, just consume if they exist
+            }
+            offsetClause = new OffsetClause(offsetCount, fetchCount).WithLocation(offsetLoc);
+        }
+
+        return new OrderByClause(entries, offsetClause).WithLocation(loc);
     }
 
     private Expression ParseExpression()

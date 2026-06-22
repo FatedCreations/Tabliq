@@ -6,7 +6,10 @@
     <Title>Tabliq.RemoteExecuter</Title>
     <Description>The remote executer for Tabliq, provides the core functionality for rewriting a virtual schema to a remote one and executing them, currently targeting support for MS Sql Server.</Description>
   </PropertyGroup>
-
+  <ItemGroup>
+    <InternalsVisibleTo Include="Tabliq.Tests"/>
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="7.0.1" />
+  </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Tabliq.Sql\Tabliq.Sql.csproj" />
   </ItemGroup>

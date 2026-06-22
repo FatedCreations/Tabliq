@@ -15,7 +15,7 @@ public class FunctionCallExpression : Expression
     public string FunctionName { get; }
     public IReadOnlyList<Expression> Arguments { get; }
     public WindowSpecification? Window { get; }
-    public FunctionSymbol? Binding { get; internal set; }
+    public FunctionSymbol? Binding { get; set; }
 
     public override bool Equals(SyntaxNode? other)
     {

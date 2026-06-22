@@ -5,7 +5,10 @@ using System.Linq;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Threading.Tasks;
+using Tabliq.RemoteExecuter.MsSql;
+using Tabliq.Sql.Ast;
 using Tabliq.Sql.Binding;
+using Tabliq.Sql.Diagnostics;
 using Tabliq.Sql.Printer;
 
 namespace Tabliq.RemoteExecuter;
@@ -22,31 +25,33 @@ public class RemoteSqlExecuter
 
     public VirtualSchema Schema { get; }
 
-    public async Task<ExecutionResult> ExecuteAsync(string sql, IEnumerable<ExecuterParameter> paramaters)
+    public async Task<ExecutionResult> ExecuteAsync(string sql, IEnumerable<ExecuterParameter> paramaters, CancellationToken cancellationToken)
     {
-        var rewittenSql = GenerateSql(sql, paramaters);
+        var rewittenSql = Parse(sql, paramaters);
 
         var normalisedParamaters = paramaters.GroupBy(x => x.Name).ToDictionary(p => p.Key, p => p.Last().Value);
 
-        return await Executer.ExecuteAsync(rewittenSql, normalisedParamaters);
+        return await Executer.ExecuteAsync(rewittenSql, normalisedParamaters, cancellationToken);
     }
 
-    internal string GenerateSql(string sql, IEnumerable<ExecuterParameter> paramaters)
+    internal SqlScript Parse(string sql, IEnumerable<ExecuterParameter> paramaters)
     {
         var parsed = Sql.Parsing.Parser.Parse(sql);
+        parsed.ThrowIfInvalid();
+
         var ctx = new ExecutionContext(this, paramaters);
         parsed = Binder.Bind(parsed, ctx);
-        parsed = SkippingReplaceStarsRewriter.Instance.Rewrite(parsed);
+        parsed = SkippingReplaceStarsRewriter.Instance.Execute(parsed);
 
-        parsed = RemoteSqlRewiter.Instance.Rewrite(parsed);
+        parsed = RemoteSqlRewiter.Instance.Execute(parsed);
 
-        if (parsed.Diagnostics.Any())
-        {
-            throw new Exception($"Invalid SQL: {sql}. Diagnostics: {string.Join(", ", parsed.Diagnostics.Select(d => d.Message))}");
-        }
+        parsed.ThrowIfInvalid();
 
-        return SqlWriter.ToSql(parsed.Script);
+        return parsed.Script;
     }
+
+    public void Validate(string sql, IEnumerable<ExecuterParameter> paramaters)
+        => Parse(sql, paramaters);
 
     private class ExecutionContext : ISchemaProvider
     {
@@ -67,6 +72,6 @@ public class RemoteSqlExecuter
 public class ExecutionResult
 {
     public ExecutionResult() { }
-    public IReadOnlyList<string> Columns { get; } = new List<string>();
-    public IReadOnlyList<object?[]> Data { get; } = new List<object?[]>();
+    public List<string> Columns { get; } = new List<string>();
+    public List<object?[]> Data { get; } = new List<object?[]>();
 }

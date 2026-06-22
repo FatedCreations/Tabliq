@@ -46,7 +46,12 @@ public enum SyntaxKind
     HavingKeyword,
     RowKeyword,
     RangeKeyword,
-
+    OffsetKeyword,
+    RowsKeyword,
+    FetchKeyword,
+    NextKeyword,
+    FirstKeyword,
+    OnlyKeyword,
     // order by direction keywords
     AscKeyword,
     DescKeyword,

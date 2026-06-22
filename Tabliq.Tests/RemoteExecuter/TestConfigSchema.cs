@@ -13,15 +13,21 @@ public class TestConfigSchema
     private static readonly Lazy<DatabaseConnectionOptions> _schema;
     private static readonly Lazy<DatabaseConnectionOptions> _schemaFriendlyNames;
     private static readonly Lazy<VirtualSchema> _schemaFriendlyNamesVirtualSchema;
+    private static readonly Lazy<VirtualSchema> _schemaVirtualSchema;
 
     public static DatabaseConnectionOptions Schema => _schema.Value;
 
     public static DatabaseConnectionOptions SchemaFriendlyNames => _schemaFriendlyNames.Value;
 
     public static VirtualSchema SchemaFriendlyNamesSchema => _schemaFriendlyNamesVirtualSchema.Value;
+    public static VirtualSchema SchemaVirtualSchema => _schemaVirtualSchema.Value;
 
     static TestConfigSchema()
     {
+        _schemaVirtualSchema = new Lazy<VirtualSchema>(() => new VirtualSchema
+        {
+            Tables = Schema.Tables.Select(x => x.AsVirtualTable()).ToList()
+        });
         _schemaFriendlyNamesVirtualSchema = new Lazy<VirtualSchema>(() => new VirtualSchema
         {
             Tables = SchemaFriendlyNames.Tables.Select(x => x.AsVirtualTable()).ToList()
@@ -1360,7 +1366,8 @@ public class TestConfigSchema
                                     "Name": "SEId",
                                     "DataType": "bigint",
                                     "RemoteColumnSql": "SEId",
-                                    "Description": ""
+                                    "Description": "",
+                                    "ExcludeFromStarExpansion": true
                                 },
                                 {
                                     "Name": "SE_ASS",
@@ -3308,7 +3315,8 @@ public class TestConfigSchema
                                         "DataType": "bigint",
                                         "RemoteColumnSql": "SEId",
                                         "Name": "SEId",
-                                        "Description": ""
+                                        "Description": "",
+                                        "ExcludeFromStarExpansion": true
                                     },
                                     {
                                         "ColName": "SE_ASS",

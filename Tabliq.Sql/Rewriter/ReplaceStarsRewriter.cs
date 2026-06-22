@@ -69,7 +69,10 @@ namespace Tabliq.Sql.Rewriter
 
                                 // TODO: fetch addtional metadata about the column to see if we should include it in the projection list
                                 var newProjection = new SelectProjection(
-                                    new IdentifierExpression(tableSymbol.Name, columnSymbol.Name).WithLocation(starIdentifier.Span),
+                                    new IdentifierExpression(tableSymbol.Name, columnSymbol.Name)
+                                    {
+                                        Binding = b,
+                                    }.WithLocation(starIdentifier.Span),
                                     columnSymbol.Name,
                                     true
                                 ).WithLocation(starIdentifier.Span);

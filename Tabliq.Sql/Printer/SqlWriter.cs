@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Linq.Expressions;
+using System.Text;
 using Tabliq.Sql.Ast;
 using Tabliq.Sql.Core;
 
@@ -365,10 +366,24 @@ namespace Tabliq.Sql.Printer
             {
                 Write(ExistsCondition);
             }
+            else if (node is DistinctValueExpression DistinctValueExpression)
+            {
+                Write(DistinctValueExpression);
+            }
             else
             {
                 throw new NotImplementedException($"Writing for {node.GetType().Name} is not implemented.");
             }
+        }
+        void Write(DistinctValueExpression val)
+        {
+            Write(val.Distinctness switch
+            {
+                Distinctness.Distinct => "DISTINCT ",
+                Distinctness.All => "ALL ",
+                _ => ""
+            });
+            Write(val.Expression);
         }
         void Write(ExistsCondition existsCondition)
         {
@@ -449,7 +464,7 @@ namespace Tabliq.Sql.Printer
         {
             Write(asExpression.Expression);
             Write(" AS ");
-            Write(asExpression.Alias);
+            Write(QuoteIdentifierPartIfNeeded(asExpression.Alias));
         }
 
         void Write(BinaryOperatorExpression binaryOperatorExpression)
@@ -591,6 +606,25 @@ namespace Tabliq.Sql.Printer
                     WriteLine();
                 }
                 Write(entry);
+            }
+
+            if (order.OffsetClause is not null)
+            {
+                Write(" ");
+                Write(order.OffsetClause);
+            }
+        }
+
+        void Write(OffsetClause offset)
+        {
+            Write("OFFSET ");
+            Write(offset.OffsetCount);
+            Write(" ROWS");
+            if (offset.FetchCount is not null)
+            {
+                Write(" FETCH NEXT ");
+                Write(offset.FetchCount);
+                Write(" ROWS ONLY");
             }
         }
 
@@ -757,7 +791,7 @@ namespace Tabliq.Sql.Printer
             if (selectProjection.Alias is not null && selectProjection.IsSynthetic == false)
             {
                 Write(" AS ");
-                Write(selectProjection.Alias);
+                Write(QuoteIdentifierPartIfNeeded(selectProjection.Alias));
             }
         }
 

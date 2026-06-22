@@ -1,5 +1,7 @@
 ﻿using Tabliq.RemoteExecuter;
+using Tabliq.Sql.Ast;
 using Tabliq.Sql.Core;
+using Tabliq.Sql.Printer;
 
 namespace Tabliq.Tests.RemoteExecuter;
 
@@ -83,10 +85,13 @@ public class AssertExecuterSql
 
         private class FakeDataExecuter : IDatabaseExecuter
         {
-            public List<(string Sql, IDictionary<string, object> Parameters)> ExecutedCommands { get; } = new List<(string, IDictionary<string, object>)>();
-            public Task<ExecutionResult> ExecuteAsync(string sql, IDictionary<string, object> paramaters)
+            public List<(SqlScript Sql, IDictionary<string, object> Parameters, CancellationToken cancellationToken)> ExecutedCommands { get; } = new();
+            public Task<ExecutionResult> ExecuteAsync(SqlScript sql, IDictionary<string, object> paramaters, CancellationToken cancellationToken)
             {
-                ExecutedCommands.Add((sql, paramaters));
+                var rewitten = Tabliq.RemoteExecuter.MsSql.RewriteForMsSqlServer.Instance.Execute(sql);
+                rewitten.ThrowIfInvalid();
+
+                ExecutedCommands.Add((rewitten.Script, paramaters, cancellationToken));
                 return Task.FromResult(new ExecutionResult());
             }
         }
@@ -99,13 +104,13 @@ public class AssertExecuterSql
                     var fakeDataExecuter = new FakeDataExecuter();
                     var ex = new RemoteSqlExecuter(_databaseSchema, fakeDataExecuter);
 
-                    _ = ex.ExecuteAsync(underTest, _parameters).GetAwaiter().GetResult();
+                    _ = ex.ExecuteAsync(underTest, _parameters, default).GetAwaiter().GetResult();
 
                     var cmd = Assert.Single(fakeDataExecuter.ExecutedCommands);
-
+                    var cmdSql = SqlWriter.ToSql(cmd.Sql);
 
                     // Normalize line endings to avoid platform-specific differences
-                    var canon = cmd.Sql.Replace("\r\n", "\n").Trim();
+                    var canon = cmdSql.Replace("\r\n", "\n").Trim();
                     expected = expected.Replace("\r\n", "\n").Trim();
 
                     // Do not parse the expected SQL -- tests assert the raw expected formatting

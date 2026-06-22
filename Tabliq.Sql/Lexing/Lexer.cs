@@ -274,6 +274,13 @@ public sealed class Lexer
             "ROW" => SyntaxKind.RowKeyword,
             "RANGE" => SyntaxKind.RangeKeyword,
 
+            "OFFSET" => SyntaxKind.OffsetKeyword,
+            "ROWS" => SyntaxKind.RowsKeyword,
+            "FETCH" => SyntaxKind.FetchKeyword,
+            "NEXT" => SyntaxKind.NextKeyword,
+            "FIRST" => SyntaxKind.FirstKeyword,
+            "ONLY" => SyntaxKind.OnlyKeyword,
+
             // directions
             "DESC" => SyntaxKind.DescKeyword,
             "ASC" => SyntaxKind.AscKeyword,

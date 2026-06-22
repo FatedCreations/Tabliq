@@ -105,7 +105,7 @@ public class AssertSql
 
                     foreach (var rewiter in _rewriters)
                     {
-                        boundTree = rewiter.Rewrite(boundTree);
+                        boundTree = rewiter.Execute(boundTree);
                     }
 
                     Assert.NotEmpty(boundTree.Diagnostics);
@@ -150,7 +150,7 @@ public class AssertSql
 
                     foreach (var rewiter in _rewriters)
                     {
-                        tree = rewiter.Rewrite(tree);
+                        tree = rewiter.Execute(tree);
                     }
 
                     Assert.Empty(tree.Diagnostics);
@@ -207,7 +207,7 @@ public class AssertSql
 
                     foreach (var rewiter in _rewriters)
                     {
-                        tree = rewiter.Rewrite(tree);
+                        tree = rewiter.Execute(tree);
                     }
 
                     Assert.Empty(tree.Diagnostics);

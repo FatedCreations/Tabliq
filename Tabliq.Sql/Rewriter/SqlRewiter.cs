@@ -4,6 +4,7 @@ using Tabliq.Sql.Binding;
 using Tabliq.Sql.Core;
 using Tabliq.Sql.Diagnostics;
 using Tabliq.Sql.Parsing;
+using Tabliq.Sql.Printer;
 
 namespace Tabliq.Sql.Rewriter
 {
@@ -11,7 +12,7 @@ namespace Tabliq.Sql.Rewriter
     {
         protected DiagnosticBag Diagnostics => _diagnostics;
         private DiagnosticBag _diagnostics = null!;
-        public CompilationResult Rewrite(CompilationResult syntaxTree)
+        public CompilationResult Execute(CompilationResult syntaxTree)
         {
             _diagnostics = new DiagnosticBag();
             var diags = new List<Diagnostic>();
@@ -26,11 +27,22 @@ namespace Tabliq.Sql.Rewriter
             return new CompilationResult(syntaxTree.Text, script, syntaxTree.Tokens, diags);
         }
 
-        [return: NotNullIfNotNull("node")]
-        protected T? Rewrite<T>(T? node) where T : SyntaxNode
+        public CompilationResult Execute(SqlScript syntaxTree)
         {
-            if (node is null) return null;
+            _diagnostics = new DiagnosticBag();
+            var diags = new List<Diagnostic>();
 
+            diags.AddRange(_diagnostics.Diagnostics);
+
+            var newTree = Rewrite(syntaxTree);
+            var script = (newTree as SqlScript) ?? new SqlScript([]);
+
+            // Binding logic will go here
+            return new CompilationResult(script, diags);
+        }
+
+        protected virtual SyntaxNode Rewrite(SyntaxNode node)
+        {
             SyntaxNode resultSyntaxNode = node switch
             {
                 SqlScript s => Rewrite(s),
@@ -65,11 +77,24 @@ namespace Tabliq.Sql.Rewriter
                 BracketedCondition s => Rewrite(s),
                 ParameterIdentifier s => Rewrite(s),
                 WindowSpecification s => Rewrite(s),
+                DistinctValueExpression s => Rewrite(s),
+                OffsetClause s => Rewrite(s),
                 _ => throw new Exception($"Unhandled node type: {node?.GetType().Name}")
             };
-            T result = (T)resultSyntaxNode;
-            result.Span = node.Span;
-            return result;
+            resultSyntaxNode.Span = node.Span;
+            return resultSyntaxNode;
+        }
+
+        protected virtual DistinctValueExpression Rewrite(DistinctValueExpression node)
+        {
+            var rewritten = false;
+            var distinctness = node.Distinctness;
+            var Expression = TryRewrite(node.Expression, ref rewritten);
+            if (!rewritten)
+            {
+                return node;
+            }
+            return new DistinctValueExpression(distinctness, Expression).WithLocation(node.Span);
         }
 
         protected virtual WindowSpecification Rewrite(WindowSpecification node)
@@ -103,10 +128,18 @@ namespace Tabliq.Sql.Rewriter
             var rewritten = false;
             var con = TryRewrite(node.Select, ref rewritten);
             var alias = node.Alias;
+
+            if (!con.IsBracketed)
+            {
+                con = new SelectExpression(true, con).WithLocation(node.Span);
+                rewritten = true;
+            }
+
             if (!rewritten)
             {
                 return node;
             }
+
             return new SelectTableReference(con, alias).WithLocation(node.Span);
         }
 
@@ -318,11 +351,24 @@ namespace Tabliq.Sql.Rewriter
         {
             var rewritten = false;
             var entries = TryRewrite(node.Entries, ref rewritten);
+            var OffsetClause = TryRewrite(node.OffsetClause, ref rewritten);
             if (!rewritten)
             {
                 return node;
             }
-            return new OrderByClause(entries).WithLocation(node.Span);
+            return new OrderByClause(entries, OffsetClause).WithLocation(node.Span);
+        }
+
+        protected virtual OffsetClause Rewrite(OffsetClause node)
+        {
+            var rewritten = false;
+            var offsetCount = TryRewrite(node.OffsetCount, ref rewritten);
+            var fetchCount = TryRewrite(node.FetchCount, ref rewritten);
+            if (!rewritten)
+            {
+                return node;
+            }
+            return new OffsetClause(offsetCount, fetchCount).WithLocation(node.Span);
         }
 
         protected virtual UnionStatement Rewrite(UnionStatement node)
@@ -463,7 +509,12 @@ namespace Tabliq.Sql.Rewriter
             }
             var result = Rewrite(node);
             rewritten = rewritten || !ReferenceEquals(result, node);
-            return result;
+
+            return result switch
+            {
+                T tResult => tResult,
+                _ => throw new Exception($"Unable to rewite node of {typeof(T)} to {result.GetType()}")
+            };
         }
     }
 }

@@ -2,18 +2,46 @@
 
 namespace Tabliq.Sql.Ast;
 
-public class OrderByClause : SyntaxNode
+public class OffsetClause : SyntaxNode
 {
-    public OrderByClause(IEnumerable<OrderByEntry> entries)
+    public OffsetClause(Expression offsetCount, Expression? fetchCount = null)
     {
-        Entries = new List<OrderByEntry>(entries);
+        OffsetCount = offsetCount;
+        FetchCount = fetchCount;
     }
 
-    public IReadOnlyList<OrderByEntry> Entries { get; }
+    public Expression OffsetCount { get; }
+    public Expression? FetchCount { get; } = null;
 
     public override bool Equals(SyntaxNode? other)
     {
-        return other is OrderByClause orderBy && Entries.SyntaxSequenceEqual(orderBy.Entries);
+        return other is OffsetClause offset && OffsetCount.Equals(offset.OffsetCount) && Equals(FetchCount, offset.FetchCount);
+    }
+
+    public override IEnumerable<SyntaxNode> GetChildren()
+    {
+        yield return OffsetCount;
+        if (FetchCount != null)
+        {
+            yield return FetchCount;
+        }
+    }
+}
+
+public class OrderByClause : SyntaxNode
+{
+    public OrderByClause(IEnumerable<OrderByEntry> entries, OffsetClause? offsetClause)
+    {
+        Entries = new List<OrderByEntry>(entries);
+        OffsetClause = offsetClause;
+    }
+
+    public IReadOnlyList<OrderByEntry> Entries { get; }
+    public OffsetClause? OffsetClause { get; }
+
+    public override bool Equals(SyntaxNode? other)
+    {
+        return other is OrderByClause orderBy && Entries.SyntaxSequenceEqual(orderBy.Entries) && Equals(OffsetClause, orderBy.OffsetClause);
     }
 
     public override IEnumerable<SyntaxNode> GetChildren()
@@ -21,6 +49,11 @@ public class OrderByClause : SyntaxNode
         foreach (var entry in Entries)
         {
             yield return entry;
+        }
+
+        if (OffsetClause != null)
+        {
+            yield return OffsetClause;
         }
     }
 }
