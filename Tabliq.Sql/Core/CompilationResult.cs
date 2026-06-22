@@ -1,14 +1,13 @@
 using Tabliq.Sql.Ast;
 using Tabliq.Sql.Diagnostics;
 using Tabliq.Sql.Printer;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace Tabliq.Sql.Core;
 
 public sealed class CompilationResult
 {
     private string? _text;
-    public string Text => _text ??= SqlWriter.ToSql(Script);
+    public string Text => _text ??= new SqlWriter().ToSql(Script);
     public SqlScript Script { get; }
     public IReadOnlyList<Diagnostic> Diagnostics { get; }
     public IReadOnlyList<SyntaxToken> Tokens { get; }
@@ -43,7 +42,7 @@ public class CompilationDiagnosticsException : Exception
 {
     public IReadOnlyList<Diagnostic> Diagnostics { get; }
     public CompilationDiagnosticsException(string text, IReadOnlyList<Diagnostic> diagnostics)
-        : base($"Invalid SQL: {text}. Diagnostics: {string.Join(", ", diagnostics.Select(d => d.Message))}")
+        : base($"Invalid SQL: {text}. Diagnostics: {string.Join(", ", diagnostics.Select(d => $"{d.Id} : [{d.Start}:{d.Length}] : {d.Message}"))}")
     {
         Diagnostics = diagnostics;
     }

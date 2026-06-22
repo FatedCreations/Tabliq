@@ -1,16 +1,10 @@
 using Microsoft.Extensions.DependencyInjection;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using Tabliq.Sql.Ast;
 using Tabliq.Sql.Binding;
 using Tabliq.Sql.Core;
 using Tabliq.Sql.Parsing;
 using Tabliq.Sql.Printer;
 using Tabliq.Sql.Rewriter;
-using Xunit;
 
 public class AssertSql
 {
@@ -155,7 +149,7 @@ public class AssertSql
 
                     Assert.Empty(tree.Diagnostics);
 
-                    var canon = SqlWriter.ToSql(tree.Script);
+                    var canon = new SqlWriter().ToSql(tree.Script);
 
                     // Normalize line endings to avoid platform-specific differences
                     canon = canon.Replace("\r\n", "\n").Trim();
@@ -212,11 +206,11 @@ public class AssertSql
 
                     Assert.Empty(tree.Diagnostics);
 
-                    var canon = SqlWriter.ToSql(tree.Script);
+                    var canon = new SqlWriter().ToSql(tree.Script);
 
                     // Normalize line endings to avoid platform-specific differences
                     canon = canon.Replace("\r\n", "\n").Trim();
-                    var expected = SqlWriter.ToSql(expectedAst).Replace("\r\n", "\n").Trim();
+                    var expected = new SqlWriter().ToSql(expectedAst).Replace("\r\n", "\n").Trim();
 
                     // Do not parse the expected SQL -- tests assert the raw expected formatting
                     Console.WriteLine("--- ASSERTSQL DIAGNOSTIC START ---");
@@ -282,6 +276,10 @@ public class DeepCloneRewiter : SqlRewiter
             }
         }
     }
+
+    protected override DataType Rewrite(DataType node)
+        => new DataType(node.Name, node.Size);
+
     protected override ParameterIdentifier Rewrite(ParameterIdentifier node)
         => new ParameterIdentifier(node.ParamterName);
 

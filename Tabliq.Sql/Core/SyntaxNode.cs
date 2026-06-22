@@ -28,7 +28,7 @@ public abstract class SyntaxNode : IEquatable<SyntaxNode>
 
     private string DebugString()
     {
-        return $"{this.GetType().Name}: {SqlWriter.ToSql(this)}";
+        return $"{this.GetType().Name}: {new SqlWriter().ToSql(this)}";
     }
 }
 

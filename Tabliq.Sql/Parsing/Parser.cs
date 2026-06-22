@@ -106,10 +106,23 @@ public sealed class Parser
         _diagnostics.Report("UnexpectedToken", $"Expected token {kind} but found {Current.Kind}", Current.Start, Current.Text.Length);
         return new SyntaxToken(kind, string.Empty, null, Current.Start);
     }
+    private SyntaxToken MatchToken(Func<SyntaxKind, bool> predicate, string entity)
+    {
+        if (predicate(Current.Kind))
+            return NextToken();
+
+        _diagnostics.Report("UnexpectedToken", $"Expected {entity} but found {Current.Kind}", Current.Start, Current.Text.Length);
+        return new SyntaxToken(Current.Kind, string.Empty, null, Current.Start);
+    }
 
     private void ReportWrongToken(SyntaxKind kind)
     {
         _diagnostics.Report("UnexpectedToken", $"Expected token {kind} but found {Current.Kind}", Current.Start, Current.Text.Length);
+    }
+
+    private void ReportWrongToken(string expectedType)
+    {
+        _diagnostics.Report("UnexpectedToken", $"Expected {expectedType} but found {Current.Kind}", Current.Start, Current.Text.Length);
     }
 
     private bool TryMatchToken(SyntaxKind kind)
@@ -141,15 +154,17 @@ public sealed class Parser
         return true;
     }
 
-    private bool IsMatch(params ReadOnlySpan<SyntaxKind> kinds)
+    private bool IsMatch(int offset, params ReadOnlySpan<SyntaxKind> kinds)
     {
         for (var i = 0; i < kinds.Length; i++)
         {
-            if (kinds[i] != Peek(i).Kind)
+            if (kinds[i] != Peek(i + offset).Kind)
                 return false;
         }
         return true;
     }
+    private bool IsMatch(params ReadOnlySpan<SyntaxKind> kinds)
+        => IsMatch(0, kinds);
 
     public SqlScript ParseCompilationUnit()
     {
@@ -258,31 +273,35 @@ public sealed class Parser
             var selProjLoc = Track();
             Expression? expression = ParseExpression();
 
-            if (expression is AsExpression asExpression)
+            string? alias = null;
+            bool isSynthetic = false;
+            if (TryMatchToken(SyntaxKind.AsKeyword))
             {
-                projections.Add(new SelectProjection(asExpression.Expression, asExpression.Alias, false).WithLocation(selProjLoc));
+                alias = MatchToken(IsIdentifierPart, "identifier").Text;
             }
             else
             {
-                string? alias = null;
                 // we haven't consumed the trailing alias yet so make sure its not there, just missing the AS keyword
                 if (Current.Kind == SyntaxKind.IdentifierToken)
                 {
                     alias = NextToken().Text;
                 }
+            }
 
-                if (expression is IdentifierExpression idExp)
-                {
-                    projections.Add(new SelectProjection(expression, alias ?? idExp.Column, alias is null).WithLocation(selProjLoc));
-                }
-                else if (expression is not null)
-                {
-                    projections.Add(new SelectProjection(expression, alias, false).WithLocation(selProjLoc));
-                }
-                else
-                {
-                    _diagnostics.Report("ExpectedExpression", "Expected identifier or expression", Current.Start, Current.Text.Length);
-                }
+            isSynthetic = alias is null;
+
+            if (expression is IdentifierExpression idExp)
+            {
+                alias = alias ?? idExp.Column;
+            }
+
+            if (expression is not null)
+            {
+                projections.Add(new SelectProjection(expression, alias, isSynthetic).WithLocation(selProjLoc));
+            }
+            else
+            {
+                _diagnostics.Report("ExpectedExpression", "Expected identifier or expression", Current.Start, Current.Text.Length);
             }
         } while (TryMatchToken(SyntaxKind.CommaToken));
 
@@ -522,14 +541,15 @@ public sealed class Parser
             return new BinaryComparisonCondition(left, op, right).WithLocation(loc);
         }
 
-        if (IsMatch([SyntaxKind.LikeKeyword, SyntaxKind.StringToken]))
+        if (IsMatch([SyntaxKind.NotKeyword, SyntaxKind.LikeKeyword, SyntaxKind.StringToken]) || IsMatch([SyntaxKind.LikeKeyword, SyntaxKind.StringToken]))
         {
-            NextToken();//like
-            var stringToken = NextToken(); ;
+            var isNot = TryMatchToken(SyntaxKind.NotKeyword);
+            MatchToken(SyntaxKind.LikeKeyword);//like
+            var stringToken = MatchToken(SyntaxKind.StringToken);//like
 
             // is not null
-            return new BinaryComparisonCondition(left,
-                BinaryCompararisonOperator.Like,
+            return new LikeCondition(isNot,
+                left,
                 new LiteralExpression(stringToken.Text).WithLocation(stringToken))
                 .WithLocation(loc);
         }
@@ -626,6 +646,7 @@ public sealed class Parser
                 fetchCount = ParseExpression();
                 TryMatchToken(SyntaxKind.RowKeyword);// optional keyword that mean nothing, just consume if they exist
                 TryMatchToken(SyntaxKind.RowsKeyword);// optional keyword that mean nothing, just consume if they exist
+                TryMatchToken(SyntaxKind.OnlyKeyword);// optional keyword that mean nothing, just consume if they exist
             }
             offsetClause = new OffsetClause(offsetCount, fetchCount).WithLocation(offsetLoc);
         }
@@ -633,7 +654,7 @@ public sealed class Parser
         return new OrderByClause(entries, offsetClause).WithLocation(loc);
     }
 
-    private Expression ParseExpression()
+    private Expression ParseExpression(bool enableAsExpressions = false)
     {
         var loc = Track();
         var left = ParsePrimaryExpression();
@@ -646,16 +667,48 @@ public sealed class Parser
             left = new BinaryOperatorExpression(left, op, right).WithLocation(loc);
         }
 
-        if (Current.Kind == SyntaxKind.AsKeyword)
-        {
-            NextToken(); // consume 'AS'
-            var aliasToken = MatchToken(SyntaxKind.IdentifierToken);
-            left = new AsExpression(left, aliasToken.Text).WithLocation(loc);
-        }
 
         return left;
     }
+    private DataType ParseDataType()
+    {
+        var loc = Track();
+        if (!IsDataType(Current.Kind))
+        {
+            ReportWrongToken("any data type");
+            return new DataType("").WithLocation(loc);
+        }
 
+        var dataType = NextToken(); // consume data type
+        string? length = null;
+        if (IsMatch(0, SyntaxKind.OpenParenToken) && IsMatch(1, SyntaxKind.NumberToken, SyntaxKind.MaxKeyword) && IsMatch(2, SyntaxKind.CloseParenToken))
+        {
+            MatchToken(SyntaxKind.OpenParenToken);
+            length = MatchToken(SyntaxKind.NumberToken)?.Value?.ToString() ?? MatchToken(SyntaxKind.MaxKeyword).Text.ToUpperInvariant();
+            MatchToken(SyntaxKind.CloseParenToken);
+        }
+        return new DataType(dataType.Text, length).WithLocation(loc);
+    }
+
+    private bool IsDataType(SyntaxKind kind)
+        => kind is
+            SyntaxKind.CharacterDataType or
+            SyntaxKind.BinaryDataType or
+            SyntaxKind.BooleanDataType or
+            SyntaxKind.IntegerDataType or
+            SyntaxKind.SingleDataType or
+            SyntaxKind.FloatDataType or
+            SyntaxKind.DoubleDataType or
+            SyntaxKind.RealDataType or
+            SyntaxKind.DecimalDataType or
+            SyntaxKind.DateDataType or
+            SyntaxKind.TimeDataType or
+            SyntaxKind.TimestampDataType or
+            SyntaxKind.CharDataType or
+            SyntaxKind.VarcharDataType or
+            SyntaxKind.NcharDataType or
+            SyntaxKind.NvarcharDataType or
+            SyntaxKind.UniqueidentifierDataType;
     private BinaryOperator GetBinaryOperator(SyntaxKind kind)
     {
         return kind switch
@@ -674,6 +727,11 @@ public sealed class Parser
 
     private FunctionCallExpression ParseFunctionExpression()
     {
+        if (!IsIdentifierPart(Current.Kind))
+        {
+            ReportWrongToken("Indentifier");
+        }
+
         var loc = Track();
         var functionName = NextToken().Text;
         MatchToken(SyntaxKind.OpenParenToken);
@@ -714,6 +772,17 @@ public sealed class Parser
                 }
 
                 var expression = ParseExpression();
+
+                // as expression can only be the first argument of a function CONVERT() PARSE() and TRY_PARSE() are the only functions that support AS expression and they only support it for the first argument
+                if (arguments.Count == 0)
+                {
+                    if (Current.Kind == SyntaxKind.AsKeyword && IsDataType(Peek(1).Kind))
+                    {
+                        NextToken(); // consume 'AS'
+                        var dataType = ParseDataType();
+                        expression = new AsExpression(expression, dataType).WithLocation(argLocation);
+                    }
+                }
 
                 if (fromExpressionType != null)
                 {
@@ -782,7 +851,7 @@ public sealed class Parser
 
             identifiers.Add(token.Text);
 
-            if (token.Kind != SyntaxKind.IdentifierToken)
+            if (!IsIdentifierPart(token.Kind))
             {
                 ReportWrongToken(SyntaxKind.IdentifierToken);
                 break;
@@ -793,7 +862,7 @@ public sealed class Parser
     }
 
     private bool IsIdentifierPart(SyntaxKind kind)
-        => kind is SyntaxKind.IdentifierToken or SyntaxKind.StarToken;
+        => kind is SyntaxKind.IdentifierToken || IsDataType(kind);
 
     private Expression ParseCaseExpression()
     {
@@ -879,9 +948,10 @@ public sealed class Parser
             return new LiteralExpression(integerPart).WithLocation(loc);
         }
 
-        if (Current.Kind == SyntaxKind.IdentifierToken || Current.Kind == SyntaxKind.StarToken) //keywords might be valid here too?
+        // handle all the other word based tokens as identifiers
+        if (IsIdentifierPart(Current.Kind) || Current.Kind == SyntaxKind.StarToken)
         {
-            if (Peek(1).Kind == SyntaxKind.OpenParenToken)
+            if (Current.Kind != SyntaxKind.StarToken && Peek(1).Kind == SyntaxKind.OpenParenToken)
             {
                 return ParseFunctionExpression();
             }

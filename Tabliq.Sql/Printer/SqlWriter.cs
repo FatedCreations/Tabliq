@@ -1,94 +1,110 @@
-﻿using System.Linq.Expressions;
-using System.Text;
-using Tabliq.Sql.Ast;
+﻿using Tabliq.Sql.Ast;
 using Tabliq.Sql.Core;
+using Tabliq.Sql.Lexing;
 
-namespace Tabliq.Sql.Printer
+namespace Tabliq.Sql.Printer;
+
+public class SqlWriter
 {
-    public class SqlWriter
+    public SqlWriter()
     {
-        private readonly StringBuilder _sb;
-        private readonly SyntaxNode _root;
+    }
 
-        public static string ToSql(SyntaxNode node)
+    private IndentedTextWriter? _writer;
+
+    private string DebugString => _writer?.ToString() ?? string.Empty;
+
+    public string ToSql(SyntaxNode node)
+    {
+        var writer = new IndentedTextWriter();
+        _writer = writer;
+        Write(node);
+        _writer = null;
+        return writer.ToString();
+    }
+
+    protected void Write(string val)
+        => _writer?.Write(val);
+    protected void WriteLine()
+        => _writer?.WriteLine();
+
+    protected void Indented(Action a)
+        => _writer?.Indented(a);
+
+    protected virtual void Write(SqlScript sqlScript)
+    {
+        foreach (var statement in sqlScript.Statements)
         {
-            var writer = new SqlWriter(node);
-            return writer.ToString();
+            Write(statement);
         }
+    }
 
-        private string DebugString => _sb.ToString();
-
-        private SqlWriter(SyntaxNode node)
+    protected virtual void Write(Statement statement)
+    {
+        if (statement is SelectStatement selectStatement)
         {
-            _sb = new StringBuilder();
-            _root = node;
-            Write(node);
-            // walk the tree here and build the SQL string representation
+            Write(selectStatement);
         }
-
-        private void Write(SqlScript sqlScript)
+        else
         {
-            foreach (var statement in sqlScript.Statements)
-            {
-                Write(statement);
-            }
+            throw new NotImplementedException($"Writing for {statement.GetType().Name} is not implemented.");
         }
+    }
 
-        private void Write(Statement statement)
+    protected virtual void Write(SelectStatement selectStatement)
+    {
+        if (selectStatement.CommonTableExpressions.Any())
         {
-            if (statement is SelectStatement selectStatement)
-            {
-                Write(selectStatement);
-            }
-            else
-            {
-                throw new NotImplementedException($"Writing for {statement.GetType().Name} is not implemented.");
-            }
-        }
+            Write("WITH ");
 
-        private void Write(SelectStatement selectStatement)
-        {
-            if (selectStatement.CommonTableExpressions.Any())
+            Write(selectStatement.CommonTableExpressions.First());
+
+            foreach (var cte in selectStatement.CommonTableExpressions.Skip(1))
             {
-                Write("WITH ");
-
-                Write(selectStatement.CommonTableExpressions.First());
-
-                foreach (var cte in selectStatement.CommonTableExpressions.Skip(1))
-                {
-                    Write(", ");
-                    WriteLine();
-                    Write(cte);
-                }
+                Write(", ");
                 WriteLine();
+                Write(cte);
             }
-            Write(selectStatement.SelectQuery);
+            WriteLine();
         }
+        Write(selectStatement.SelectQuery);
+    }
 
-        private void Write(CommonTableExpression commonTableExpression)
+    protected virtual void Write(CommonTableExpression commonTableExpression)
+    {
+        Write(commonTableExpression.Alias);
+        Write(" AS (");
+
+        Indented(() =>
         {
-            Write(commonTableExpression.Alias);
-            Write(" AS (");
-            Indent();
             WriteLine();
-
             Write(commonTableExpression.Body);
+        });
 
-            Outdent();
+        WriteLine();
+        Write(")");
+    }
+
+    protected virtual void Write(SelectExpression select)
+    {
+        if (select.IsBracketed)
+        {
+            Write("(");
+            Indented(() =>
+            {
+                WriteLine();
+                WriteSelectBody(select);
+            });
             WriteLine();
-
             Write(")");
         }
-
-        private void Write(SelectExpression selectExpression)
+        else
         {
-            if (selectExpression.IsBracketed)
-            {
-                Write("(");
-                Indent();
-                WriteLine();
-            }
+            WriteSelectBody(select);
+        }
 
+        void WriteSelectBody(SelectExpression selectExpression)
+        {
             Write("SELECT");
 
             if (selectExpression.Top.HasValue)
@@ -107,16 +123,17 @@ namespace Tabliq.Sql.Printer
 
             if (selectExpression.Projections.Count > 1)
             {
-                Indent();
-                WriteLine();
-                Write(selectExpression.Projections.First());
-                foreach (var projection in selectExpression.Projections.Skip(1))
+                Indented(() =>
                 {
-                    Write(",");
                     WriteLine();
-                    Write(projection);
-                }
-                Outdent();
+                    Write(selectExpression.Projections.First());
+                    foreach (var projection in selectExpression.Projections.Skip(1))
+                    {
+                        Write(",");
+                        WriteLine();
+                        Write(projection);
+                    }
+                });
             }
             else
             {
@@ -160,45 +177,37 @@ namespace Tabliq.Sql.Printer
                 WriteLine();
                 Write(union);
             }
-
-            if (selectExpression.IsBracketed)
-            {
-                Outdent();
-                WriteLine();
-                Write(")");
-            }
         }
-        private void Write(WhereClause whereClause)
+    }
+
+    protected virtual void Write(WhereClause whereClause)
+    {
+        // determine if where should start on 2nd line or not?
+        Write("WHERE");
+
+        // peek into expression to see if it is a logical condition, if so, we will write it on the next line
+        if (whereClause.Condition is LogicalCondition)
         {
-            // determine if where should start on 2nd line or not?
-            Write("WHERE");
-
-            // peek into expression to see if it is a logical condition, if so, we will write it on the next line
-            bool indented = false;
-            if (whereClause.Condition is LogicalCondition)
+            Indented(() =>
             {
-                indented = true;
-                Indent();
                 WriteLine();
-            }
-            else
-            {
-                Write(" ");
-            }
-
+                Write(whereClause.Condition);
+            });
+        }
+        else
+        {
+            Write(" ");
             Write(whereClause.Condition);
-            if (indented)
-            {
-                Outdent();
-            }
         }
-        private void Write(FromClause fromClause)
-        {
-            Write("FROM");
+    }
+    protected virtual void Write(FromClause fromClause)
+    {
+        Write("FROM");
 
-            if (fromClause.TableReferences.Count > 1)
+        if (fromClause.TableReferences.Count > 1)
+        {
+            Indented(() =>
             {
-                Indent();
                 WriteLine();
                 Write(fromClause.TableReferences.First());
                 foreach (var tableReference in fromClause.TableReferences.Skip(1))
@@ -207,222 +216,240 @@ namespace Tabliq.Sql.Printer
                     WriteLine();
                     Write(tableReference);
                 }
-                Outdent();
-                WriteLine();
-            }
-            else
+            });
+            WriteLine();
+        }
+        else
+        {
+            Write(" ");
+            Write(fromClause.TableReferences.First());
+        }
+        // joins 1 per line
+        foreach (var join in fromClause.Joins)
+        {
+            WriteLine();
+
+            Write(join.JoinSide switch
             {
-                Write(" ");
-                Write(fromClause.TableReferences.First());
-            }
-            // joins 1 per line
-            foreach (var join in fromClause.Joins)
+                JoinSide.Left => "LEFT ",
+                JoinSide.Right => "RIGHT ",
+                JoinSide.Full => "FULL ",
+                _ => ""
+            });
+
+            Write(join.JoinType switch
             {
-                WriteLine();
+                JoinType.Inner => "INNER ",
+                JoinType.Outer => "OUTER ",
+                JoinType.Cross => "CROSS ",
+                _ => ""
+            });
+            Write("JOIN ");
+            Write(join.TableReference);
 
-                Write(join.JoinSide switch
+            if (join.OnCondition is not null)
+            {
+                Indented(() =>
                 {
-                    JoinSide.Left => "LEFT ",
-                    JoinSide.Right => "RIGHT ",
-                    JoinSide.Full => "FULL ",
-                    _ => ""
-                });
-
-                Write(join.JoinType switch
-                {
-                    JoinType.Inner => "INNER ",
-                    JoinType.Outer => "OUTER ",
-                    JoinType.Cross => "CROSS ",
-                    _ => ""
-                });
-                Write("JOIN ");
-                Write(join.TableReference);
-
-                if (join.OnCondition is not null)
-                {
-                    Indent();
                     WriteLine();
                     Write("ON ");
                     Write(join.OnCondition);
-                    Outdent();
-                }
+                });
             }
         }
+    }
 
-        void Write(SyntaxNode node)
+    protected virtual void Write(SyntaxNode node)
+    {
+        if (node is SqlScript sqlScript)
         {
-            // big if else chain to handle different expression types
-
-            if (node is SqlScript sqlScript)
-            {
-                Write(sqlScript);
-            }
-            else if (node is Statement statement)
-            {
-                Write(statement);
-            }
-            else if (node is SelectStatement selectStatement)
-            {
-                Write(selectStatement);
-            }
-            else if (node is CommonTableExpression commonTableExpression)
-            {
-                Write(commonTableExpression);
-            }
-            else if (node is SelectExpression selectExpression)
-            {
-                Write(selectExpression);
-            }
-            else if (node is FromClause fromClause)
-            {
-                Write(fromClause);
-            }
-            else if (node is SelectProjection selectProjection)
-            {
-                Write(selectProjection);
-            }
-            else if (node is NamedTableReference NamedTableReference)
-            {
-                Write(NamedTableReference);
-            }
-            else if (node is SelectTableReference SubqueryTableReference)
-            {
-                Write(SubqueryTableReference);
-            }
-            else if (node is IdentifierExpression identifierExpression)
-            {
-                Write(identifierExpression);
-            }
-            else if (node is StarIdentifierExpression StarIdentifierExpression)
-            {
-                Write(StarIdentifierExpression);
-            }
-
-            else if (node is BinaryComparisonCondition comparisonCondition)
-            {
-                Write(comparisonCondition);
-            }
-            else if (node is BracketedCondition BracketedCondition)
-            {
-                Write(BracketedCondition);
-            }
-            else if (node is LogicalCondition LogicalCondition)
-            {
-                Write(LogicalCondition);
-            }
-            else if (node is FunctionCallExpression FunctionCallExpression)
-            {
-                Write(FunctionCallExpression);
-            }
-            else if (node is WindowSpecification WindowSpecification)
-            {
-                Write(WindowSpecification);
-            }
-            else if (node is OrderByClause OrderByClause)
-            {
-                Write(OrderByClause);
-            }
-            else if (node is IsNullCondition IsNullCondition)
-            {
-                Write(IsNullCondition);
-            }
-            else if (node is LiteralExpression LiteralExpression)
-            {
-                Write(LiteralExpression);
-            }
-            else if (node is UnionStatement UnionStatement)
-            {
-                Write(UnionStatement);
-            }
-            else if (node is ValueFromExpression ValueFromExpression)
-            {
-                Write(ValueFromExpression);
-            }
-            else if (node is CaseExpression CaseExpression)
-            {
-                Write(CaseExpression);
-            }
-            else if (node is BinaryOperatorExpression BinaryOperatorExpression)
-            {
-                Write(BinaryOperatorExpression);
-            }
-            else if (node is AsExpression AsExpression)
-            {
-                Write(AsExpression);
-            }
-            else if (node is GroupByClause GroupByClause)
-            {
-                Write(GroupByClause);
-            }
-            else if (node is ParameterIdentifier ParameterIdentifier)
-            {
-                Write(ParameterIdentifier);
-            }
-            else if (node is UnaryCondition UnaryCondition)
-            {
-                Write(UnaryCondition);
-            }
-            else if (node is ExistsCondition ExistsCondition)
-            {
-                Write(ExistsCondition);
-            }
-            else if (node is DistinctValueExpression DistinctValueExpression)
-            {
-                Write(DistinctValueExpression);
-            }
-            else
-            {
-                throw new NotImplementedException($"Writing for {node.GetType().Name} is not implemented.");
-            }
+            Write(sqlScript);
         }
-        void Write(DistinctValueExpression val)
+        else if (node is Statement statement)
         {
-            Write(val.Distinctness switch
-            {
-                Distinctness.Distinct => "DISTINCT ",
-                Distinctness.All => "ALL ",
-                _ => ""
-            });
-            Write(val.Expression);
+            Write(statement);
         }
-        void Write(ExistsCondition existsCondition)
+        else if (node is SelectStatement selectStatement)
         {
-            Write("EXISTS (");
-            Indent();
-            WriteLine();
-            Write(existsCondition.SelectExpression);
-            Outdent();
-            WriteLine();
+            Write(selectStatement);
+        }
+        else if (node is CommonTableExpression commonTableExpression)
+        {
+            Write(commonTableExpression);
+        }
+        else if (node is SelectExpression selectExpression)
+        {
+            Write(selectExpression);
+        }
+        else if (node is FromClause fromClause)
+        {
+            Write(fromClause);
+        }
+        else if (node is SelectProjection selectProjection)
+        {
+            Write(selectProjection);
+        }
+        else if (node is NamedTableReference NamedTableReference)
+        {
+            Write(NamedTableReference);
+        }
+        else if (node is SelectTableReference SubqueryTableReference)
+        {
+            Write(SubqueryTableReference);
+        }
+        else if (node is IdentifierExpression identifierExpression)
+        {
+            Write(identifierExpression);
+        }
+        else if (node is StarIdentifierExpression StarIdentifierExpression)
+        {
+            Write(StarIdentifierExpression);
+        }
+
+        else if (node is BinaryComparisonCondition comparisonCondition)
+        {
+            Write(comparisonCondition);
+        }
+        else if (node is BracketedCondition BracketedCondition)
+        {
+            Write(BracketedCondition);
+        }
+        else if (node is LogicalCondition LogicalCondition)
+        {
+            Write(LogicalCondition);
+        }
+        else if (node is FunctionCallExpression FunctionCallExpression)
+        {
+            Write(FunctionCallExpression);
+        }
+        else if (node is WindowSpecification WindowSpecification)
+        {
+            Write(WindowSpecification);
+        }
+        else if (node is OrderByClause OrderByClause)
+        {
+            Write(OrderByClause);
+        }
+        else if (node is IsNullCondition IsNullCondition)
+        {
+            Write(IsNullCondition);
+        }
+        else if (node is LiteralExpression LiteralExpression)
+        {
+            Write(LiteralExpression);
+        }
+        else if (node is UnionStatement UnionStatement)
+        {
+            Write(UnionStatement);
+        }
+        else if (node is ValueFromExpression ValueFromExpression)
+        {
+            Write(ValueFromExpression);
+        }
+        else if (node is CaseExpression CaseExpression)
+        {
+            Write(CaseExpression);
+        }
+        else if (node is BinaryOperatorExpression BinaryOperatorExpression)
+        {
+            Write(BinaryOperatorExpression);
+        }
+        else if (node is AsExpression AsExpression)
+        {
+            Write(AsExpression);
+        }
+        else if (node is GroupByClause GroupByClause)
+        {
+            Write(GroupByClause);
+        }
+        else if (node is ParameterIdentifier ParameterIdentifier)
+        {
+            Write(ParameterIdentifier);
+        }
+        else if (node is UnaryCondition UnaryCondition)
+        {
+            Write(UnaryCondition);
+        }
+        else if (node is ExistsCondition ExistsCondition)
+        {
+            Write(ExistsCondition);
+        }
+        else if (node is DistinctValueExpression DistinctValueExpression)
+        {
+            Write(DistinctValueExpression);
+        }
+        else if (node is LikeCondition LikeCondition)
+        {
+            Write(LikeCondition);
+        }
+        else if (node is DataType type)
+        {
+            Write(type);
+        }
+        else
+        {
+            throw new NotImplementedException($"Writing for {node.GetType().Name} is not implemented.");
+        }
+    }
+    protected virtual void Write(DataType val)
+    {
+        Write(val.Name);
+        if (!string.IsNullOrEmpty(val.Size))
+        {
+            Write("(");
+            Write(val.Size);
             Write(")");
         }
-        void Write(UnaryCondition unaryCondition)
+    }
+    protected virtual void Write(DistinctValueExpression val)
+    {
+        Write(val.Distinctness switch
         {
-            Write(unaryCondition.Operator switch
-            {
-                UnaryCompararisonOperator.Not => "NOT ",
-                _ => throw new NotImplementedException($"Operator {unaryCondition.Operator} is not implemented.")
-            });
+            Distinctness.Distinct => "DISTINCT ",
+            Distinctness.All => "ALL ",
+            _ => ""
+        });
+        Write(val.Expression);
+    }
+    protected virtual void Write(ExistsCondition existsCondition)
+    {
+        Write("EXISTS (");
+        Indented(() =>
+        {
+            WriteLine();
+            Write(existsCondition.SelectExpression);
+        });
+        WriteLine();
+        Write(")");
+    }
+    protected virtual void Write(UnaryCondition unaryCondition)
+    {
+        Write(unaryCondition.Operator switch
+        {
+            UnaryCompararisonOperator.Not => "NOT ",
+            _ => throw new NotImplementedException($"Operator {unaryCondition.Operator} is not implemented.")
+        });
 
-            Write(unaryCondition.Right);
+        Write(unaryCondition.Right);
+    }
+
+    protected virtual void Write(ParameterIdentifier parameterIdentifier)
+    {
+        Write("@");
+        Write(parameterIdentifier.ParamterName);
+    }
+    protected virtual void Write(GroupByClause groupByClause)
+    {
+        Write("GROUP BY");
+        if (groupByClause.Entries.Count == 1)
+        {
+            Write(" ");
+            Write(groupByClause.Entries[0]);
         }
-
-        void Write(ParameterIdentifier parameterIdentifier)
+        else
         {
-            Write("@");
-            Write(parameterIdentifier.ParamterName);
-        }
-        void Write(GroupByClause groupByClause)
-        {
-            Write("GROUP BY");
-            if (groupByClause.Entries.Count == 1)
+            Indented(() =>
             {
-                Write(" ");
-                Write(groupByClause.Entries[0]);
-            }
-            else
-            {
-                Indent();
-
                 WriteLine();
                 Write(groupByClause.Entries.First());
 
@@ -432,71 +459,67 @@ namespace Tabliq.Sql.Printer
                     WriteLine();
                     Write(entry);
                 }
-                Outdent();
-            }
-        }
-        void Write(HavingClause having)
-        {
-            // determine if having should start on 2nd line or not?
-            Write("HAVING");
-
-            // peek into expression to see if it is a logical condition, if so, we will write it on the next line
-            bool indented = false;
-            if (having.Condition is LogicalCondition)
-            {
-                indented = true;
-                Indent();
-                WriteLine();
-            }
-            else
-            {
-                Write(" ");
-            }
-
-            Write(having.Condition);
-            if (indented)
-            {
-                Outdent();
-            }
-        }
-
-        void Write(AsExpression asExpression)
-        {
-            Write(asExpression.Expression);
-            Write(" AS ");
-            Write(QuoteIdentifierPartIfNeeded(asExpression.Alias));
-        }
-
-        void Write(BinaryOperatorExpression binaryOperatorExpression)
-        {
-            Write(binaryOperatorExpression.Left);
-            Write(" ");
-            Write(binaryOperatorExpression.Operator switch
-            {
-                BinaryOperator.Add => "+",
-                BinaryOperator.Subtract => "-",
-                BinaryOperator.Multiply => "*",
-                BinaryOperator.Divide => "/",
-                BinaryOperator.Modulus => "%",
-                BinaryOperator.Concatenate => "||",
-                _ => throw new NotImplementedException($"Operator {binaryOperatorExpression.Operator} is not implemented.")
             });
+        }
+    }
+    protected virtual void Write(HavingClause having)
+    {
+        // determine if having should start on 2nd line or not?
+        Write("HAVING");
+
+        // peek into expression to see if it is a logical condition, if so, we will write it on the next line
+        if (having.Condition is LogicalCondition)
+        {
+            Indented(() =>
+            {
+                WriteLine();
+                Write(having.Condition);
+            });
+        }
+        else
+        {
             Write(" ");
-            Write(binaryOperatorExpression.Right);
+            Write(having.Condition);
+        }
+    }
+
+    protected virtual void Write(AsExpression asExpression)
+    {
+        Write(asExpression.Expression);
+        Write(" AS ");
+        Write(asExpression.DataType);
+    }
+
+    protected virtual void Write(BinaryOperatorExpression binaryOperatorExpression)
+    {
+        Write(binaryOperatorExpression.Left);
+        Write(" ");
+        Write(binaryOperatorExpression.Operator switch
+        {
+            BinaryOperator.Add => "+",
+            BinaryOperator.Subtract => "-",
+            BinaryOperator.Multiply => "*",
+            BinaryOperator.Divide => "/",
+            BinaryOperator.Modulus => "%",
+            BinaryOperator.Concatenate => "||",
+            _ => throw new NotImplementedException($"Operator {binaryOperatorExpression.Operator} is not implemented.")
+        });
+        Write(" ");
+        Write(binaryOperatorExpression.Right);
+    }
+
+    protected virtual void Write(CaseExpression caseExpression)
+    {
+        Write("CASE");
+
+        if (caseExpression.Expression is not null)
+        {
+            Write(" ");
+            Write(caseExpression.Expression);
         }
 
-        void Write(CaseExpression caseExpression)
+        Indented(() =>
         {
-            Write("CASE");
-
-            if (caseExpression.Expression is not null)
-            {
-                Write(" ");
-                Write(caseExpression.Expression);
-            }
-
-            Indent();
-
             foreach (var whenClause in caseExpression.WhenClauses)
             {
                 WriteLine();
@@ -512,87 +535,92 @@ namespace Tabliq.Sql.Printer
                 Write("ELSE ");
                 Write(caseExpression.ElseResult);
             }
+        });
+        WriteLine();
+        Write("END");
+    }
+    protected virtual void Write(ValueFromExpression valueFromExpression)
+    {
+        Write(valueFromExpression.Part);
+        Write(" FROM ");
+        Write(valueFromExpression.Expression);
+    }
+    protected virtual void Write(UnionStatement union)
+    {
+        Write("UNION");
+        if (union.IsAll)
+        {
+            Write(" ALL");
+        }
 
-            Outdent();
-            WriteLine();
-            Write("END");
-        }
-        void Write(ValueFromExpression valueFromExpression)
-        {
-            Write(valueFromExpression.Part);
-            Write(" FROM ");
-            Write(valueFromExpression.Expression);
-        }
-        void Write(UnionStatement union)
-        {
-            Write("UNION");
-            if (union.IsAll)
-            {
-                Write(" ALL");
-            }
+        WriteLine();
 
-            WriteLine();
-
-            Write(union.Select);
-        }
-        void Write(LiteralExpression lit)
+        Write(union.Select);
+    }
+    protected virtual void Write(LiteralExpression lit)
+    {
+        if (lit.Value is null)
         {
-            if (lit.Value is null)
-            {
-                Write("NULL");
-            }
-            else if (lit.Value is string s)
-            {
-                Write($"'{s.Replace("'", "''")}'");
-            }
-            else if (lit.Value is long l)
-            {
-                Write(l.ToString());
-            }
-            else if (lit.Value is double d)
-            {
-                var val = d.ToString();
-                Write(val);
-                if (!val.Contains('.')) // force the decimal place if got one in the ast 
-                {
-                    Write(".0");
-                }
-            }
-            else
-            {
-                Write($"{lit.Value}"); // fallback
-            }
-        }
-        void Write(IsNullCondition isNulls)
-        {
-            Write(isNulls.Expression);
-            Write(" IS ");
-            if (isNulls.IsNot)
-            {
-                Write("NOT ");
-            }
             Write("NULL");
         }
-
-        void Write(OrderByClause order, bool inline = false)
+        else if (lit.Value is string s)
         {
-            Write("ORDER BY");
-
-            if (order.Entries.Count == 1)
+            Write($"'{s.Replace("'", "''")}'");
+        }
+        else if (lit.Value is long l)
+        {
+            Write(l.ToString());
+        }
+        else if (lit.Value is double d)
+        {
+            var val = d.ToString();
+            Write(val);
+            if (!val.Contains('.')) // force the decimal place if got one in the ast 
             {
-                inline = true;
+                Write(".0");
             }
+        }
+        else
+        {
+            Write($"{lit.Value}"); // fallback
+        }
+    }
+    protected virtual void Write(IsNullCondition isNulls)
+    {
+        Write(isNulls.Expression);
+        Write(" IS ");
+        if (isNulls.IsNot)
+        {
+            Write("NOT ");
+        }
+        Write("NULL");
+    }
 
-            if (inline)
+    protected virtual void Write(OrderByClause order, bool inline = false)
+    {
+        Write("ORDER BY");
+
+        if (order.Entries.Count == 1)
+        {
+            inline = true;
+        }
+
+        if (inline)
+        {
+            Write(" ");
+            WriteBody();
+        }
+        else
+        {
+            Indented(() =>
             {
-                Write(" ");
-            }
-            else
-            {
-                Indent();
                 WriteLine();
-            }
+                WriteBody();
+            });
+        }
 
+        void WriteBody()
+        {
             Write(order.Entries.First());
             foreach (var entry in order.Entries.Skip(1))
             {
@@ -614,214 +642,211 @@ namespace Tabliq.Sql.Printer
                 Write(order.OffsetClause);
             }
         }
+    }
 
-        void Write(OffsetClause offset)
+    protected virtual void Write(OffsetClause offset)
+    {
+        Write("OFFSET ");
+        Write(offset.OffsetCount);
+        Write(" ROWS");
+        if (offset.FetchCount is not null)
         {
-            Write("OFFSET ");
-            Write(offset.OffsetCount);
-            Write(" ROWS");
-            if (offset.FetchCount is not null)
+            Write(" FETCH NEXT ");
+            Write(offset.FetchCount);
+            Write(" ROWS ONLY");
+        }
+    }
+
+    protected virtual void Write(OrderByEntry entry)
+    {
+        Write(entry.Expression);
+        if (entry.Direction != OrderByDirection.Unspecified)
+        {
+            Write(" ");
+            Write(entry.Direction == OrderByDirection.Ascending ? "ASC" : "DESC");
+        }
+    }
+
+    protected virtual void Write(FunctionCallExpression func)
+    {
+        Write(func.FunctionName.ToUpperInvariant());
+        Write("(");
+
+        if (func.Arguments.Any())
+        {
+            Write(func.Arguments.First());
+            foreach (var arg in func.Arguments.Skip(1))
             {
-                Write(" FETCH NEXT ");
-                Write(offset.FetchCount);
-                Write(" ROWS ONLY");
+                Write(", ");
+                Write(arg);
             }
         }
+        Write(")");
 
-        void Write(OrderByEntry entry)
+        if (func.Window is not null)
         {
-            Write(entry.Expression);
-            if (entry.Direction != OrderByDirection.Unspecified)
+            Write(" ");
+            Write(func.Window);
+        }
+    }
+    protected virtual void Write(WindowSpecification window)
+    {
+        Write("OVER ");
+        Write("(");
+        if (window.Partions.Any())
+        {
+            Write("PARTITION BY ");
+            Write(window.Partions.First());
+            foreach (var partition in window.Partions.Skip(1))
             {
-                Write(" ");
-                Write(entry.Direction == OrderByDirection.Ascending ? "ASC" : "DESC");
+                Write(", ");
+                Write(partition);
             }
         }
-
-        void Write(FunctionCallExpression func)
+        if (window.OrderBy is not null)
         {
-            Write(func.FunctionName.ToUpperInvariant());
-            Write("(");
-
-            if (func.Arguments.Any())
-            {
-                Write(func.Arguments.First());
-                foreach (var arg in func.Arguments.Skip(1))
-                {
-                    Write(", ");
-                    Write(arg);
-                }
-            }
-            Write(")");
-
-            if (func.Window is not null)
-            {
-                Write(" ");
-                Write(func.Window);
-            }
+            Write(" ");
+            Write(window.OrderBy, true);
         }
-        void Write(WindowSpecification window)
-        {
-            Write("OVER ");
-            Write("(");
-            if (window.Partions.Any())
-            {
-                Write("PARTITION BY ");
-                Write(window.Partions.First());
-                foreach (var partition in window.Partions.Skip(1))
-                {
-                    Write(", ");
-                    Write(partition);
-                }
-            }
-            if (window.OrderBy is not null)
-            {
-                Write(" ");
-                Write(window.OrderBy, true);
-            }
-            Write(")");
-        }
+        Write(")");
+    }
 
-        void Write(BracketedCondition BracketedCondition)
+    protected virtual void Write(BracketedCondition BracketedCondition)
+    {
+        Write("(");
+        Indented(() =>
         {
-            Write("(");
-            Indent();
             WriteLine();
             Write(BracketedCondition.Expression);
-
-            Outdent();
-            WriteLine();
-            Write(")");
-        }
-        void Write(BinaryComparisonCondition comparisonCondition)
+        });
+        WriteLine();
+        Write(")");
+    }
+    protected virtual void Write(BinaryComparisonCondition comparisonCondition)
+    {
+        Write(comparisonCondition.Left);
+        Write(" ");
+        Write(comparisonCondition.Operator switch
         {
-            Write(comparisonCondition.Left);
-            Write(" ");
-            Write(comparisonCondition.Operator switch
-            {
-                BinaryCompararisonOperator.Equals => "=",
-                BinaryCompararisonOperator.NotEquals => "<>",
-                BinaryCompararisonOperator.GreaterThan => ">",
-                BinaryCompararisonOperator.LessThan => "<",
-                BinaryCompararisonOperator.GreaterThanOrEqual => ">=",
-                BinaryCompararisonOperator.LessThanOrEqual => "<=",
-                BinaryCompararisonOperator.Like => "LIKE",
-                _ => throw new NotImplementedException($"Operator {comparisonCondition.Operator} is not implemented.")
-            });
-            Write(" ");
-            Write(comparisonCondition.Right);
+            BinaryCompararisonOperator.Equals => "=",
+            BinaryCompararisonOperator.NotEquals => "<>",
+            BinaryCompararisonOperator.GreaterThan => ">",
+            BinaryCompararisonOperator.LessThan => "<",
+            BinaryCompararisonOperator.GreaterThanOrEqual => ">=",
+            BinaryCompararisonOperator.LessThanOrEqual => "<=",
+            _ => throw new NotImplementedException($"Operator {comparisonCondition.Operator} is not implemented.")
+        });
+        Write(" ");
+        Write(comparisonCondition.Right);
+    }
+
+    protected virtual void Write(LikeCondition comparisonCondition)
+    {
+        Write(comparisonCondition.Left);
+        if (comparisonCondition.IsNot)
+        {
+            Write(" NOT");
+        }
+        Write(" ");
+        Write("LIKE");
+        Write(" ");
+        Write(comparisonCondition.Right);
+    }
+
+    protected virtual bool RequiresQuotedIdentifier(string name)
+    {
+        if (name == "*")
+        {
+            return false;
         }
 
-        public static string QuoteIdentifierPartIfNeeded(string? name)
+        if (Lexer.GetKeywordKind(name) != SyntaxKind.IdentifierToken)
         {
-            if (string.IsNullOrEmpty(name)) return name ?? string.Empty;
-            // preserve wildcard/star tokens
-            if (name == "*" || name.EndsWith(".*", StringComparison.Ordinal)) return name;
-            // if name already looks safe (letters, digits, underscore, dot, @) print as-is
-            for (int i = 0; i < name.Length; i++)
+            return true;
+        }
+        for (int i = 0; i < name.Length; i++)
+        {
+            var c = name[i];
+            if (!(char.IsLetterOrDigit(c) || c == '_' || c == '.' || c == '@'))
             {
-                var c = name[i];
-                if (!(char.IsLetterOrDigit(c) || c == '_' || c == '.' || c == '@'))
-                {
-                    // needs bracket quoting; escape closing bracket by doubling
-                    var esc = name.Replace("]", "]]");
-                    return "[" + esc + "]";
-                }
+                return true;
             }
-
-            return name;
         }
+        return false;
+    }
 
-        void Write(StarIdentifierExpression identifier)
+    protected virtual string QuoteIdentifierPartIfNeeded(string? name)
+    {
+        if (string.IsNullOrEmpty(name)) return name ?? string.Empty;
+        if (RequiresQuotedIdentifier(name))
         {
-            if (identifier.IdentifierParts.Any())
-            {
-                foreach (var part in identifier.IdentifierParts)
-                {
-                    Write(QuoteIdentifierPartIfNeeded(part));
-                    Write(".");
-                }
-            }
-            Write("*");
+            var esc = name.Replace("]", "]]");
+            return "[" + esc + "]";
         }
-        void Write(IdentifierExpression identifier)
+        return name;
+    }
+
+    protected virtual void Write(StarIdentifierExpression identifier)
+    {
+        if (identifier.IdentifierParts.Any())
         {
-            Write(QuoteIdentifierPartIfNeeded(identifier.IdentifierParts.First()));
-            foreach (var part in identifier.IdentifierParts.Skip(1))
+            foreach (var part in identifier.IdentifierParts)
             {
-                Write(".");
                 Write(QuoteIdentifierPartIfNeeded(part));
+                Write(".");
             }
         }
-        void Write(NamedTableReference table)
+        Write("*");
+    }
+    protected virtual void Write(IdentifierExpression identifier)
+    {
+        Write(QuoteIdentifierPartIfNeeded(identifier.IdentifierParts.First()));
+        foreach (var part in identifier.IdentifierParts.Skip(1))
         {
-            Write(table.Identifer);
-            if (table.Alias is not null)
-            {
-                Write(" AS ");
-                Write(QuoteIdentifierPartIfNeeded(table.Alias));
-            }
+            Write(".");
+            Write(QuoteIdentifierPartIfNeeded(part));
         }
+    }
+    protected virtual void Write(NamedTableReference table)
+    {
+        Write(table.Identifer);
+        if (table.Alias is not null)
+        {
+            Write(" AS ");
+            Write(QuoteIdentifierPartIfNeeded(table.Alias));
+        }
+    }
 
-        void Write(SelectTableReference table)
+    protected virtual void Write(SelectTableReference table)
+    {
+        Write(table.Select);
+        if (table.Alias is not null)
         {
-            Write(table.Select);
-            if (table.Alias is not null)
-            {
-                Write(" AS ");
-                Write(QuoteIdentifierPartIfNeeded(table.Alias));
-            }
+            Write(" AS ");
+            Write(QuoteIdentifierPartIfNeeded(table.Alias));
         }
-        void Write(LogicalCondition con)
-        {
-            Write(con.Left);
-            Write(con.Operator switch
-            {
-                LogicalOperator.And => " AND",
-                LogicalOperator.Or => " OR",
-                _ => throw new NotImplementedException($"Operator {con.Operator} is not implemented.")
-            });
-            WriteLine();
-            Write(con.Right);
-        }
+    }
 
-        void Write(SelectProjection selectProjection)
+    protected virtual void Write(LogicalCondition con)
+    {
+        Write(con.Left);
+        Write(con.Operator switch
         {
-            Write(selectProjection.Expression);
-            if (selectProjection.Alias is not null && selectProjection.IsSynthetic == false)
-            {
-                Write(" AS ");
-                Write(QuoteIdentifierPartIfNeeded(selectProjection.Alias));
-            }
-        }
+            LogicalOperator.And => " AND",
+            LogicalOperator.Or => " OR",
+            _ => throw new NotImplementedException($"Operator {con.Operator} is not implemented.")
+        });
+        WriteLine();
+        Write(con.Right);
+    }
 
-        private int indentLevel = 0;
-        private void Indent()
+    protected virtual void Write(SelectProjection selectProjection)
+    {
+        Write(selectProjection.Expression);
+        if (selectProjection.Alias is not null && selectProjection.IsSynthetic == false)
         {
-            indentLevel++;
-        }
-        private void Outdent()
-        {
-            indentLevel--;
-        }
-
-        private void WriteLine()
-        {
-            _sb.AppendLine();
-            for (int i = 0; i < indentLevel; i++)
-            {
-                _sb.Append("    "); // Assuming 4 spaces per indent level
-            }
-        }
-
-        private void Write(string value)
-        {
-            _sb.Append(value);
-        }
-
-        public override string ToString()
-        {
-            return _sb.ToString();
+            Write(" AS ");
+            Write(QuoteIdentifierPartIfNeeded(selectProjection.Alias));
         }
     }
 }

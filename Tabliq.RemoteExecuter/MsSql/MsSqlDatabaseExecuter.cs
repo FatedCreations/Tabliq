@@ -1,6 +1,4 @@
 ﻿using Tabliq.Sql.Ast;
-using Tabliq.Sql.Parsing;
-using Tabliq.Sql.Printer;
 
 namespace Tabliq.RemoteExecuter.MsSql;
 
@@ -13,13 +11,20 @@ public class MsSqlDatabaseExecuter : IDatabaseExecuter
 
     public string ConnectionString { get; set; }
 
-    public async Task<ExecutionResult> ExecuteAsync(SqlScript sqlScript, IDictionary<string, object?>? paramaters, CancellationToken cancellationToken)
+    public static string GenerateSqlQuery(SqlScript script)
     {
-        var parsed = RewriteForMsSqlServer.Instance.Execute(sqlScript);
+        var parsed = RewriteForMsSqlServer.Instance.Execute(script);
 
         parsed.ThrowIfInvalid();
 
-        var sql = SqlWriter.ToSql(parsed.Script);
+        var sql = new MsSqlServerWriter().ToSql(parsed.Script);
+
+        return sql;
+    }
+
+    public async Task<ExecutionResult> ExecuteAsync(SqlScript sqlScript, IDictionary<string, object?>? paramaters, CancellationToken cancellationToken)
+    {
+        var sql = GenerateSqlQuery(sqlScript);
 
         await using var con = new Microsoft.Data.SqlClient.SqlConnection(ConnectionString);
         await using var cmd = con.CreateCommand();

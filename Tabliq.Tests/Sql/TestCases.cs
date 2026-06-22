@@ -55,7 +55,7 @@ public class TestCases
             """,
             """
             SELECT
-                CONVERT(date, DATEFROMPARTS(YEAR(SE_CRE), MONTH(SE_CRE), 1)) AS month,
+                CONVERT([date], DATEFROMPARTS(YEAR(SE_CRE), MONTH(SE_CRE), 1)) AS month,
                 COUNT(*) AS incident_count
             FROM SE
             GROUP BY

@@ -280,7 +280,8 @@ public sealed class Lexer
             "NEXT" => SyntaxKind.NextKeyword,
             "FIRST" => SyntaxKind.FirstKeyword,
             "ONLY" => SyntaxKind.OnlyKeyword,
-
+            "MAX" => SyntaxKind.MaxKeyword,
+            
             // directions
             "DESC" => SyntaxKind.DescKeyword,
             "ASC" => SyntaxKind.AscKeyword,
@@ -304,6 +305,26 @@ public sealed class Lexer
             "RIGHT" => SyntaxKind.RightKeyword,
             "FULL" => SyntaxKind.FullKeyword,
             "CROSS" => SyntaxKind.CrossKeyword,
+
+            "CHARACTER" => SyntaxKind.CharacterDataType,
+            "BINARY" => SyntaxKind.BinaryDataType,
+            "BOOLEAN" => SyntaxKind.BooleanDataType,
+            "INTEGER" => SyntaxKind.IntegerDataType,
+            "INT" => SyntaxKind.IntegerDataType,
+            "SINGLE" => SyntaxKind.SingleDataType,
+            "FLOAT" => SyntaxKind.FloatDataType,
+            "DOUBLE" => SyntaxKind.DoubleDataType,
+            "REAL" => SyntaxKind.RealDataType,
+            "DECIMAL" => SyntaxKind.DecimalDataType,
+            "DATE" => SyntaxKind.DateDataType,
+            "TIME" => SyntaxKind.TimeDataType,
+            "TIMESTAMP" => SyntaxKind.TimestampDataType,
+            "DATETIME" => SyntaxKind.TimestampDataType,
+            "CHAR" => SyntaxKind.CharDataType,
+            "VARCHAR" => SyntaxKind.VarcharDataType,
+            "NCHAR" => SyntaxKind.NcharDataType,
+            "NVARCHAR" => SyntaxKind.NvarcharDataType,
+            "UNIQUEIDENTIFIER" => SyntaxKind.UniqueidentifierDataType,
 
             _ => SyntaxKind.IdentifierToken
         };

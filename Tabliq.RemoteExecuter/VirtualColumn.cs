@@ -7,13 +7,12 @@ namespace Tabliq.RemoteExecuter;
 
 public class VirtualColumn
 {
-    public VirtualColumn(string colName, string dataType, bool isNullable, string? remoteSql = null) // this should be a syntax node, but for now just a string
+    public VirtualColumn(string colName, string dataType, bool isNullable, string remoteSql) // this should be a syntax node, but for now just a string
     {
-        RemoteColumnName = remoteSql ?? SqlWriter.QuoteIdentifierPartIfNeeded(colName);
+        RemoteColumnName = remoteSql;
         ColumnName = colName;
         DataType = dataType;
         IsNullable = isNullable;
-
     }
 
     public ColumnSymbol AsSymbol()

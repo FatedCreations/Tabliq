@@ -79,10 +79,28 @@ namespace Tabliq.Sql.Rewriter
                 WindowSpecification s => Rewrite(s),
                 DistinctValueExpression s => Rewrite(s),
                 OffsetClause s => Rewrite(s),
+                LikeCondition s => Rewrite(s),
+                DataType s => Rewrite(s),
                 _ => throw new Exception($"Unhandled node type: {node?.GetType().Name}")
             };
             resultSyntaxNode.Span = node.Span;
             return resultSyntaxNode;
+        }
+
+        protected virtual DataType Rewrite(DataType node)
+            => node;
+
+        protected virtual LikeCondition Rewrite(LikeCondition node)
+        {
+            var rewritten = false;
+            var isNot = node.IsNot;
+            var Left = TryRewrite(node.Left, ref rewritten);
+            var Right = TryRewrite(node.Right, ref rewritten);
+            if (!rewritten)
+            {
+                return node;
+            }
+            return new LikeCondition(isNot, Left, Right).WithLocation(node.Span);
         }
 
         protected virtual DistinctValueExpression Rewrite(DistinctValueExpression node)
@@ -277,12 +295,12 @@ namespace Tabliq.Sql.Rewriter
         {
             var rewritten = false;
             var expression = TryRewrite(node.Expression, ref rewritten);
-            var alias = node.Alias;
+            var DataType = TryRewrite(node.DataType, ref rewritten);
             if (!rewritten)
             {
                 return node;
             }
-            return new AsExpression(expression, alias).WithLocation(node.Span);
+            return new AsExpression(expression, DataType).WithLocation(node.Span);
         }
 
         protected virtual FunctionCallExpression Rewrite(FunctionCallExpression node)

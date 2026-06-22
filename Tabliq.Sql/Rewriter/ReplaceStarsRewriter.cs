@@ -26,7 +26,6 @@ namespace Tabliq.Sql.Rewriter
 
         protected override SelectExpression Rewrite(SelectExpression node)
         {
-
             List<SelectProjection> projections = null!;
             var rewritten = false;
             if (node.Projections.Any(x => x.Expression is StarIdentifierExpression)) // can't be aliased, so we can just check the expression type

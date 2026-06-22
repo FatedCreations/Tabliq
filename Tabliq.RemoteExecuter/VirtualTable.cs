@@ -9,9 +9,11 @@ public class VirtualTable
 {
     public VirtualTable(string tableName, string? remoteSql = null)
     {
-        remoteSql ??= SqlWriter.QuoteIdentifierPartIfNeeded(tableName);
+        // use the correct sql writer??
         TableName = tableName;
 
+        // TODO move this block to some db specific sql generator
+        remoteSql ??= new SqlWriter().ToSql(new IdentifierExpression(tableName));
         if (remoteSql.Trim().StartsWith("SELECT", StringComparison.OrdinalIgnoreCase))
         {
             var parsed = Sql.Parsing.Parser.Parse(remoteSql); // validate the sql
@@ -40,6 +42,19 @@ public class VirtualTable
             RemoteSqlTableName = ((parsed.Script.Statements[0] as SelectStatement)?.SelectQuery.From?.TableReferences[0] as NamedTableReference)?.Identifer ?? throw new Exception($"Invalid remote SQL: {remoteSql}");
         }
     }
+
+    public VirtualTable(string tableName, SelectExpression selectExpression)
+    {
+        TableName = tableName;
+        RemoteSql = selectExpression;
+    }
+
+    public VirtualTable(string tableName, IdentifierExpression remoteSqlTableName)
+    {
+        TableName = tableName;
+        RemoteSqlTableName = remoteSqlTableName;
+    }
+
     public IdentifierExpression? RemoteSqlTableName { get; }
 
     public SelectExpression? RemoteSql { get; }

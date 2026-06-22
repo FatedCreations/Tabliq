@@ -20,7 +20,7 @@ public class WriterTests
             FROM Users
             WHERE a = b
             """,
-            SqlWriter.ToSql(tree.Script));
+            new SqlWriter().ToSql(tree.Script));
     }
 
     [Fact]
@@ -36,7 +36,7 @@ public class WriterTests
                 cc < dd
             )
             """,
-            SqlWriter.ToSql(tree.Script));
+            new SqlWriter().ToSql(tree.Script));
     }
 }
 

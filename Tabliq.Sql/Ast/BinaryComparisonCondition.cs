@@ -37,7 +37,5 @@ public enum BinaryCompararisonOperator
     LessThan,
     GreaterThan,
     LessThanOrEqual,
-    GreaterThanOrEqual,
-
-    Like,
+    GreaterThanOrEqual
 }

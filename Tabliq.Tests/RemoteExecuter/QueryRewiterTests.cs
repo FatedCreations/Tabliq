@@ -37,11 +37,11 @@ public class QueryRewiterTests
             "SELECT CAST(\"Creation Date\" AS DATE) AS date, COUNT(*) AS count FROM \"TAC SRs\" GROUP BY CAST(\"Creation Date\" AS DATE) ORDER BY date",
             """
             SELECT
-                CAST([TAC SRs].SE_CRE AS DATE) AS date,
+                CAST([TAC SRs].SE_CRE AS DATE) AS [date],
                 COUNT(*) AS count
             FROM landscapeQuery_strategy_A.SE AS [TAC SRs]
             GROUP BY CAST([TAC SRs].SE_CRE AS DATE)
-            ORDER BY date
+            ORDER BY [date]
             """);
 
     [Fact]
@@ -395,6 +395,113 @@ public class QueryRewiterTests
             """,
             "UnexpectedToken: [344:9] : 'UNION' was unexpected");
 
+    [Fact]
+    public void Issue14()
+        => AssertExecuterSql
+            .WithParameters("selectedTech", "selectedFamily", "selectedStatus")
+            .Equal(
+            """
+            SELECT [Assigned Product Family], COUNT(*) AS SR_Count
+            FROM [TAC SRs]
+            WHERE (@selectedTech = 'All' OR [Assigned Technology] = @selectedTech)
+              AND (@selectedFamily = 'All' OR [Assigned Product Family] = @selectedFamily)
+              AND (@selectedStatus = 'All' OR [Incident Status] = @selectedStatus)
+            GROUP BY [Assigned Product Family]
+            ORDER BY SR_Count DESC
+            OFFSET 0 ROWS FETCH NEXT 10 ROWS ONLY
+            """,
+            """
+            SELECT
+                [TAC SRs].SE_IGN AS [Assigned Product Family],
+                COUNT(*) AS SR_Count
+            FROM landscapeQuery_strategy_A.SE AS [TAC SRs]
+            WHERE
+                (
+                    @selectedTech = 'All' OR
+                    [TAC SRs].SE_ASS = @selectedTech
+                ) AND
+                (
+                    @selectedFamily = 'All' OR
+                    [TAC SRs].SE_IGN = @selectedFamily
+                ) AND
+                (
+                    @selectedStatus = 'All' OR
+                    [TAC SRs].SE_NCI = @selectedStatus
+                )
+            GROUP BY [TAC SRs].SE_IGN
+            ORDER BY SR_Count DESC OFFSET 0 ROWS FETCH NEXT 10 ROWS ONLY
+            """);
+    [Fact]
+    public void Issue15()
+        => AssertExecuterSql
+            .WithParameters("tech", "family", "status")
+            .Equal(
+            """
+               SELECT
+               COUNT(*) as open 
+               FROM [TAC SRs] 
+               WHERE (
+                [Incident Status] NOT LIKE 'Closed%' AND 
+                [Incident Status] NOT LIKE 'Solution Provided%'
+               ) AND (
+                 [Assigned Technology] = @tech OR 
+                 @tech IS NULL
+               ) AND (
+                 [Assigned Product Family] = @family OR 
+                 @family IS NULL
+               ) AND (
+                 [Incident Status] = @status OR @status IS NULL
+               )
+            """,
+            """
+            SELECT COUNT(*) AS [open]
+            FROM landscapeQuery_strategy_A.SE AS [TAC SRs]
+            WHERE
+                (
+                    [TAC SRs].SE_NCI NOT LIKE 'Closed%' AND
+                    [TAC SRs].SE_NCI NOT LIKE 'Solution Provided%'
+                ) AND
+                (
+                    [TAC SRs].SE_ASS = @tech OR
+                    @tech IS NULL
+                ) AND
+                (
+                    [TAC SRs].SE_IGN = @family OR
+                    @family IS NULL
+                ) AND
+                (
+                    [TAC SRs].SE_NCI = @status OR
+                    @status IS NULL
+                )
+            """); [Fact]
+    public void Issue16()
+        => AssertExecuterSql
+            .WithParameters("tech", "family", "status")
+            .Equal(
+            """
+              SELECT COUNT(*) as open FROM [TAC SRs] WHERE ([Incident Status] NOT LIKE 'Closed%' AND [Incident Status] NOT LIKE 'Solution Provided%') AND ([Assigned Technology] = @tech OR @tech IS NULL) AND ([Assigned Product Family] = @family OR @family IS NULL) AND ([Incident Status] = @status OR @status IS NULL)
+            """,
+            """
+            SELECT COUNT(*) AS [open]
+            FROM landscapeQuery_strategy_A.SE AS [TAC SRs]
+            WHERE
+                (
+                    [TAC SRs].SE_NCI NOT LIKE 'Closed%' AND
+                    [TAC SRs].SE_NCI NOT LIKE 'Solution Provided%'
+                ) AND
+                (
+                    [TAC SRs].SE_ASS = @tech OR
+                    @tech IS NULL
+                ) AND
+                (
+                    [TAC SRs].SE_IGN = @family OR
+                    @family IS NULL
+                ) AND
+                (
+                    [TAC SRs].SE_NCI = @status OR
+                    @status IS NULL
+                )
+            """);
 
     [Fact]
     public void OrderByColumnAlias()
@@ -412,10 +519,10 @@ public class QueryRewiterTests
             """,
             """
             SELECT
-                CONVERT(date, SE.SE_CRE) AS month,
+                CONVERT([date], SE.SE_CRE) AS month,
                 COUNT(*) AS incident_count
             FROM landscapeQuery_strategy_A.SE AS SE
-            GROUP BY CONVERT(date, SE.SE_CRE)
+            GROUP BY CONVERT([date], SE.SE_CRE)
             ORDER BY month
             """.Trim());
 
@@ -435,10 +542,10 @@ public class QueryRewiterTests
             """,
             """
             SELECT
-                CONVERT(date, SE.SE_CRE) AS month,
+                CONVERT([date], SE.SE_CRE) AS month,
                 COUNT(*) AS incident_count
             FROM landscapeQuery_strategy_A.SE AS SE
-            GROUP BY CONVERT(date, SE.SE_CRE)
+            GROUP BY CONVERT([date], SE.SE_CRE)
             ORDER BY 1
             """.Trim());
 

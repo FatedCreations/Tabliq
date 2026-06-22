@@ -1,4 +1,5 @@
 ﻿using Tabliq.RemoteExecuter;
+using Tabliq.RemoteExecuter.MsSql;
 using Tabliq.Sql.Ast;
 using Tabliq.Sql.Core;
 using Tabliq.Sql.Printer;
@@ -109,7 +110,9 @@ public class AssertExecuterSql
                     _ = ex.ExecuteAsync(underTest, _parameters, default).GetAwaiter().GetResult();
 
                     var cmd = Assert.Single(fakeDataExecuter.ExecutedCommands);
-                    var cmdSql = SqlWriter.ToSql(cmd.Sql);
+
+                    // run in the mssql generator to ensure that the generated SQL is valid and can be parsed
+                    var cmdSql = MsSqlDatabaseExecuter.GenerateSqlQuery(cmd.Sql);
 
                     // Normalize line endings to avoid platform-specific differences
                     var canon = cmdSql.Replace("\r\n", "\n").Trim();
