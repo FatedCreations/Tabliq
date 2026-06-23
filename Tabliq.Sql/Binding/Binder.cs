@@ -60,6 +60,19 @@ public class Binder
         BindChildren(sqlScript);
     }
 
+    void WithProjectionsInScope(Action action)
+    {
+        var prev = Current.CanBindToProjections;
+        Current.CanBindToProjections = true;
+        try
+        {
+            action();
+        }
+        finally
+        {
+            Current.CanBindToProjections = prev;
+        }
+    }
     void WithNewTable(string name, Action action)
     {
         var previous = Current;
@@ -132,14 +145,8 @@ public class Binder
 
     private void Bind(OrderByClause p)
     {
-        var parent = Current;
-        WithNewTable(string.Empty, () =>
+        WithProjectionsInScope(() =>
         {
-            Current.AddTableReference(parent.Build()!);
-            foreach (var r in parent.ReferencedTables)
-            {
-                Current.AddTableReference(r);
-            }
             BindChildren(p);
         });
     }
@@ -490,8 +497,18 @@ public class BindingScope
         return (null, null);
     }
 
+    // are we in an order by, group by, having scope?
+    public bool CanBindToProjections { get; set; } = false;
     internal IEnumerable<(TableSymbol? table, ColumnSymbol? col)> FindColumnsInScope(string colName)
     {
+        if (CanBindToProjections)
+        {
+            if (_columns.TryGetValue(colName, out var col))
+            {
+                yield return (Build(), col);
+                yield break;
+            }
+        }
         // we can look for the column in all referenced tables, and if found, return it
         foreach (var table in _referencedTables)
         {

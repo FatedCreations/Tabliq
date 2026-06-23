@@ -504,6 +504,36 @@ public class QueryRewiterTests
             """);
 
     [Fact]
+    public void Issue17()
+        => AssertExecuterSql
+            .WithParameters("start_date")
+        .Equal(
+            "SELECT [Close Date], AVG([FResolution Time (h)]) AS AvgResolution FROM [TAC SRs] WHERE [Close Date] >= @start_date GROUP BY [Close Date] ORDER BY [Close Date] ASC",
+            """
+            SELECT
+                [TAC SRs].SE_CLO AS [Close Date],
+                AVG([TAC SRs].SE_FSO) AS AvgResolution
+            FROM landscapeQuery_strategy_A.SE AS [TAC SRs]
+            WHERE [TAC SRs].SE_CLO >= @start_date
+            GROUP BY [TAC SRs].SE_CLO
+            ORDER BY [Close Date] ASC
+            """);
+    [Fact]
+    public void Issue18()
+        => AssertExecuterSql
+            .WithParameters("start_date")
+        .Equal(
+            "SELECT [Close Date], AVG([FResolution Time (h)]) AS AvgResolution FROM [TAC SRs] WHERE [Close Date] >= @start_date GROUP BY [Close Date] ORDER BY 1 ASC",
+            """
+            SELECT
+                [TAC SRs].SE_CLO AS [Close Date],
+                AVG([TAC SRs].SE_FSO) AS AvgResolution
+            FROM landscapeQuery_strategy_A.SE AS [TAC SRs]
+            WHERE [TAC SRs].SE_CLO >= @start_date
+            GROUP BY [TAC SRs].SE_CLO
+            ORDER BY 1 ASC
+            """);
+    [Fact]
     public void OrderByColumnAlias()
         => AssertExecuterSql
         .WithSchema(TestConfigSchema.SchemaVirtualSchema)
