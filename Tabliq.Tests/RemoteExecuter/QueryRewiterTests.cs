@@ -60,7 +60,16 @@ public class QueryRewiterTests
     [Fact]
     public void Issue4()
         => AssertExecuterSql.Equal(
-            "SELECT YEAR([Creation Date]) AS Year, DATEPART(quarter, [Creation Date]) AS QuarterNum, COUNT(*) AS TotalSRs, AVG([FResolution Time (h)]) AS AvgResolutionHours FROM [TAC SRs] GROUP BY YEAR([Creation Date]), DATEPART(quarter, [Creation Date]) ORDER BY YEAR([Creation Date]), DATEPART(quarter, [Creation Date])",
+            """
+            SELECT
+                YEAR([Creation Date]) AS Year,
+                DATEPART(quarter, [Creation Date]) AS QuarterNum,
+                COUNT(*) AS TotalSRs,
+                AVG([FResolution Time (h)]) AS AvgResolutionHours
+            FROM [TAC SRs]
+            GROUP BY YEAR([Creation Date]), DATEPART(quarter, [Creation Date])
+            ORDER BY YEAR([Creation Date]), DATEPART(quarter, [Creation Date])
+            """,
             """
             SELECT
                 YEAR([TAC SRs].SE_CRE) AS Year,
@@ -627,4 +636,25 @@ public class QueryRewiterTests
                 WHERE AAA = 'test'
             ) AS filter_Table
             """.Trim());
+
+    [Fact]
+    public void ColumnInvalidAsNotInGroupByOrAnAgrgegate()
+        => AssertExecuterSql
+        .Errors("""
+            WITH counted AS (
+              SELECT [Defect Reported Version] AS version,
+                     COUNT(*) AS cnt,
+                     ROW_NUMBER() OVER (ORDER BY COUNT(*) DESC) AS rn
+              FROM [Defects]
+              GROUP BY [Defect Reported Version]
+            )
+            SELECT CASE WHEN rn <= 10 THEN version ELSE 'Other' END AS version,
+                   SUM(cnt) AS cnt
+            FROM counted
+            GROUP BY CASE WHEN rn <= 10 THEN version ELSE 'Other' END
+            ORDER BY CASE WHEN version = 'Other' THEN 1 ELSE 0 END, cnt DESC
+            """,
+            """
+            InvalidColumnInOrderBy: [376:45] : Expression 'counted.version' in ORDER BY must be either an aggregate or a grouped column.
+            """);
 }

@@ -30,6 +30,11 @@ public abstract class SyntaxNode : IEquatable<SyntaxNode>
     {
         return $"{this.GetType().Name}: {new SqlWriter().ToSql(this)}";
     }
+
+    public override string ToString()
+    {
+        return new SqlWriter().ToSql(this);
+    }
 }
 
 internal static class SyntaxNodeExtensions

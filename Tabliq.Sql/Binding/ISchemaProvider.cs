@@ -29,7 +29,9 @@ public sealed record ParameterSymbol(string Name, string Type, bool IsLocal = fa
     public object? State { get; init; }
 }
 
-public sealed record FunctionSymbol(string Name,
+public sealed record FunctionSymbol(
+    string Name,
+    bool IsAggregate,
     IReadOnlyList<FunctionArgumentSymbol> Arguments,
     FunctionArgumentSymbol? ParamsArgument = null, // for additional params, like in a variadic function (i.e. Concat)
     bool IsLocal = false)

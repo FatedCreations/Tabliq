@@ -11,6 +11,7 @@ using Tabliq.Sql.Core;
 using Tabliq.Sql.Diagnostics;
 using Tabliq.Sql.Lexing;
 using Tabliq.Sql.Parsing;
+using Tabliq.Sql.Printer;
 
 namespace Tabliq.Sql.Binding;
 
@@ -60,17 +61,45 @@ public class Binder
         BindChildren(sqlScript);
     }
 
-    void WithProjectionsInScope(Action action)
+    void InsideOrderBy(Action action)
     {
-        var prev = Current.CanBindToProjections;
-        Current.CanBindToProjections = true;
+        var prev = Current.InsideOrderBy;
+        Current.InsideOrderBy = true;
         try
         {
             action();
         }
         finally
         {
-            Current.CanBindToProjections = prev;
+            Current.InsideOrderBy = prev;
+        }
+    }
+    void InsideGroupBy(Action action)
+    {
+        Current.HasGroupBy = true;
+        var prev = Current.InsideGroupBy;
+        Current.InsideGroupBy = true;
+        try
+        {
+            action();
+        }
+        finally
+        {
+            Current.InsideGroupBy = prev;
+        }
+    }
+    void InsideAggregate(Action action)
+    {
+        Current.HasAggregates = true;
+        var prev = Current.InsideAggregate;
+        Current.InsideAggregate = true;
+        try
+        {
+            action();
+        }
+        finally
+        {
+            Current.InsideAggregate = prev;
         }
     }
     void WithNewTable(string name, Action action)
@@ -137,15 +166,178 @@ public class Binder
             case OrderByClause OrderByClause:
                 Bind(OrderByClause);
                 break;
+            case GroupByClause GroupByClause:
+                Bind(GroupByClause);
+                break;
+            case OrderByEntry OrderByEntry:
+                Bind(OrderByEntry);
+                break;
             default:
                 BindChildren(node);
                 break;
         }
     }
 
+    private void Bind(GroupByClause p)
+    {
+        // capture all columns in the groupby clause (excluding those in aggregate functions)
+        InsideGroupBy(() =>
+        {
+            foreach (var c in p.Entries)
+            {
+                Bind(c);
+                Current.AddColumnGrouping(c);
+            }
+        });
+    }
+
+    private void Bind(OrderByEntry e)
+    {
+        // Allow positional ORDER BY (numeric literal)
+        if (e.Expression is LiteralExpression lit && lit.Value is long)
+        {
+            return;
+        }
+
+        if (e.Expression is IdentifierExpression idExp)
+        {
+            if (idExp.IdentifierParts.Count == 1)
+            {
+                var binding = Current.FindByAlias(idExp.Column);
+                if (binding is not null)
+                {
+                    idExp.Binding = binding;
+                }
+            }
+        }
+
+        Bind(e.Expression);
+
+        // only needed if we every called an aggregate function or we hit a groupby clause
+        if (Current.HasAggregates || Current.HasGroupBy)
+        {
+            // For other expressions, allow them only if they contain an aggregate function
+            if (!ExpressionValidForOrderBy(e.Expression, out var exp))
+            {
+                if (exp.Binding is not null)
+                {
+                    Diagnostics.Report("InvalidColumnInOrderBy",
+                        $"Expression '{exp.Binding.TableSymbol.Name}.{exp.Binding.ColumnSymbol.Name}' in ORDER BY must be either an aggregate or a grouped column.",
+                        e.Expression);
+                }
+                else
+                {
+                    Diagnostics.Report("InvalidColumnInOrderBy",
+                        $"Expression '{exp}' in ORDER BY must be either an aggregate or a grouped column.",
+                        e.Expression);
+                }
+            }
+        }
+    }
+
+    private bool ExpressionValidForOrderBy(SyntaxNode node, out IdentifierExpression? invalidExpressionResult)
+    {
+        IdentifierExpression? invalidExpression = null;
+        bool foundAggregate = false;
+
+        // DFS that validates columns are grouped and detects aggregates
+        bool Validate(SyntaxNode n)
+        {
+            if (n is Expression ex)
+            {
+                if (Current.IsColumnInGroupBy(ex))
+                {
+                    return true;
+                }
+            }
+
+            if (n is AsExpression asExpression)
+            {
+                return Validate(asExpression.Expression);
+            }
+
+            if (n is ValueFromExpression vf)
+            {
+                return Validate(vf.Expression);
+            }
+
+            if (n is FunctionCallExpression fn)
+            {
+
+                if (fn.Binding?.IsAggregate == true)
+                {
+                    foundAggregate = true;
+                    return true;
+                }
+                else
+                {
+                    for (var i = 0; i < fn.Arguments.Count; i++)
+                    {
+                        FunctionArgumentSymbol? argumentDef = null;
+                        if (fn.Binding is not null)
+                        {
+                            if (fn.Binding.Arguments.Count > i)
+                            {
+                                argumentDef = fn.Binding.Arguments[i];
+                            }
+                            else
+                            {
+                                argumentDef = fn.Binding.ParamsArgument;
+                            }
+                        }
+
+                        if (argumentDef is not null && argumentDef.BinderHandling == BinderHandling.Skip)
+                        {
+                            //skip binding
+                            continue;
+                        }
+
+                        if (!Validate(fn.Arguments[i]))
+                        {
+                            return false;
+                        }
+                    }
+                }
+
+                return true;
+            }
+
+            if (n is IdentifierExpression id)
+            {
+                // If identifier is an alias to another expression, validate that expression instead
+                if (id.Binding?.Expression is not null)
+                {
+                    return Validate(id.Binding.Expression);
+                }
+
+                // Unbound identifier or something else is invalid for grouping rules
+                invalidExpression = id;
+                return false;
+            }
+
+            foreach (var child in n.GetChildren())
+            {
+                if (!Validate(child))
+                    return false;
+            }
+
+            return true;
+        }
+
+        var ok = Validate(node);
+        if (!ok)
+        {
+            invalidExpressionResult = invalidExpression;
+            return false;
+        }
+
+        invalidExpressionResult = null;
+        return true;
+    }
+
     private void Bind(OrderByClause p)
     {
-        WithProjectionsInScope(() =>
+        InsideOrderBy(() =>
         {
             BindChildren(p);
         });
@@ -162,95 +354,146 @@ public class Binder
             return;
         }
 
-        var countOfRequired = def.Arguments.Count(a => !a.Optional);
-
-        if (p.Arguments.Count < countOfRequired)
+        InsideAggregate(() =>
         {
-            Diagnostics.Report("InvalidArgumentCount", $"Function '{p.FunctionName}' requires at least {countOfRequired} arguments", p.Span);
-            return;
-        }
 
-        for (var i = 0; i < p.Arguments.Count; i++)
-        {
-            var argumentDef = def.Arguments.Count > i ? def.Arguments[i] : def.ParamsArgument;
-            if (argumentDef is null)
+            var countOfRequired = def.Arguments.Count(a => !a.Optional);
+
+            if (p.Arguments.Count < countOfRequired)
             {
                 Diagnostics.Report("InvalidArgumentCount", $"Function '{p.FunctionName}' requires at least {countOfRequired} arguments", p.Span);
+                return;
             }
-            else
+
+            for (var i = 0; i < p.Arguments.Count; i++)
             {
-                if (argumentDef.RequiredType is not null)
+                var argumentDef = def.Arguments.Count > i ? def.Arguments[i] : def.ParamsArgument;
+                if (argumentDef is null)
                 {
-                    if (!p.Arguments[i].GetType().IsAssignableTo(argumentDef.RequiredType))
+                    Diagnostics.Report("InvalidArgumentCount", $"Function '{p.FunctionName}' requires at least {countOfRequired} arguments", p.Span);
+                }
+                else
+                {
+                    if (argumentDef.RequiredType is not null)
                     {
-                        Diagnostics.Report("InvalidArgumentType", $"Function '{p.FunctionName}' argument '{argumentDef.Name}' requires type '{argumentDef.RequiredType.Name}'", p.Arguments[i].Span);
+                        if (!p.Arguments[i].GetType().IsAssignableTo(argumentDef.RequiredType))
+                        {
+                            Diagnostics.Report("InvalidArgumentType", $"Function '{p.FunctionName}' argument '{argumentDef.Name}' requires type '{argumentDef.RequiredType.Name}'", p.Arguments[i].Span);
+                        }
+                    }
+
+                    if (argumentDef.BinderHandling == BinderHandling.Skip)
+                    {
+                        //skip binding
+                        continue;
                     }
                 }
 
-                if (argumentDef.BinderHandling == BinderHandling.Skip)
-                {
-                    //skip binding
-                    continue;
-                }
+                Bind(p.Arguments[i]);
             }
-
-            Bind(p.Arguments[i]);
-        }
+        });
     }
     private void Bind(SelectProjection p)
     {
         BindChildren(p);
         if (!string.IsNullOrEmpty(p.Alias))
         {
-            Current.AddColumn(p.Alias);
+            Current.AddColumn(p.Alias, p.Expression);
         }
     }
 
     private void Bind(IdentifierExpression p)
     {
-        string columName = p.Column;
-        string? tableName = null;
-        if (p.IdentifierParts.Count == 2)
+        Expression expressionToValidate = p;
+        if (p.Binding is null)
         {
-            tableName = p.IdentifierParts[0];
-            var (table, col) = Current.FindColumn(tableName, columName);
-            if (table is null || col is null)
+            string columName = p.Column;
+            string? tableName = null;
+            if (p.IdentifierParts.Count == 2)
             {
-                if (table is null)
+                tableName = p.IdentifierParts[0];
+                var (table, col) = Current.FindColumn(tableName, columName);
+                if (table is null || col is null)
                 {
-                    Diagnostics.Report("TableNotFound", $"Table '{tableName}' not found in the current scope", p.Span);
+                    if (table is null)
+                    {
+                        Diagnostics.Report("TableNotFound", $"Table '{tableName}' not found in the current scope", p.Span);
+                    }
+                    else
+                    {
+                        Diagnostics.Report("ColumnNotFound", $"Column '{columName}' not found in table '{table.Name}'", p.Span);
+                    }
+                    p.Binding = ColumnBinding.Missing;
+                    return;
                 }
-                else
-                {
-                    Diagnostics.Report("ColumnNotFound", $"Column '{columName}' not found in table '{table.Name}'", p.Span);
-                }
+
+                p.Binding = new ColumnBinding(table, col);
+                return;
+            }
+            else if (p.IdentifierParts.Count > 2)
+            {
+                Diagnostics.Report("ColumnNotFound", "Only simple '[col]' or 'table.[col]' identifiers are supported for now", p.Span);
+                p.Binding = ColumnBinding.Missing;
                 return;
             }
 
-            p.Binding = new ColumnBinding(table, col);
-            return;
-        }
-        else if (p.IdentifierParts.Count > 2)
-        {
-            Diagnostics.Report("ColumnNotFound", "Only simple '[col]' or 'table.[col]' identifiers are supported for now", p.Span);
-            return;
-        }
+            // need to handle aliased columns too??
 
-        // need to handle aliased columns too??
+            var cols = Current.FindColumnsInScope(columName).ToList();
+            if (cols.Count == 0)
+            {
+                Diagnostics.Report("ColumnNotFound", $"Column '{columName}' not found in the current scope", p.Span);
+                p.Binding = ColumnBinding.Missing;
+                return;
+            }
+            else if (cols.Count > 1)
+            {
+                Diagnostics.Report("AmbiguousColumn", $"Column '{p}' is ambiguous in the current scope", p.Span);
+                p.Binding = ColumnBinding.Missing;
+                return;
+            }
 
-        var cols = Current.FindColumnsInScope(columName).ToList();
-        if (cols.Count == 0)
-        {
-            Diagnostics.Report("ColumnNotFound", $"Column '{columName}' not found in the current scope", p.Span);
-            return;
+            var (t, c) = cols[0];
+
+            var binding = new ColumnBinding(t, c, null);
+
+            p.Binding = binding;
         }
-        else if (cols.Count > 1)
-        {
-            Diagnostics.Report("AmbiguousColumn", $"Column '{columName}' is ambiguous in the current scope", p.Span);
-            return;
-        }
-        var (t, c) = cols[0];
-        p.Binding = new ColumnBinding(t, c);
+        //if (Current.InsideGroupBy)
+        //{
+        //    if (!Current.InsideAggregate)
+        //    {
+        //        if (p.Binding.Expression is not null)
+        //        {
+        //            Bind(p.Binding.Expression);
+        //        }
+        //        else
+        //        {
+        //            Current.AddColumnGrouping(p);
+        //        }
+        //    }
+        //}
+
+        //if (Current.InsideOrderBy)
+        //{
+        //    if (!Current.InsideAggregate)
+        //    {
+        //        if (p.Binding.Expression is not null) // i'm an alias to somthing else, process the referenced expression instead
+        //        {
+        //            Bind(p.Binding.Expression);
+        //        }
+        //        else
+        //        {
+        //            if (!Current.IsColumnInGroupBy(p.Binding))
+        //            {
+        //                // todo get this working, the logic is deep than it look on face value.
+
+        //                //Diagnostics.Report("InvalidColumnInOrderBy", $"Column \"{p}\" is invalid in the ORDER BY clause because it is not contained in either an aggregate function or the GROUP BY clause.", p.Span);
+        //            }
+        //        }
+        //    }
+        //}
+
         return;
     }
 
@@ -400,7 +643,7 @@ public class BindingScope
     private readonly Dictionary<string, TableSymbol> _tables = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, TableSymbol> _tablesInCatalog = new(StringComparer.OrdinalIgnoreCase);
     private readonly string _tableName;
-    private readonly Dictionary<string, ColumnSymbol> _columns = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, (ColumnSymbol column, Expression? expression)> _columns = new(StringComparer.OrdinalIgnoreCase);
 
     public BindingScope(string tableName, BindingScope parent)
     {
@@ -418,12 +661,22 @@ public class BindingScope
 
     public TableSymbol? Build()
     {
-        return new TableSymbol(_tableName ?? string.Empty, _columns.Values.ToList(), true);
+        return new TableSymbol(_tableName ?? string.Empty, _columns.Values.Select(x => new ColumnSymbol(x.column.Name, x.column.Type, x.column.IsLocal)).ToList(), true);
     }
 
-    public void AddColumn(string columnName)
+    private List<Expression> groupBys = new List<Expression>();
+    public void AddColumnGrouping(Expression binding)
     {
-        _columns[columnName] = new ColumnSymbol(columnName, string.Empty, true);
+        groupBys.Add(binding);
+    }
+    public bool IsColumnInGroupBy(Expression exp)
+    {
+        return groupBys.Any(x => x.Equals(exp));
+    }
+
+    public void AddColumn(string columnName, Expression? expression = null)
+    {
+        _columns[columnName] = (new ColumnSymbol(columnName, string.Empty, true), expression);
     }
 
     public void AddTableToCatalog(TableSymbol table)
@@ -498,17 +751,24 @@ public class BindingScope
     }
 
     // are we in an order by, group by, having scope?
-    public bool CanBindToProjections { get; set; } = false;
+    public bool InsideOrderBy { get; set; } = false;
+    public bool InsideAggregate { get; set; } = false;
+    public bool InsideGroupBy { get; set; } = false;
+    public bool HasGroupBy { get; internal set; }
+    public bool HasAggregates { get; internal set; }
+
+    internal ColumnBinding? FindByAlias(string colName)
+    {
+        if (_columns.TryGetValue(colName, out var col))
+        {
+            return new ColumnBinding(Build()!, col.column, col.expression);
+        }
+
+        return null;
+    }
+
     internal IEnumerable<(TableSymbol? table, ColumnSymbol? col)> FindColumnsInScope(string colName)
     {
-        if (CanBindToProjections)
-        {
-            if (_columns.TryGetValue(colName, out var col))
-            {
-                yield return (Build(), col);
-                yield break;
-            }
-        }
         // we can look for the column in all referenced tables, and if found, return it
         foreach (var table in _referencedTables)
         {
@@ -533,12 +793,18 @@ public class ParameterBinding
 
 public class ColumnBinding
 {
-    public ColumnBinding(TableSymbol tableSymbol, ColumnSymbol column)
+    public static ColumnBinding Missing = new ColumnBinding(new TableSymbol("", new List<ColumnSymbol>(), true), new ColumnSymbol("", string.Empty, true));
+
+    public ColumnBinding(TableSymbol tableSymbol, ColumnSymbol column, Expression? expression = null)
     {
         TableSymbol = tableSymbol;
         ColumnSymbol = column;
+        Expression = expression;
     }
 
+    public Expression? Expression { get; }
+
     public TableSymbol TableSymbol { get; }
+
     public ColumnSymbol ColumnSymbol { get; }
 }

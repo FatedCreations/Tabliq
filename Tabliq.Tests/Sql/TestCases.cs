@@ -134,16 +134,14 @@ public class TestCases
     public void ParseExpressionWithDataTypeKeywords()
         => AssertSql.Equal(
             """
-            SELECT Parse(SE_CRE as date) AS month, COUNT(*) AS incident_count FROM SE GROUP BY YEAR(SE_CRE), MONTH(SE_CRE) ORDER BY month
+            SELECT Parse(SE_CRE as date) AS month, COUNT(*) AS incident_count FROM SE GROUP BY PARSE(SE_CRE AS date) ORDER BY month
             """,
             """
             SELECT
                 PARSE(SE_CRE AS date) AS month,
                 COUNT(*) AS incident_count
             FROM SE
-            GROUP BY
-                YEAR(SE_CRE),
-                MONTH(SE_CRE)
+            GROUP BY PARSE(SE_CRE AS date)
             ORDER BY month
             """
             );

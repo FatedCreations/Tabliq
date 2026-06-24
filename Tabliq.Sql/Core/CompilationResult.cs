@@ -37,7 +37,6 @@ public sealed class CompilationResult
     }
 }
 
-
 public class CompilationDiagnosticsException : Exception
 {
     public IReadOnlyList<Diagnostic> Diagnostics { get; }
