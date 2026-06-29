@@ -7,7 +7,21 @@ namespace Tabliq.Tests.Sql;
 
 public class TestCases
 {
-   
+
+    [Fact]
+    public void Between ()
+        => AssertSql
+            .SkipBinder()
+            .Equal(
+                """
+                SELECT * FROM landscapeQuery_strategy_A.BE WHERE BEId between 100 and 200
+                """,
+                """
+                SELECT *
+                FROM landscapeQuery_strategy_A.BE
+                WHERE BEId BETWEEN 100 AND 200
+                """);
+
     [Fact]
     public void ComplexTableName()
         => AssertSql

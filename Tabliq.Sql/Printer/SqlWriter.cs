@@ -261,136 +261,119 @@ public class SqlWriter
 
     protected virtual void Write(SyntaxNode node)
     {
-        if (node is SqlScript sqlScript)
+        switch (node)
         {
-            Write(sqlScript);
-        }
-        else if (node is Statement statement)
-        {
-            Write(statement);
-        }
-        else if (node is SelectStatement selectStatement)
-        {
-            Write(selectStatement);
-        }
-        else if (node is CommonTableExpression commonTableExpression)
-        {
-            Write(commonTableExpression);
-        }
-        else if (node is SelectExpression selectExpression)
-        {
-            Write(selectExpression);
-        }
-        else if (node is FromClause fromClause)
-        {
-            Write(fromClause);
-        }
-        else if (node is SelectProjection selectProjection)
-        {
-            Write(selectProjection);
-        }
-        else if (node is NamedTableReference NamedTableReference)
-        {
-            Write(NamedTableReference);
-        }
-        else if (node is SelectTableReference SubqueryTableReference)
-        {
-            Write(SubqueryTableReference);
-        }
-        else if (node is IdentifierExpression identifierExpression)
-        {
-            Write(identifierExpression);
-        }
-        else if (node is StarIdentifierExpression StarIdentifierExpression)
-        {
-            Write(StarIdentifierExpression);
-        }
-
-        else if (node is BinaryComparisonCondition comparisonCondition)
-        {
-            Write(comparisonCondition);
-        }
-        else if (node is BracketedCondition BracketedCondition)
-        {
-            Write(BracketedCondition);
-        }
-        else if (node is LogicalCondition LogicalCondition)
-        {
-            Write(LogicalCondition);
-        }
-        else if (node is FunctionCallExpression FunctionCallExpression)
-        {
-            Write(FunctionCallExpression);
-        }
-        else if (node is WindowSpecification WindowSpecification)
-        {
-            Write(WindowSpecification);
-        }
-        else if (node is OrderByClause OrderByClause)
-        {
-            Write(OrderByClause);
-        }
-        else if (node is IsNullCondition IsNullCondition)
-        {
-            Write(IsNullCondition);
-        }
-        else if (node is LiteralExpression LiteralExpression)
-        {
-            Write(LiteralExpression);
-        }
-        else if (node is UnionStatement UnionStatement)
-        {
-            Write(UnionStatement);
-        }
-        else if (node is ValueFromExpression ValueFromExpression)
-        {
-            Write(ValueFromExpression);
-        }
-        else if (node is CaseExpression CaseExpression)
-        {
-            Write(CaseExpression);
-        }
-        else if (node is BinaryOperatorExpression BinaryOperatorExpression)
-        {
-            Write(BinaryOperatorExpression);
-        }
-        else if (node is AsExpression AsExpression)
-        {
-            Write(AsExpression);
-        }
-        else if (node is GroupByClause GroupByClause)
-        {
-            Write(GroupByClause);
-        }
-        else if (node is ParameterIdentifier ParameterIdentifier)
-        {
-            Write(ParameterIdentifier);
-        }
-        else if (node is UnaryCondition UnaryCondition)
-        {
-            Write(UnaryCondition);
-        }
-        else if (node is ExistsCondition ExistsCondition)
-        {
-            Write(ExistsCondition);
-        }
-        else if (node is DistinctValueExpression DistinctValueExpression)
-        {
-            Write(DistinctValueExpression);
-        }
-        else if (node is LikeCondition LikeCondition)
-        {
-            Write(LikeCondition);
-        }
-        else if (node is DataType type)
-        {
-            Write(type);
-        }
-        else
-        {
-            throw new NotImplementedException($"Writing for {node.GetType().Name} is not implemented.");
+            case SqlScript sqlScript:
+                Write(sqlScript);
+                break;
+            case SelectStatement selectStatement:
+                Write(selectStatement);
+                break;
+            case CommonTableExpression commonTableExpression:
+                Write(commonTableExpression);
+                break;
+            case SelectExpression selectExpression:
+                Write(selectExpression);
+                break;
+            case FromClause fromClause:
+                Write(fromClause);
+                break;
+            case SelectProjection selectProjection:
+                Write(selectProjection);
+                break;
+            case NamedTableReference NamedTableReference:
+                Write(NamedTableReference);
+                break;
+            case SelectTableReference SubqueryTableReference:
+                Write(SubqueryTableReference);
+                break;
+            case IdentifierExpression identifierExpression:
+                Write(identifierExpression);
+                break;
+            case StarIdentifierExpression StarIdentifierExpression:
+                Write(StarIdentifierExpression);
+                break;
+            case BinaryComparisonCondition comparisonCondition:
+                Write(comparisonCondition);
+                break;
+            case BracketedCondition BracketedCondition:
+                Write(BracketedCondition);
+                break;
+            case LogicalCondition LogicalCondition:
+                Write(LogicalCondition);
+                break;
+            case FunctionCallExpression FunctionCallExpression:
+                Write(FunctionCallExpression);
+                break;
+            case WindowSpecification WindowSpecification:
+                Write(WindowSpecification);
+                break;
+            case OrderByClause OrderByClause:
+                Write(OrderByClause);
+                break;
+            case IsNullCondition IsNullCondition:
+                Write(IsNullCondition);
+                break;
+            case LiteralExpression LiteralExpression:
+                Write(LiteralExpression);
+                break;
+            case UnionStatement UnionStatement:
+                Write(UnionStatement);
+                break;
+            case ValueFromExpression ValueFromExpression:
+                Write(ValueFromExpression);
+                break;
+            case CaseExpression CaseExpression:
+                Write(CaseExpression);
+                break;
+            case BinaryOperatorExpression BinaryOperatorExpression:
+                Write(BinaryOperatorExpression);
+                break;
+            case AsExpression AsExpression:
+                Write(AsExpression);
+                break;
+            case GroupByClause GroupByClause:
+                Write(GroupByClause);
+                break;
+            case ParameterIdentifier ParameterIdentifier:
+                Write(ParameterIdentifier);
+                break;
+            case UnaryCondition UnaryCondition:
+                Write(UnaryCondition);
+                break;
+            case ExistsCondition ExistsCondition:
+                Write(ExistsCondition);
+                break;
+            case DistinctValueExpression DistinctValueExpression:
+                Write(DistinctValueExpression);
+                break;
+            case LikeCondition LikeCondition:
+                Write(LikeCondition);
+                break;
+            case DataType type:
+                Write(type);
+                break;
+            case BetweenCondition BetweenCondition:
+                Write(BetweenCondition);
+                break;
+            default:
+                throw new NotImplementedException($"Writing for {node.GetType().Name} is not implemented.");
         }
     }
+
+    protected virtual void Write(BetweenCondition val)
+    {
+        Write(val.Left);
+        if (val.IsNot)
+        {
+            Write(" NOT");
+        }
+        Write(" BETWEEN ");
+        Write(val.From);
+        Write(" AND ");
+        Write(val.To);
+    }
+
     protected virtual void Write(DataType val)
     {
         Write(val.Name);
@@ -401,6 +384,7 @@ public class SqlWriter
             Write(")");
         }
     }
+
     protected virtual void Write(DistinctValueExpression val)
     {
         Write(val.Distinctness switch
@@ -411,6 +395,7 @@ public class SqlWriter
         });
         Write(val.Expression);
     }
+
     protected virtual void Write(ExistsCondition existsCondition)
     {
         Write("EXISTS (");
@@ -422,6 +407,7 @@ public class SqlWriter
         WriteLine();
         Write(")");
     }
+
     protected virtual void Write(UnaryCondition unaryCondition)
     {
         Write(unaryCondition.Operator switch

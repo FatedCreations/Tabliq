@@ -541,6 +541,22 @@ public sealed class Parser
             return new BinaryComparisonCondition(left, op, right).WithLocation(loc);
         }
 
+        if (IsMatch([SyntaxKind.NotKeyword, SyntaxKind.BetweenKeyword ]) || IsMatch([SyntaxKind.BetweenKeyword]))
+        {
+            var isNot = TryMatchToken(SyntaxKind.NotKeyword);
+            MatchToken(SyntaxKind.BetweenKeyword);//between
+            var val1 = ParseExpression();
+            MatchToken(SyntaxKind.AndKeyword);
+            var val2 = ParseExpression();
+
+            // is not null
+            return new BetweenCondition(isNot,
+                left,
+                val1,
+                val2)
+                .WithLocation(loc);
+        }
+
         if (IsMatch([SyntaxKind.NotKeyword, SyntaxKind.LikeKeyword, SyntaxKind.StringToken]) || IsMatch([SyntaxKind.LikeKeyword, SyntaxKind.StringToken]))
         {
             var isNot = TryMatchToken(SyntaxKind.NotKeyword);

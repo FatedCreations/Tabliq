@@ -273,6 +273,7 @@ public sealed class Lexer
             "EXISTS" => SyntaxKind.ExistsKeyword,
             "ROW" => SyntaxKind.RowKeyword,
             "RANGE" => SyntaxKind.RangeKeyword,
+            "BETWEEN" => SyntaxKind.BetweenKeyword,
 
             "OFFSET" => SyntaxKind.OffsetKeyword,
             "ROWS" => SyntaxKind.RowsKeyword,

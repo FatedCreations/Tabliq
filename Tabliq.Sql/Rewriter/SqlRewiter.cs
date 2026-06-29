@@ -81,10 +81,25 @@ namespace Tabliq.Sql.Rewriter
                 OffsetClause s => Rewrite(s),
                 LikeCondition s => Rewrite(s),
                 DataType s => Rewrite(s),
+                BetweenCondition s => Rewrite(s),
                 _ => throw new Exception($"Unhandled node type: {node?.GetType().Name}")
             };
             resultSyntaxNode.Span = node.Span;
             return resultSyntaxNode;
+        }
+
+        protected virtual BetweenCondition Rewrite(BetweenCondition node)
+        {
+            var rewritten = false;
+            var isNot = node.IsNot;
+            var Left = TryRewrite(node.Left, ref rewritten);
+            var from = TryRewrite(node.From, ref rewritten);
+            var to = TryRewrite(node.To, ref rewritten);
+            if (!rewritten)
+            {
+                return node;
+            }
+            return new BetweenCondition(isNot, Left, from, to).WithLocation(node.Span);
         }
 
         protected virtual DataType Rewrite(DataType node)

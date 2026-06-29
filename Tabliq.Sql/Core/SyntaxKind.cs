@@ -95,4 +95,5 @@ public enum SyntaxKind
     PipePipeToken,
     ExistsKeyword,
     MaxKeyword,
+    BetweenKeyword,
 }
