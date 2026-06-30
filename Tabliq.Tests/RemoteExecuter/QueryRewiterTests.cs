@@ -588,6 +588,34 @@ public class QueryRewiterTests
             ORDER BY dh.EV_FRO
             """);
     [Fact]
+    public void Issue20()
+       => AssertExecuterSql
+       .Equal(
+           """
+             SELECT CAST(
+                YEAR([Historic Month]) AS varchar) + 
+                '-' + 
+                RIGHT(
+                    '0' + CAST(MONTH([Historic Month]) AS varchar)
+                    ,2) AS month
+                    ,
+                    COUNT(*) AS replacements FROM [Device History] WHERE [Operational Status] = 'Replaced' GROUP BY YEAR([Historic Month]), MONTH([Historic Month]) ORDER BY YEAR([Historic Month]), MONTH([Historic Month])
+           """,
+           """
+            SELECT
+                CAST(YEAR([Device History].EV_FRO) AS varchar) + '-' + RIGHT('0' + CAST(MONTH([Device History].EV_FRO) AS varchar), 2) AS month,
+                COUNT(*) AS replacements
+            FROM landscapeQuery_strategy_A.EV AS [Device History]
+            WHERE [Device History].EV_OPE = 'Replaced'
+            GROUP BY
+                YEAR([Device History].EV_FRO),
+                MONTH([Device History].EV_FRO)
+            ORDER BY
+                YEAR([Device History].EV_FRO),
+                MONTH([Device History].EV_FRO)
+            """);
+    
+    [Fact]
     public void OrderByColumnAlias()
         => AssertExecuterSql
         .WithSchema(TestConfigSchema.SchemaVirtualSchema)

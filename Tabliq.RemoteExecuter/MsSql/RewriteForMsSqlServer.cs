@@ -47,7 +47,7 @@ internal class RewriteForMsSqlServer : SqlRewiter
             }
         }
 
-        if (node is BinaryOperatorExpression op)
+        if (node is BinaryOperatorExpression op && op.Operator == BinaryOperator.Concatenate)
         {
             if (GetConcatinateExpressions(op).Any())
             {

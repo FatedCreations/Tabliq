@@ -541,7 +541,7 @@ public sealed class Parser
             return new BinaryComparisonCondition(left, op, right).WithLocation(loc);
         }
 
-        if (IsMatch([SyntaxKind.NotKeyword, SyntaxKind.BetweenKeyword ]) || IsMatch([SyntaxKind.BetweenKeyword]))
+        if (IsMatch([SyntaxKind.NotKeyword, SyntaxKind.BetweenKeyword]) || IsMatch([SyntaxKind.BetweenKeyword]))
         {
             var isNot = TryMatchToken(SyntaxKind.NotKeyword);
             MatchToken(SyntaxKind.BetweenKeyword);//between
@@ -706,6 +706,59 @@ public sealed class Parser
         return new DataType(dataType.Text, length).WithLocation(loc);
     }
 
+    private bool IsKeyword(SyntaxKind kind)
+        => kind is
+            SyntaxKind.SelectKeyword or
+            SyntaxKind.FromKeyword or
+            SyntaxKind.WhereKeyword or
+            SyntaxKind.WithKeyword or
+            SyntaxKind.AsKeyword or
+            SyntaxKind.IsKeyword or
+            SyntaxKind.InKeyword or
+            SyntaxKind.UnionKeyword or
+            SyntaxKind.AllKeyword or
+            SyntaxKind.DistinctKeyword or
+            SyntaxKind.TopKeyword or
+            SyntaxKind.JoinKeyword or
+            SyntaxKind.OnKeyword or
+            SyntaxKind.OverKeyword or
+            SyntaxKind.OrderKeyword or
+            SyntaxKind.PartitionKeyword or
+            SyntaxKind.ByKeyword or
+            SyntaxKind.GroupKeyword or
+            SyntaxKind.HavingKeyword or
+            SyntaxKind.RowKeyword or
+            SyntaxKind.RangeKeyword or
+            SyntaxKind.OffsetKeyword or
+            SyntaxKind.RowsKeyword or
+            SyntaxKind.FetchKeyword or
+            SyntaxKind.NextKeyword or
+            SyntaxKind.FirstKeyword or
+            SyntaxKind.OnlyKeyword or
+            SyntaxKind.AscKeyword or
+            SyntaxKind.DescKeyword or
+            SyntaxKind.InnerKeyword or
+            SyntaxKind.OuterKeyword or
+            SyntaxKind.LeftKeyword or
+            SyntaxKind.RightKeyword or
+            SyntaxKind.FullKeyword or
+            SyntaxKind.CrossKeyword or
+            SyntaxKind.OrKeyword or
+            SyntaxKind.AndKeyword or
+            SyntaxKind.NotKeyword or
+            SyntaxKind.NullKeyword or
+            SyntaxKind.LikeKeyword or
+            SyntaxKind.CaseKeyword or
+            SyntaxKind.WhenKeyword or
+            SyntaxKind.ThenKeyword or
+            SyntaxKind.ElseKeyword or
+            SyntaxKind.EndKeyword or
+            SyntaxKind.PipePipeToken or
+            SyntaxKind.ExistsKeyword or
+            SyntaxKind.MaxKeyword or
+            SyntaxKind.BetweenKeyword or
+            SyntaxKind.OfKeyword;
+
     private bool IsDataType(SyntaxKind kind)
         => kind is
             SyntaxKind.CharacterDataType or
@@ -725,6 +778,7 @@ public sealed class Parser
             SyntaxKind.NcharDataType or
             SyntaxKind.NvarcharDataType or
             SyntaxKind.UniqueidentifierDataType;
+
     private BinaryOperator GetBinaryOperator(SyntaxKind kind)
     {
         return kind switch
@@ -878,7 +932,7 @@ public sealed class Parser
     }
 
     private bool IsIdentifierPart(SyntaxKind kind)
-        => kind is SyntaxKind.IdentifierToken || IsDataType(kind);
+        => kind is SyntaxKind.IdentifierToken || IsDataType(kind) || IsKeyword(kind);
 
     private Expression ParseCaseExpression()
     {
