@@ -11,10 +11,6 @@ on:
   release:
     types: [created]
 
-concurrency:
-  group: ${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
   build:
     permissions:
