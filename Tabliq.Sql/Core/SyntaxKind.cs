@@ -96,4 +96,5 @@ public enum SyntaxKind
     ExistsKeyword,
     MaxKeyword,
     BetweenKeyword,
+    OfKeyword,
 }

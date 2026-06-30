@@ -542,6 +542,51 @@ public class QueryRewiterTests
             GROUP BY [TAC SRs].SE_CLO
             ORDER BY 1 ASC
             """);
+
+
+    [Fact]
+    public void Issue19()
+        => AssertExecuterSql
+            .WithSchema(TestConfigSchema.AnonVirtualSchema)
+        .Equal(
+            """
+            SELECT
+            dh.[Historic Month] AS month,
+            AVG(dh.[SRs as % of IB]) AS avg_srs_percent,
+            CASE WHEN isw.[SW Replaced Date] IS NOT NULL THEN 1 ELSE 0 END AS replaced_flag
+            FROM [All Components] ac
+            JOIN [EV_PH] evph ON ac._id = evph.PH_id
+            JOIN [Device History] dh ON evph.EV_id = dh._id
+            LEFT JOIN [OF_PH] ofph ON ac._id = ofph.PH_id
+            LEFT JOIN [Installed Software] isw ON ofph.OF_id = isw._id
+            WHERE ac.[Device SubType] LIKE '%Router%' GROUP BY dh.[Historic Month], CASE WHEN isw.[SW Replaced Date] IS NOT NULL THEN 1 ELSE 0 END ORDER BY dh.[Historic Month]
+            """,
+            """
+            SELECT
+                dh.EV_FRO AS month,
+                AVG(dh.EV_SRS) AS avg_srs_percent,
+                CASE
+                    WHEN isw.OF_SWR IS NOT NULL THEN 1
+                    ELSE 0
+                END AS replaced_flag
+            FROM landscapeQuery_strategy_A.PH AS ac
+            JOIN landscapeQuery_strategy_A.EV_PH AS evph
+                ON ac.PHId = evph.PHId
+            JOIN landscapeQuery_strategy_A.EV AS dh
+                ON evph.EVId = dh.EVId
+            LEFT JOIN landscapeQuery_strategy_A.OF_PH AS ofph
+                ON ac.PHId = ofph.PHId
+            LEFT JOIN landscapeQuery_strategy_A.[OF] AS isw
+                ON ofph.OFId = isw.OFId
+            WHERE ac.PH_DEV LIKE '%Router%'
+            GROUP BY
+                dh.EV_FRO,
+                CASE
+                    WHEN isw.OF_SWR IS NOT NULL THEN 1
+                    ELSE 0
+                END
+            ORDER BY dh.EV_FRO
+            """);
     [Fact]
     public void OrderByColumnAlias()
         => AssertExecuterSql

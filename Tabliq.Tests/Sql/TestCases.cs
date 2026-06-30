@@ -208,14 +208,14 @@ public class TestCases
     public void GroupByWithHaving()
         => AssertSql.Equal(
             """
-            SELECT OF_UID,COUNT(*) AS Orders,AVG(OF_SWR) avgSWR FROM OF GROUP BY OF_UID HAVING COUNT(*)>5
+            SELECT OF_UID,COUNT(*) AS Orders,AVG(OF_SWR) avgSWR FROM [OF] GROUP BY OF_UID HAVING COUNT(*)>5
             """,
             """
             SELECT
                 OF_UID,
                 COUNT(*) AS Orders,
                 AVG(OF_SWR) AS avgSWR
-            FROM OF
+            FROM [OF]
             GROUP BY OF_UID
             HAVING COUNT(*) > 5
             """);
@@ -224,14 +224,14 @@ public class TestCases
     public void WindowFunctionRowNumber()
         => AssertSql.Equal(
             """
-            SELECT OFId,OF_UID,ROW_NUMBER()OVER(PARTITION BY OF_UID ORDER BY OF_LAS DESC) rn FROM OF WHERE OF_LAS IS NOT NULL
+            SELECT OFId,OF_UID,ROW_NUMBER()OVER(PARTITION BY OF_UID ORDER BY OF_LAS DESC) rn FROM [OF] WHERE OF_LAS IS NOT NULL
             """,
             """
             SELECT
                 OFId,
                 OF_UID,
                 ROW_NUMBER() OVER (PARTITION BY OF_UID ORDER BY OF_LAS DESC) AS rn
-            FROM OF
+            FROM [OF]
             WHERE OF_LAS IS NOT NULL
             """);
 
@@ -253,7 +253,7 @@ public class TestCases
     public void CteSimple()
         => AssertSql.Equal(
             """
-            WITH recentOrders AS(SELECT OFId,OF_UID,OF_LAS FROM OF WHERE OF_LAS>='2023-01-01') SELECT * FROM recentOrders
+            WITH recentOrders AS(SELECT OFId,OF_UID,OF_LAS FROM [OF] WHERE OF_LAS>='2023-01-01') SELECT * FROM recentOrders
             """,
             """
             WITH recentOrders AS (
@@ -261,7 +261,7 @@ public class TestCases
                     OFId,
                     OF_UID,
                     OF_LAS
-                FROM OF
+                FROM [OF]
                 WHERE OF_LAS >= '2023-01-01'
             )
             SELECT *
@@ -297,7 +297,7 @@ public class TestCases
     public void SubqueryInSelect()
         => AssertSql.Equal(
             """
-            SELECT OFId,(SELECT COUNT(*) FROM OF_SO so WHERE so.OFId=OF.OFId) as SoCount FROM OF
+            SELECT OFId,(SELECT COUNT(*) FROM OF_SO so WHERE so.OFId=[OF].OFId) as SoCount FROM [OF]
             """,
             """
             SELECT
@@ -305,20 +305,20 @@ public class TestCases
                 (
                     SELECT COUNT(*)
                     FROM OF_SO AS so
-                    WHERE so.OFId = OF.OFId
+                    WHERE so.OFId = [OF].OFId
                 ) AS SoCount
-            FROM OF
+            FROM [OF]
             """);
 
     [Fact]
     public void CorrelatedSubqueryWhereExists()
         => AssertSql.Equal(
             """
-            SELECT * FROM OF o WHERE EXISTS(SELECT 1 FROM OF_SO so WHERE so.OFId=o.OFId AND so.SOId>100)
+            SELECT * FROM [OF] o WHERE EXISTS(SELECT 1 FROM OF_SO so WHERE so.OFId=o.OFId AND so.SOId>100)
             """,
             """
             SELECT *
-            FROM OF AS o
+            FROM [OF] AS o
             WHERE EXISTS (
                 SELECT 1
                 FROM OF_SO AS so
@@ -332,7 +332,7 @@ public class TestCases
     public void NestedSubqueries()
         => AssertSql.Equal(
             """
-            SELECT * FROM (SELECT OFId,OF_UID,(SELECT COUNT(*) FROM OF_SO so WHERE so.OFId=innerq.OFId) cnt FROM OF innerq) t WHERE cnt>0
+            SELECT * FROM (SELECT OFId,OF_UID,(SELECT COUNT(*) FROM OF_SO so WHERE so.OFId=innerq.OFId) cnt FROM [OF] innerq) t WHERE cnt>0
             """,
             """
             SELECT *
@@ -345,7 +345,7 @@ public class TestCases
                         FROM OF_SO AS so
                         WHERE so.OFId = innerq.OFId
                     ) AS cnt
-                FROM OF AS innerq
+                FROM [OF] AS innerq
             ) AS t
             WHERE cnt > 0
             """);
@@ -354,12 +354,12 @@ public class TestCases
     public void ParametersDeclared()
         => AssertSql.Equal(
             """
-            DECLARE @minId bigint = 100;SELECT * FROM OF WHERE OFId>@minId
+            DECLARE @minId bigint = 100;SELECT * FROM [OF] WHERE OFId>@minId
             """,
             """
             DECLARE @minId bigint = 100;
             SELECT *
-            FROM OF
+            FROM [OF]
             WHERE OFId > @minId
             """);
 
@@ -395,14 +395,14 @@ public class TestCases
     public void JoinMultipleTypes()
         => AssertSql.Equal(
             """
-            SELECT o.OFId,s.SOId,opr.PRId FROM OF o LEFT JOIN OF_SO os ON o.OFId=os.OFId LEFT JOIN SO s ON os.SOId=s.SOId LEFT JOIN OD_PR opr ON opr.PRId=s.SOId JOIN OD od ON od.ODId=opr.ODId
+            SELECT o.OFId,s.SOId,opr.PRId FROM [OF] o LEFT JOIN OF_SO os ON o.OFId=os.OFId LEFT JOIN SO s ON os.SOId=s.SOId LEFT JOIN OD_PR opr ON opr.PRId=s.SOId JOIN OD od ON od.ODId=opr.ODId
             """,
             """
             SELECT
                 o.OFId,
                 s.SOId,
                 opr.PRId
-            FROM OF AS o
+            FROM [OF] AS o
             LEFT JOIN OF_SO AS os
                 ON o.OFId = os.OFId
             LEFT JOIN SO AS s
@@ -417,11 +417,11 @@ public class TestCases
     public void JoinInner()
         => AssertSql.Equal(
             """
-            SELECT o.OFId FROM OF o INNER JOIN OF_SO os ON o.OFId=os.OFId
+            SELECT o.OFId FROM [OF] o INNER JOIN OF_SO os ON o.OFId=os.OFId
             """,
             """
             SELECT o.OFId
-            FROM OF AS o
+            FROM [OF] AS o
             INNER JOIN OF_SO AS os
                 ON o.OFId = os.OFId
             """);
@@ -430,11 +430,11 @@ public class TestCases
     public void JoinLeftOuter()
         => AssertSql.Equal(
             """
-            SELECT o.OFId FROM OF o LEFT OUTER JOIN OF_SO os ON o.OFId=os.OFId
+            SELECT o.OFId FROM [OF] o LEFT OUTER JOIN OF_SO os ON o.OFId=os.OFId
             """,
             """
             SELECT o.OFId
-            FROM OF AS o
+            FROM [OF] AS o
             LEFT OUTER JOIN OF_SO AS os
                 ON o.OFId = os.OFId
             """);
@@ -443,11 +443,11 @@ public class TestCases
     public void JoinRightOuter()
         => AssertSql.Equal(
             """
-            SELECT o.OFId FROM OF o RIGHT OUTER JOIN OF_SO os ON o.OFId=os.OFId
+            SELECT o.OFId FROM [OF] o RIGHT OUTER JOIN OF_SO os ON o.OFId=os.OFId
             """,
             """
             SELECT o.OFId
-            FROM OF AS o
+            FROM [OF] AS o
             RIGHT OUTER JOIN OF_SO AS os
                 ON o.OFId = os.OFId
             """);
@@ -456,11 +456,11 @@ public class TestCases
     public void JoinFullOuter()
         => AssertSql.Equal(
             """
-            SELECT o.OFId FROM OF o FULL OUTER JOIN OF_SO os ON o.OFId=os.OFId
+            SELECT o.OFId FROM [OF] o FULL OUTER JOIN OF_SO os ON o.OFId=os.OFId
             """,
             """
             SELECT o.OFId
-            FROM OF AS o
+            FROM [OF] AS o
             FULL OUTER JOIN OF_SO AS os
                 ON o.OFId = os.OFId
             """);
@@ -469,11 +469,11 @@ public class TestCases
     public void JoinCross()
         => AssertSql.Equal(
             """
-            SELECT o.OFId FROM OF o CROSS JOIN OF_SO os
+            SELECT o.OFId FROM [OF] o CROSS JOIN OF_SO os
             """,
             """
             SELECT o.OFId
-            FROM OF AS o
+            FROM [OF] AS o
             CROSS JOIN OF_SO AS os
             """);
 
@@ -617,12 +617,12 @@ public class TestCases
     public void UpdateFromWithJoin()
         => AssertSql.Equal(
             """
-            UPDATE o SET OF_TRA=s.SO_DAT FROM OF o JOIN OF_SO os ON o.OFId=os.OFId JOIN SO s ON os.SOId=s.SOId WHERE s.SO_DAT>'2022-01-01'
+            UPDATE o SET OF_TRA=s.SO_DAT FROM [OF] o JOIN OF_SO os ON o.OFId=os.OFId JOIN SO s ON os.SOId=s.SOId WHERE s.SO_DAT>'2022-01-01'
             """,
             """
             UPDATE o
             SET OF_TRA = s.SO_DAT
-            FROM OF AS o
+            FROM [OF] AS o
             JOIN OF_SO AS os
                 ON o.OFId = os.OFId
             JOIN SO AS s
@@ -634,11 +634,11 @@ public class TestCases
     public void DeleteWithWhereExists()
         => AssertSql.Equal(
             """
-            DELETE FROM OF WHERE NOT EXISTS(SELECT 1 FROM OF_SO so WHERE so.OFId=OF.OFId)
+            DELETE FROM [OF] WHERE NOT EXISTS(SELECT 1 FROM OF_SO so WHERE so.OFId=OF.OFId)
             """,
             """
             DELETE
-            FROM OF
+            FROM [OF]
             WHERE NOT EXISTS (
                 SELECT 1
                 FROM OF_SO AS so
@@ -668,14 +668,14 @@ public class TestCases
     public void GroupingSetsRollupCubeExamples()
         => AssertSql.Equal(
             """
-            SELECT OF_UID,OF_OFT,COUNT(*) FROM OF GROUP BY ROLLUP(OF_UID,OF_OFT)
+            SELECT OF_UID,OF_OFT,COUNT(*) FROM [OF] GROUP BY ROLLUP(OF_UID,OF_OFT)
             """,
             """
             SELECT
                 OF_UID,
                 OF_OFT,
                 COUNT(*)
-            FROM OF
+            FROM [OF]
             GROUP BY ROLLUP(OF_UID, OF_OFT)
             """);
 

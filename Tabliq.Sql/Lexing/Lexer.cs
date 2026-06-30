@@ -274,6 +274,7 @@ public sealed class Lexer
             "ROW" => SyntaxKind.RowKeyword,
             "RANGE" => SyntaxKind.RangeKeyword,
             "BETWEEN" => SyntaxKind.BetweenKeyword,
+            "OF" => SyntaxKind.OfKeyword,
 
             "OFFSET" => SyntaxKind.OffsetKeyword,
             "ROWS" => SyntaxKind.RowsKeyword,
