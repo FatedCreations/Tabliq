@@ -102,7 +102,7 @@ public class AssertSql
             {
                 Task.Run(() =>
                 {
-                    var tree = Parser.Parse(underTest);
+                    var tree = Parser.Parse(underTest.Replace("\r\n", "\n"));
                     var boundTree = Binder.Bind(tree, _databaseSchema);
 
                     foreach (var rewiter in _rewriters)
