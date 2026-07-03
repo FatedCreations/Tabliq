@@ -1,16 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.Text;
-using System.Text.RegularExpressions;
-using Tabliq.Sql.Ast;
-using Tabliq.Sql.Binding;
-using Tabliq.Sql.Parsing;
-using Tabliq.Sql.Printer;
-using Tabliq.Sql.Rewriter;
-
-namespace Tabliq.Tests.RemoteExecuter;
+﻿namespace Tabliq.Tests.RemoteExecuter;
 
 public class QueryRewiterTests
 {
@@ -614,7 +602,154 @@ public class QueryRewiterTests
                 YEAR([Device History].EV_FRO),
                 MONTH([Device History].EV_FRO)
             """);
-    
+    [Fact]
+    public void Issue21()
+       => AssertExecuterSql
+        .WithSchema(TestConfigSchema.AnonVirtualSchema)
+       .Equal(
+           """
+           SELECT [Approach], AVG([Current_Disruption_Index]) AS [Avg_Disruption] FROM (SELECT
+            AC.[_id],
+            AC.[Host Name],
+            AC.[Device SubType],
+            CASE 
+                WHEN AC.[Current EOX Milestone] IS NOT NULL AND (AC.[Decommissioned Date] IS NULL AND ISW.[SW Replaced Date] IS NULL) THEN 'EOX'
+                WHEN (AC.[Decommissioned Date] IS NOT NULL OR ISW.[SW Replaced Date] IS NOT NULL) THEN 'REPLACED'
+                ELSE 'UNKNOWN'
+            END AS [Approach],
+            PF.[Disruption Index] AS [Current_Disruption_Index]
+           FROM [All Components] AC
+           JOIN [Product IDs] PI ON AC.[_id] = PI.[_id]
+           JOIN [OD_PR] ON PI.[_id] = [OD_PR].[OD_id]
+           JOIN [Product Families] PF ON [OD_PR].[PR_id] = PF.[_id]
+           LEFT JOIN [OF_PH] ON AC.[_id] = [OF_PH].[PH_id]
+           LEFT JOIN [Installed Software] ISW ON [OF_PH].[OF_id] = ISW.[_id]
+           WHERE AC.[Device SubType] = 'router'
+               AND (AC.[Current EOX Milestone] IS NOT NULL OR AC.[Decommissioned Date] IS NOT NULL OR ISW.[SW Replaced Date] IS NOT NULL)
+           ) t
+           WHERE [Approach] IN ('EOX','REPLACED')
+           GROUP BY [Approach]
+           """,
+            """
+            SELECT
+                Approach,
+                AVG(Current_Disruption_Index) AS Avg_Disruption
+            FROM (
+                SELECT
+                    AC.PHId AS _id,
+                    AC.PH_HOS AS [Host Name],
+                    AC.PH_DEV AS [Device SubType],
+                    CASE
+                        WHEN AC.PH_CUR IS NOT NULL AND
+                        (
+                            AC.PH_DEC IS NULL AND
+                            ISW.OF_SWR IS NULL
+                        ) THEN 'EOX'
+                        WHEN (
+                            AC.PH_DEC IS NOT NULL OR
+                            ISW.OF_SWR IS NOT NULL
+                        ) THEN 'REPLACED'
+                        ELSE 'UNKNOWN'
+                    END AS Approach,
+                    PF.PR_DIS AS Current_Disruption_Index
+                FROM landscapeQuery_strategy_A.PH AS AC
+                JOIN landscapeQuery_strategy_A.OD AS PI
+                    ON AC.PHId = PI.ODId
+                JOIN landscapeQuery_strategy_A.OD_PR AS OD_PR
+                    ON PI.ODId = OD_PR.ODId
+                JOIN landscapeQuery_strategy_A.PR AS PF
+                    ON OD_PR.PRId = PF.PRId
+                LEFT JOIN landscapeQuery_strategy_A.OF_PH AS OF_PH
+                    ON AC.PHId = OF_PH.PHId
+                LEFT JOIN landscapeQuery_strategy_A.[OF] AS ISW
+                    ON OF_PH.OFId = ISW.OFId
+                WHERE
+                    AC.PH_DEV = 'router' AND
+                    (
+                        AC.PH_CUR IS NOT NULL OR
+                        AC.PH_DEC IS NOT NULL OR
+                        ISW.OF_SWR IS NOT NULL
+                    )
+            ) AS t
+            WHERE Approach IN ('EOX', 'REPLACED')
+            GROUP BY Approach
+            """);
+    [Fact]
+    public void Issue21_InSQL()
+       => AssertExecuterSql
+        .WithSchema(TestConfigSchema.AnonVirtualSchema)
+       .Equal(
+           """
+           SELECT [Approach], AVG([Current_Disruption_Index]) AS [Avg_Disruption] FROM (SELECT
+            AC.[_id],
+            AC.[Host Name],
+            AC.[Device SubType],
+            CASE 
+                WHEN AC.[Current EOX Milestone] IS NOT NULL AND (AC.[Decommissioned Date] IS NULL AND ISW.[SW Replaced Date] IS NULL) THEN 'EOX'
+                WHEN (AC.[Decommissioned Date] IS NOT NULL OR ISW.[SW Replaced Date] IS NOT NULL) THEN 'REPLACED'
+                ELSE 'UNKNOWN'
+            END AS [Approach],
+            PF.[Disruption Index] AS [Current_Disruption_Index]
+           FROM [All Components] AC
+           JOIN [Product IDs] PI ON AC.[_id] = PI.[_id]
+           JOIN [OD_PR] ON PI.[_id] = [OD_PR].[OD_id]
+           JOIN [Product Families] PF ON [OD_PR].[PR_id] = PF.[_id]
+           LEFT JOIN [OF_PH] ON AC.[_id] = [OF_PH].[PH_id]
+           LEFT JOIN [Installed Software] ISW ON [OF_PH].[OF_id] = ISW.[_id]
+           WHERE AC.[Device SubType] = 'router'
+               AND (AC.[Current EOX Milestone] IS NOT NULL OR AC.[Decommissioned Date] IS NOT NULL OR ISW.[SW Replaced Date] IS NOT NULL)
+           ) t
+           WHERE [Approach] IN (select distinct [Active Status] from [All Components])
+           GROUP BY [Approach]
+           """,
+            """
+            SELECT
+                Approach,
+                AVG(Current_Disruption_Index) AS Avg_Disruption
+            FROM (
+                SELECT
+                    AC.PHId AS _id,
+                    AC.PH_HOS AS [Host Name],
+                    AC.PH_DEV AS [Device SubType],
+                    CASE
+                        WHEN AC.PH_CUR IS NOT NULL AND
+                        (
+                            AC.PH_DEC IS NULL AND
+                            ISW.OF_SWR IS NULL
+                        ) THEN 'EOX'
+                        WHEN (
+                            AC.PH_DEC IS NOT NULL OR
+                            ISW.OF_SWR IS NOT NULL
+                        ) THEN 'REPLACED'
+                        ELSE 'UNKNOWN'
+                    END AS Approach,
+                    PF.PR_DIS AS Current_Disruption_Index
+                FROM landscapeQuery_strategy_A.PH AS AC
+                JOIN landscapeQuery_strategy_A.OD AS PI
+                    ON AC.PHId = PI.ODId
+                JOIN landscapeQuery_strategy_A.OD_PR AS OD_PR
+                    ON PI.ODId = OD_PR.ODId
+                JOIN landscapeQuery_strategy_A.PR AS PF
+                    ON OD_PR.PRId = PF.PRId
+                LEFT JOIN landscapeQuery_strategy_A.OF_PH AS OF_PH
+                    ON AC.PHId = OF_PH.PHId
+                LEFT JOIN landscapeQuery_strategy_A.[OF] AS ISW
+                    ON OF_PH.OFId = ISW.OFId
+                WHERE
+                    AC.PH_DEV = 'router' AND
+                    (
+                        AC.PH_CUR IS NOT NULL OR
+                        AC.PH_DEC IS NOT NULL OR
+                        ISW.OF_SWR IS NOT NULL
+                    )
+            ) AS t
+            WHERE Approach IN (
+                SELECT DISTINCT [All Components].PH_ACT AS [Active Status]
+                FROM landscapeQuery_strategy_A.PH AS [All Components]
+            )
+            GROUP BY Approach
+            """);
+
     [Fact]
     public void OrderByColumnAlias()
         => AssertExecuterSql

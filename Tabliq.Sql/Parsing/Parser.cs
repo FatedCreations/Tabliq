@@ -556,7 +556,25 @@ public sealed class Parser
                 val2)
                 .WithLocation(loc);
         }
+        if (IsMatch(SyntaxKind.NotKeyword, SyntaxKind.InKeyword) || IsMatch(SyntaxKind.InKeyword))
+        {
+            var isNot = TryMatchToken(SyntaxKind.NotKeyword);
+            MatchToken(SyntaxKind.InKeyword);//between
 
+            // this is eather a sub select in brackets or a comma seperated list
+
+            if (IsMatch(SyntaxKind.OpenParenToken, SyntaxKind.SelectKeyword))
+            {
+                var selectExpression = ParseSelectExpression();
+                selectExpression = new SelectExpression(true, selectExpression).WithLocation(loc);
+                return new InSelectCondition(isNot, left, selectExpression).WithLocation(loc);
+            }
+            else
+            {
+                var items = ParseBracketedList();
+                return new InListCondition(isNot, left, items).WithLocation(loc);
+            }
+        }
         if (IsMatch([SyntaxKind.NotKeyword, SyntaxKind.LikeKeyword, SyntaxKind.StringToken]) || IsMatch([SyntaxKind.LikeKeyword, SyntaxKind.StringToken]))
         {
             var isNot = TryMatchToken(SyntaxKind.NotKeyword);
@@ -584,6 +602,19 @@ public sealed class Parser
 
         _diagnostics.Report("ExpectedCondition", "Expected a condition operator (=, !=, <, >, <=, >=)", Current.Start, Current.Text.Length);
         return new BadCondition(loc.Span).WithLocation(loc);
+    }
+
+    public IEnumerable<Expression> ParseBracketedList()
+    {
+        List<Expression> items = new List<Expression>();
+        MatchToken(SyntaxKind.OpenParenToken);
+        do
+        {
+            var item = ParseExpression();
+            items.Add(item);
+        } while (TryMatchToken(SyntaxKind.CommaToken));
+        MatchToken(SyntaxKind.CloseParenToken);
+        return items;
     }
 
     private bool IsBinaryComparisonOperator(SyntaxKind kind)

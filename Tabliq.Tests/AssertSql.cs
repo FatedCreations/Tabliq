@@ -5,11 +5,14 @@ using Tabliq.Sql.Core;
 using Tabliq.Sql.Parsing;
 using Tabliq.Sql.Printer;
 using Tabliq.Sql.Rewriter;
+using Tabliq.Tests;
 
 public class AssertSql
 {
     public static Asserter WithSchema(ISchemaProvider provider)
         => new Asserter(provider);
+    public static Asserter WithSchema(Action<SchemaBuilder> builder)
+        => new Asserter().WithSchema(builder);
     public static Asserter WithParameters(IEnumerable<string> parameters)
         => new Asserter().WithParameters(parameters);
     public static Asserter WithParameters(params string[] parameters)
@@ -45,7 +48,12 @@ public class AssertSql
             _rewriters = rewriters ?? [];
             _databaseSchema = schema ?? TestSchema.DatabaseSchema;
         }
-
+        internal Asserter WithSchema(Action<SchemaBuilder> builder)
+        {
+            var newBuilder = new SchemaBuilder();
+            builder(newBuilder);
+            return new Asserter(new CombineSchema(newBuilder.Build(), this._databaseSchema));
+        }
         internal Asserter WithSchema(ISchemaProvider provider)
             => new Asserter(new CombineSchema(provider, this._databaseSchema));
 

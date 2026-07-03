@@ -356,9 +356,43 @@ public class SqlWriter
             case BetweenCondition BetweenCondition:
                 Write(BetweenCondition);
                 break;
+            case InSelectCondition InSelectCondition:
+                Write(InSelectCondition);
+                break;
+            case InListCondition InListCondition:
+                Write(InListCondition);
+                break;
             default:
                 throw new NotImplementedException($"Writing for {node.GetType().Name} is not implemented.");
         }
+    }
+
+    protected virtual void Write(InSelectCondition val)
+    {
+        Write(val.Left);
+        if (val.IsNot)
+        {
+            Write(" NOT");
+        }
+        Write(" IN ");
+        Write(val.Expression);
+    }
+
+    protected virtual void Write(InListCondition val)
+    {
+        Write(val.Left);
+        if (val.IsNot)
+        {
+            Write(" NOT");
+        }
+        Write(" IN (");
+        Write(val.Items.First());
+        foreach (var itm in val.Items.Skip(1))
+        {
+            Write(", ");
+            Write(itm);
+        }
+        Write(")");
     }
 
     protected virtual void Write(BetweenCondition val)

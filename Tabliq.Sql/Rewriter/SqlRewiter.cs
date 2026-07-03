@@ -82,10 +82,38 @@ namespace Tabliq.Sql.Rewriter
                 LikeCondition s => Rewrite(s),
                 DataType s => Rewrite(s),
                 BetweenCondition s => Rewrite(s),
+                InSelectCondition s => Rewrite(s),
+                InListCondition s => Rewrite(s),
                 _ => throw new Exception($"Unhandled node type: {node?.GetType().Name}")
             };
             resultSyntaxNode.Span = node.Span;
             return resultSyntaxNode;
+        }
+
+        protected virtual InListCondition Rewrite(InListCondition node)
+        {
+            var rewritten = false;
+            var isNot = node.IsNot;
+            var Left = TryRewrite(node.Left, ref rewritten);
+            var Items = TryRewrite(node.Items, ref rewritten);
+            if (!rewritten)
+            {
+                return node;
+            }
+            return new InListCondition(isNot, Left, Items).WithLocation(node.Span);
+        }
+
+        protected virtual InSelectCondition Rewrite(InSelectCondition node)
+        {
+            var rewritten = false;
+            var isNot = node.IsNot;
+            var Left = TryRewrite(node.Left, ref rewritten);
+            var Expression = TryRewrite(node.Expression, ref rewritten);
+            if (!rewritten)
+            {
+                return node;
+            }
+            return new InSelectCondition(isNot, Left, Expression).WithLocation(node.Span);
         }
 
         protected virtual BetweenCondition Rewrite(BetweenCondition node)
