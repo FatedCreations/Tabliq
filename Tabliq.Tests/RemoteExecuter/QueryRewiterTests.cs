@@ -881,6 +881,19 @@ public class QueryRewiterTests
     """);
 
     [Fact]
+    public void Issue24()
+       => AssertExecuterSql
+        .WithSchema(TestConfigSchema.AnonVirtualSchema)
+       .Errors(
+        """
+        SELECT EXTRACT(YEAR FROM dh.[Historic Month]) AS year, EXTRACT(MONTH FROM dh.[Historic Month]) AS month, SUM(dh.[Total SRs on active Devices]) AS service_requests, CASE WHEN ac.[Decommissioned Date] IS NULL THEN 'Nearing EOL' ELSE 'Replaced' END AS status FROM [Device History] dh JOIN [All Components] ac ON dh.[Unique Key]=ac.[Unique Key] WHERE ac.[Device SubType] LIKE '%router%' AND dh.[Historic Month] >= DATEADD(month,-24, CURRENT_DATE) GROUP BY year, month, status ORDER BY year, month, status
+        """,
+        "ColumnNotFound: [452:4] : Column 'year' not found in the current scope",
+        "ColumnNotFound: [458:5] : Column 'month' not found in the current scope",
+        "ColumnNotFound: [465:6] : Column 'status' not found in the current scope"
+        );
+
+    [Fact]
     public void OrderByColumnAlias()
         => AssertExecuterSql
         .WithSchema(TestConfigSchema.SchemaVirtualSchema)

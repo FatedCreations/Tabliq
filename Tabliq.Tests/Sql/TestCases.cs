@@ -44,9 +44,7 @@ public class TestCases
                 FROM OD_PR
                 join OD on OD_PR.ODId = OD.ODId
             """,
-            [
-            "Column 'ODId' is ambiguous in the current scope"
-            ]);
+            "AmbiguousColumn: [13:4] : Column 'ODId' is ambiguous in the current scope");
     [Fact]
     public void OrderByAliasColumns()
         => AssertSql.Equal(
@@ -60,6 +58,17 @@ public class TestCases
             FROM SE
             ORDER BY d
             """);
+
+    [Fact]
+    public void GroupByAliasColumns()
+        => AssertSql.WithErrors (
+            """
+            SELECT SE_CRE AS d
+            FROM SE 
+            GROUP BY d
+            """,
+            "ColumnNotFound: [39:1] : Column 'd' not found in the current scope"
+            );
 
     [Fact]
     public void ConvertExpressionWithDataTypeKeywords()
@@ -387,9 +396,7 @@ public class TestCases
             """
             SELECT * FROM PH WHERE PH_SER=@series AND PH_LOG=1
             """,
-            [
-                "Parameter '@series' not provided"
-            ]);
+            "ParameterNotFound: [30:7] : Parameter '@series' not provided");
 
     [Fact]
     public void JoinMultipleTypes()

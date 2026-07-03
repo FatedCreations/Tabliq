@@ -30,8 +30,8 @@ public class AssertSql
     public static void Equal(string underTest, SyntaxNode expectedAst)
         => new Asserter().Equal(underTest, expectedAst);
 
-    public static void WithErrors(string underTest, List<string>? errors = null)
-        => new Asserter().WithErrors(underTest, errors ?? []);
+    public static void WithErrors(string underTest, params string[] errors)
+        => new Asserter().WithErrors(underTest, errors);
 
     internal static Asserter SkipBinder(bool skip = true)
         => new Asserter().SkipBinder(skip);
@@ -96,7 +96,7 @@ public class AssertSql
             return new Asserter(new CombineSchema(s, this._databaseSchema));
         }
 
-        public void WithErrors(string underTest, List<string> errors)
+        public void WithErrors(string underTest, params string[] errors)
         {
             try
             {
@@ -112,10 +112,20 @@ public class AssertSql
 
                     Assert.NotEmpty(boundTree.Diagnostics);
 
-                    Assert.All(errors, expectedError =>
-                    {
-                        Assert.Contains(boundTree.Diagnostics, d => d.Message == expectedError);
-                    });
+                    var messages = boundTree.Diagnostics.Select(x => $"{x.Id}: [{x.Start}:{x.Length}] : {x.Message}");
+
+                    Console.WriteLine("--- ASSERTSQL DIAGNOSTIC START ---");
+                    Console.WriteLine("EXPECTED (messages):");
+                    Console.WriteLine(string.Empty);
+                    Console.WriteLine(string.Join("\n", errors));
+                    Console.WriteLine("-----");
+                    Console.WriteLine("ACTUAL:");
+                    Console.WriteLine(string.Empty);
+                    Console.WriteLine(string.Join("\n", messages));
+                    Console.WriteLine("--- ASSERTSQL DIAGNOSTIC END ---");
+
+                    Assert.Equal(errors, messages);
+                    
                 }, new CancellationTokenSource(100).Token).GetAwaiter().GetResult();
             }
             catch (TaskCanceledException)
