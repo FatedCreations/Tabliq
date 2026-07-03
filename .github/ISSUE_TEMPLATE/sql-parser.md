@@ -2,7 +2,7 @@
 name: SQL Parser
 about: Issues with parsing/binding sql queries against a schema
 title: ''
-labels: ''
+labels: 'parser-bug'
 assignees: ''
 
 ---
