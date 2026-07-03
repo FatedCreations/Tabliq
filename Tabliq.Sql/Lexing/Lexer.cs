@@ -308,6 +308,10 @@ public sealed class Lexer
             "FULL" => SyntaxKind.FullKeyword,
             "CROSS" => SyntaxKind.CrossKeyword,
 
+            "CURRENT_TIMESTAMP" => SyntaxKind.CurrentTimestampKeyword,
+            "CURRENT_DATE" => SyntaxKind.CurrentDateKeyword,
+            "CURRENT_TIME" => SyntaxKind.CurrentTimeKeyword,
+
             "CHARACTER" => SyntaxKind.CharacterDataType,
             "BINARY" => SyntaxKind.BinaryDataType,
             "BOOLEAN" => SyntaxKind.BooleanDataType,
@@ -327,6 +331,8 @@ public sealed class Lexer
             "NCHAR" => SyntaxKind.NcharDataType,
             "NVARCHAR" => SyntaxKind.NvarcharDataType,
             "UNIQUEIDENTIFIER" => SyntaxKind.UniqueidentifierDataType,
+
+            
 
             _ => SyntaxKind.IdentifierToken
         };

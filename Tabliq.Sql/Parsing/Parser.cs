@@ -1018,6 +1018,30 @@ public sealed class Parser
             return new BracketedExpression(exp).WithLocation(loc);
         }
 
+        if (TryMatchToken(SyntaxKind.NullKeyword))
+        {
+            return new NullValue().WithLocation(loc);
+        }
+
+        if (TryMatchToken(SyntaxKind.CurrentDateKeyword))
+        {
+            return new CurrentDate().WithLocation(loc);
+        }
+        if (TryMatchToken(SyntaxKind.CurrentTimeKeyword))
+        {
+            return new CurrentTime().WithLocation(loc);
+        }
+
+        if (TryMatchToken(SyntaxKind.CurrentTimestampKeyword))
+        {
+            return new CurrentTimestamp().WithLocation(loc);
+        }
+
+        if (TryMatchToken(SyntaxKind.CurrentDateKeyword))
+        {
+            return new CurrentDate().WithLocation(loc);
+        }
+
         if (Current.Kind == SyntaxKind.ParameterToken)
         {
             var paramName = NextToken().Value as string;
@@ -1033,8 +1057,16 @@ public sealed class Parser
             return new LiteralExpression(stringToken.Value).WithLocation(loc);
         }
 
-        if (Current.Kind == SyntaxKind.NumberToken)
+        if (Current.Kind == SyntaxKind.NumberToken || IsMatch(SyntaxKind.MinusToken, SyntaxKind.NumberToken) || IsMatch(SyntaxKind.PlusToken, SyntaxKind.NumberToken))
         {
+            int ngtivness = 1;
+            if (Current.Kind != SyntaxKind.NumberToken)
+            {
+                if (NextToken().Kind == SyntaxKind.MinusToken)
+                {
+                    ngtivness = -1;
+                }
+            }
             var integerPart = (long)NextToken().Value!;
 
             if (IsMatch([SyntaxKind.DotToken, SyntaxKind.NumberToken]))
@@ -1043,10 +1075,10 @@ public sealed class Parser
                 var fractionalToken = MatchToken(SyntaxKind.NumberToken);
                 var fractionalPart = (long)fractionalToken.Value!;
                 var decimalValue = ((double)fractionalPart / Math.Pow(10, fractionalToken.Text.Length)) + integerPart;
-                return new LiteralExpression(decimalValue).WithLocation(loc);
+                return new LiteralExpression(decimalValue * ngtivness).WithLocation(loc);
             }
 
-            return new LiteralExpression(integerPart).WithLocation(loc);
+            return new LiteralExpression(integerPart * ngtivness).WithLocation(loc);
         }
 
         // handle all the other word based tokens as identifiers

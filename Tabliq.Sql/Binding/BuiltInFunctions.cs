@@ -19,6 +19,14 @@ public static class BuiltInFunctions
             ],
             new FunctionArgumentSymbol("argOthers")),
 
+        ["DATEADD"] = new FunctionSymbol(
+            "DATEADD",
+            IsAggregate: false,
+            [
+                new FunctionArgumentSymbol("datepart", BinderHandling: BinderHandling.Skip), // datepart symbol.
+                new FunctionArgumentSymbol("count"),
+                new FunctionArgumentSymbol("date") // date expression
+            ]),
         ["DATEPART"] = new FunctionSymbol(
             "DATEPART",
             IsAggregate: false,

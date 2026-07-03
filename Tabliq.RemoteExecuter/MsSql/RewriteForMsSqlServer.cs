@@ -28,6 +28,44 @@ internal class RewriteForMsSqlServer : SqlRewiter
 
     protected override SyntaxNode Rewrite(SyntaxNode node)
     {
+        if (node is CurrentTimestamp)
+        {
+            node = new FunctionCallExpression("GETDATE", [], null)
+            {
+                Span = node.Span,
+            };
+        }
+        else if (node is CurrentTime)
+        {
+            node = new FunctionCallExpression("CAST", [
+                new AsExpression(
+                    new FunctionCallExpression("GETDATE", [], null){
+                        Span = node.Span,
+                    },
+                    new DataType("TIME"){
+                        Span = node.Span,
+                    })
+                ], null)
+            {
+                Span = node.Span,
+            };
+        }
+        else if (node is CurrentDate)
+        {
+            node = new FunctionCallExpression("CAST", [
+                new AsExpression(
+                    new FunctionCallExpression("GETDATE", [], null){
+                        Span = node.Span,
+                    },
+                    new DataType("DATE"){
+                        Span = node.Span,
+                    })
+                ], null)
+            {
+                Span = node.Span,
+            };
+        }
+
         IEnumerable<Expression> GetConcatinateExpressions(Expression node)
         {
             if (node is BinaryOperatorExpression bin && bin.Operator == BinaryOperator.Concatenate)

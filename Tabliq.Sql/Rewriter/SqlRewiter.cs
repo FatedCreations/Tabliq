@@ -84,11 +84,23 @@ namespace Tabliq.Sql.Rewriter
                 BetweenCondition s => Rewrite(s),
                 InSelectCondition s => Rewrite(s),
                 InListCondition s => Rewrite(s),
+                CurrentDate s => Rewrite(s),
+                CurrentTimestamp s => Rewrite(s),
+                CurrentTime s => Rewrite(s),
+                NullValue s => Rewrite(s),
                 _ => throw new Exception($"Unhandled node type: {node?.GetType().Name}")
             };
             resultSyntaxNode.Span = node.Span;
             return resultSyntaxNode;
         }
+
+        protected virtual CurrentTime Rewrite(CurrentTime node) => node;
+
+        protected virtual CurrentDate Rewrite(CurrentDate node) => node;
+
+        protected virtual CurrentTimestamp Rewrite(CurrentTimestamp node) => node;
+
+        protected virtual NullValue Rewrite(NullValue node) => node;
 
         protected virtual InListCondition Rewrite(InListCondition node)
         {

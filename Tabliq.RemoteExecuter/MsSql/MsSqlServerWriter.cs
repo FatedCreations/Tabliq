@@ -14,5 +14,4 @@ internal class MsSqlServerWriter : SqlWriter
     {
         return base.RequiresQuotedIdentifier(name) || (QuotedIdentifiers.Contains(name, StringComparer.OrdinalIgnoreCase));
     }
-
 }

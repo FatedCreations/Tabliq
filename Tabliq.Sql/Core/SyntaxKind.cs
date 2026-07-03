@@ -97,4 +97,7 @@ public enum SyntaxKind
     MaxKeyword,
     BetweenKeyword,
     OfKeyword,
+    CurrentTimestampKeyword,
+    CurrentDateKeyword,
+    CurrentTimeKeyword,
 }

@@ -362,11 +362,42 @@ public class SqlWriter
             case InListCondition InListCondition:
                 Write(InListCondition);
                 break;
+            case CurrentDate CurrentDate:
+                Write(CurrentDate);
+                break;
+            case CurrentTimestamp CurrentTimestamp:
+                Write(CurrentTimestamp);
+                break;
+            case NullValue NullValue:
+                Write(NullValue);
+                break;
+            case CurrentTime CurrentTime:
+                Write(CurrentTime);
+                break;
             default:
                 throw new NotImplementedException($"Writing for {node.GetType().Name} is not implemented.");
         }
     }
 
+    protected virtual void Write(CurrentDate val)
+    {
+        Write("CURRENT_DATE");
+    }
+
+    protected virtual void Write(CurrentTimestamp val)
+    {
+        Write("CURRENT_TIMESTAMP");
+    }
+
+    protected virtual void Write(CurrentTime val)
+    {
+        Write("CURRENT_TIME");
+    }
+
+    protected virtual void Write(NullValue val)
+    {
+        Write("NULL");
+    }
     protected virtual void Write(InSelectCondition val)
     {
         Write(val.Left);

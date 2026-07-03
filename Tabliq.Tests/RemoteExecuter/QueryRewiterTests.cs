@@ -749,7 +749,58 @@ public class QueryRewiterTests
             )
             GROUP BY Approach
             """);
-
+    [Fact]
+    public void Issue22()
+       => AssertExecuterSql
+        .WithSchema(TestConfigSchema.AnonVirtualSchema)
+       .Equal(
+        """
+        SELECT
+            AC.[Serial Number],
+            AC.[Host Name],
+            AC.[Cost of Device],
+            AC.[Recommended PID (EoL)],
+            DS.[Historic Month],
+            DS.[Total SRs on active Devices],
+            DS.[SRs as % of IB],
+            DS.[PSIRT Count],
+            AC.[Unique Key],
+            SV.[Disruption Index] 
+        FROM [All Components] AC
+        INNER JOIN [Device History] DS ON AC.[Unique Key] = DS.[Unique Key]
+        LEFT JOIN [Software Versions] SV ON SV.[OS Type] = AC.[Device SubType]
+        WHERE (
+            AC.[Current EOX Milestone] = 'EoL' OR
+            AC.[Recommended PID (EoL)] IS NOT NULL OR
+            AC.[Decommissioned Date] IS NOT NULL
+        ) AND
+        DS.[Historic Month] >= DATEADD(year, -1, CURRENT_DATE)
+        """,
+        """
+        SELECT
+            AC.PH_SER AS [Serial Number],
+            AC.PH_HOS AS [Host Name],
+            AC.PH_NEW AS [Cost of Device],
+            AC.PH_REC AS [Recommended PID (EoL)],
+            DS.EV_FRO AS [Historic Month],
+            DS.EV_TOT AS [Total SRs on active Devices],
+            DS.EV_SRS AS [SRs as % of IB],
+            DS.EV_PSI AS [PSIRT Count],
+            AC.PH_UID AS [Unique Key],
+            SV.SO_DIS AS [Disruption Index]
+        FROM landscapeQuery_strategy_A.PH AS AC
+        INNER JOIN landscapeQuery_strategy_A.EV AS DS
+            ON AC.PH_UID = DS.EV_UID
+        LEFT JOIN landscapeQuery_strategy_A.SO AS SV
+            ON SV.SO_OST = AC.PH_DEV
+        WHERE
+            (
+                AC.PH_CUR = 'EoL' OR
+                AC.PH_REC IS NOT NULL OR
+                AC.PH_DEC IS NOT NULL
+            ) AND
+            DS.EV_FRO >= DATEADD(year, -1, CAST(GETDATE() AS DATE))
+        """);
     [Fact]
     public void OrderByColumnAlias()
         => AssertExecuterSql
