@@ -1013,7 +1013,7 @@ public sealed class Parser
             }
             // bracketed select expression
             NextToken(); // consume '('
-            var exp = ParsePrimaryExpression();
+            var exp = ParseExpression();
             MatchToken(SyntaxKind.CloseParenToken);
             return new BracketedExpression(exp).WithLocation(loc);
         }

@@ -45,6 +45,7 @@ namespace Tabliq.Sql.Rewriter
         {
             SyntaxNode resultSyntaxNode = node switch
             {
+                BracketedExpression s => Rewrite(s),
                 SqlScript s => Rewrite(s),
                 SelectStatement s => Rewrite(s),
                 SelectExpression s => Rewrite(s),
@@ -94,6 +95,16 @@ namespace Tabliq.Sql.Rewriter
             return resultSyntaxNode;
         }
 
+        protected virtual BracketedExpression Rewrite(BracketedExpression node){
+
+            var rewritten = false;
+            var Expression = TryRewrite(node.Expression, ref rewritten);
+            if (!rewritten)
+            {
+                return node;
+            }
+            return new BracketedExpression(Expression).WithLocation(node.Span);
+        }
         protected virtual CurrentTime Rewrite(CurrentTime node) => node;
 
         protected virtual CurrentDate Rewrite(CurrentDate node) => node;

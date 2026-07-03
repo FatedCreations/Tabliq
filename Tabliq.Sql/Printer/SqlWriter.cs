@@ -217,7 +217,6 @@ public class SqlWriter
                     Write(tableReference);
                 }
             });
-            WriteLine();
         }
         else
         {
@@ -374,9 +373,19 @@ public class SqlWriter
             case CurrentTime CurrentTime:
                 Write(CurrentTime);
                 break;
+            case BracketedExpression BracketedExpression:
+                Write(BracketedExpression);
+                break;
             default:
                 throw new NotImplementedException($"Writing for {node.GetType().Name} is not implemented.");
         }
+    }
+
+    protected virtual void Write(BracketedExpression val)
+    {
+        Write("(");
+        Write(val.Expression);
+        Write(")");
     }
 
     protected virtual void Write(CurrentDate val)

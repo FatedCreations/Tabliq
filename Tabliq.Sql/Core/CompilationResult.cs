@@ -1,3 +1,4 @@
+using System.Net.NetworkInformation;
 using Tabliq.Sql.Ast;
 using Tabliq.Sql.Diagnostics;
 using Tabliq.Sql.Printer;
@@ -41,8 +42,16 @@ public class CompilationDiagnosticsException : Exception
 {
     public IReadOnlyList<Diagnostic> Diagnostics { get; }
     public CompilationDiagnosticsException(string text, IReadOnlyList<Diagnostic> diagnostics)
-        : base($"Invalid SQL: {text}. Diagnostics: {string.Join(", ", diagnostics.Select(d => $"{d.Id} : [{d.Start}:{d.Length}] : {d.Message}"))}")
+        : base($"Invalid SQL: {text}. Diagnostics: {string.Join(", ", diagnostics.Select(d => GetDiagnosticMessage(text, d)))}")
     {
         Diagnostics = diagnostics;
+    }
+    private static string GetDiagnosticMessage(string text, Diagnostic d)
+    {
+        var prefix = text[Math.Max(0, d.Start - 10)..d.Start];
+        var postfix = text[(d.Start + d.Length)..Math.Min(d.Start + d.Length + 10, text.Length)];
+        var slice = text[d.Start..(d.Start + d.Length)];
+
+        return $"{d.Id} : [{d.Start}:{d.Length}] : {d.Message} `{prefix}|>{slice}<|{postfix}`";
     }
 }

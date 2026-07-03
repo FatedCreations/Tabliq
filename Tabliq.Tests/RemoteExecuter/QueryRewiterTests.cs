@@ -802,6 +802,85 @@ public class QueryRewiterTests
             DS.EV_FRO >= DATEADD(year, -1, CAST(GETDATE() AS DATE))
         """);
     [Fact]
+    public void Issue23()
+       => AssertExecuterSql
+        .WithSchema(TestConfigSchema.AnonVirtualSchema)
+       .Equal(
+    """
+    WITH before AS (
+        SELECT 
+            AVG(dh.[PSIRT Count] + dh.[Total SRs on active Devices]) AS before_avg
+        FROM [Device History] dh
+        JOIN [All Components] ac ON dh.[Unique Key]=ac.[Unique Key]
+        WHERE
+            ac.[Active Status]='Active' AND
+            ac.[Decommissioned Date] IS NULL AND
+            ac.[Device SubType] LIKE '%router%' AND
+            dh.[Historic Month] >= DATEADD(month, -24, CURRENT_DATE) AND
+            dh.[Historic Month] < DATEADD(month, -12, CURRENT_DATE)
+    ), 
+    after AS (
+        SELECT
+            AVG(dh.[PSIRT Count] + dh.[Total SRs on active Devices]) AS after_avg
+        FROM [Device History] dh
+        JOIN [All Components] ac ON dh.[Unique Key]=ac.[Unique Key]
+        WHERE
+            ac.[Decommissioned Date] IS NOT NULL AND
+            ac.[Decommissioned Date] >= DATEADD(month, -12, CURRENT_DATE) AND
+            ac.[Device SubType] LIKE '%router%' AND
+            dh.[Historic Month] >= DATEADD(month, -12, CURRENT_DATE)
+    ),
+    calc AS (
+        SELECT
+            before.before_avg,
+            after.after_avg
+        FROM before, after
+    )
+    SELECT
+        ROUND(
+            (
+                1 - after_avg/before_avg
+            )*100, 1
+        ) AS disruptions_reduction_pct
+        FROM calc
+    """,
+    """
+    WITH before AS (
+        SELECT AVG(dh.EV_PSI + dh.EV_TOT) AS before_avg
+        FROM landscapeQuery_strategy_A.EV AS dh
+        JOIN landscapeQuery_strategy_A.PH AS ac
+            ON dh.EV_UID = ac.PH_UID
+        WHERE
+            ac.PH_ACT = 'Active' AND
+            ac.PH_DEC IS NULL AND
+            ac.PH_DEV LIKE '%router%' AND
+            dh.EV_FRO >= DATEADD(month, -24, CAST(GETDATE() AS DATE)) AND
+            dh.EV_FRO < DATEADD(month, -12, CAST(GETDATE() AS DATE))
+    ), 
+    after AS (
+        SELECT AVG(dh.EV_PSI + dh.EV_TOT) AS after_avg
+        FROM landscapeQuery_strategy_A.EV AS dh
+        JOIN landscapeQuery_strategy_A.PH AS ac
+            ON dh.EV_UID = ac.PH_UID
+        WHERE
+            ac.PH_DEC IS NOT NULL AND
+            ac.PH_DEC >= DATEADD(month, -12, CAST(GETDATE() AS DATE)) AND
+            ac.PH_DEV LIKE '%router%' AND
+            dh.EV_FRO >= DATEADD(month, -12, CAST(GETDATE() AS DATE))
+    ), 
+    calc AS (
+        SELECT
+            before.before_avg,
+            after.after_avg
+        FROM
+            before,
+            after
+    )
+    SELECT ROUND((1 - after_avg / before_avg) * 100, 1) AS disruptions_reduction_pct
+    FROM calc
+    """);
+
+    [Fact]
     public void OrderByColumnAlias()
         => AssertExecuterSql
         .WithSchema(TestConfigSchema.SchemaVirtualSchema)
