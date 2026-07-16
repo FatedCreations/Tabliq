@@ -136,7 +136,7 @@ public sealed partial class Parser
         return false;
     }
 
-    private bool TryMatchTokens(ReadOnlySpan<SyntaxKind> kinds)
+    private bool TryMatchTokens(params ReadOnlySpan<SyntaxKind> kinds)
     {
         for (var i = 0; i < kinds.Length; i++)
         {
@@ -513,11 +513,13 @@ public sealed partial class Parser
 
     private bool IsBinaryComparisonOperator(SyntaxKind kind)
         => GetBinaryComparisonOperator(kind) != BinaryCompararisonOperator.Unknown;
+
     private BinaryCompararisonOperator GetBinaryComparisonOperator(SyntaxKind kind)
         => kind switch
         {
             SyntaxKind.EqualsToken => BinaryCompararisonOperator.Equals,
             SyntaxKind.NotEqualsToken => BinaryCompararisonOperator.NotEquals,
+            SyntaxKind.NotEqualsAlt1Token => BinaryCompararisonOperator.NotEquals,
             SyntaxKind.LessToken => BinaryCompararisonOperator.LessThan,
             SyntaxKind.GreaterToken => BinaryCompararisonOperator.GreaterThan,
             SyntaxKind.LessOrEqualsToken => BinaryCompararisonOperator.LessThanOrEqual,
@@ -548,6 +550,16 @@ public sealed partial class Parser
         } while (TryMatchToken(SyntaxKind.CommaToken));
 
         return new GroupByClause(entries).WithLocation(loc);
+    }
+
+    private OrderByClause? TryParseOrderBy()
+    {
+        if (IsMatch([SyntaxKind.OrderKeyword, SyntaxKind.ByKeyword]))
+        {
+            return ParseOrderBy();
+        }
+
+        return null;
     }
 
     private OrderByClause ParseOrderBy()
@@ -631,6 +643,7 @@ public sealed partial class Parser
             SyntaxKind.JoinKeyword or
             SyntaxKind.OnKeyword or
             SyntaxKind.OverKeyword or
+            SyntaxKind.WithinKeyword or
             SyntaxKind.OrderKeyword or
             SyntaxKind.PartitionKeyword or
             SyntaxKind.ByKeyword or

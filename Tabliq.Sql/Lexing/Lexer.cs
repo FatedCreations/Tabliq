@@ -146,6 +146,18 @@ public sealed class Lexer
                         _tokens.Add(new SyntaxToken(SyntaxKind.LessToken, "<", null, start));
                     }
                     break;
+                case '!':
+                    Next();
+                    if (Current == '=')
+                    {
+                        _tokens.Add(new SyntaxToken(SyntaxKind.NotEqualsAlt1Token, "!=", null, start));
+                        Next();
+                    }
+                    else
+                    {
+                        _tokens.Add(new SyntaxToken(SyntaxKind.BadToken, "!", null, start));
+                    }
+                    break;
                 case '>':
                     Next();
                     if (Current == '=')
@@ -269,6 +281,7 @@ public sealed class Lexer
             "JOIN" => SyntaxKind.JoinKeyword,
             "ON" => SyntaxKind.OnKeyword,
             "OVER" => SyntaxKind.OverKeyword,
+            "WITHIN" => SyntaxKind.WithinKeyword,
             "ORDER" => SyntaxKind.OrderKeyword,
             "PARTITION" => SyntaxKind.PartitionKeyword,
             "BY" => SyntaxKind.ByKeyword,
