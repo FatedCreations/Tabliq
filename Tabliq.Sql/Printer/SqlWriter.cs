@@ -1,4 +1,5 @@
-﻿using Tabliq.Sql.Ast;
+﻿using System.Text.Json.Serialization;
+using Tabliq.Sql.Ast;
 using Tabliq.Sql.Core;
 using Tabliq.Sql.Lexing;
 
@@ -45,7 +46,7 @@ public class SqlWriter
         {
             Write(selectStatement);
         }
-        else if(statement is EmptyStatement emptyStatement)
+        else if (statement is EmptyStatement emptyStatement)
         {
             Write(emptyStatement);
         }
@@ -392,9 +393,70 @@ public class SqlWriter
             case BracketedExpression BracketedExpression:
                 Write(BracketedExpression);
                 break;
+            case OverClause OverClause:
+                Write(OverClause);
+                break;
+            case WithinGroupClause WithinGroupClause:
+                Write(WithinGroupClause);
+                break;
             default:
                 throw new NotImplementedException($"Writing for {node.GetType().Name} is not implemented.");
         }
+    }
+    protected virtual void Write(OverClause overClause)
+    {
+        var hasPartitions = overClause.Partions?.Any() == true;
+        var hasOrderBy = overClause.OrderBy is not null;
+        Write("OVER ");
+        Write("(");
+        if (hasPartitions)
+        {
+            Write("PARTITION BY ");
+            Write(overClause.Partions!.First());
+            foreach (var partition in overClause.Partions!.Skip(1))
+            {
+                Write(", ");
+                Write(partition);
+            }
+        }
+
+        if (hasPartitions && hasOrderBy)
+        {
+            Write(" ");
+        }
+
+        if (hasOrderBy)
+        {
+            Write(overClause.OrderBy!, true);
+        }
+        Write(")");
+    }
+
+    protected virtual void Write(WithinGroupClause within)
+    {
+        Write("WITHIN GROUP (");
+        if (within.OrderBy is not null)
+        {
+            Write(within.OrderBy);
+        }
+        Write(")");
+    }
+
+    protected virtual void Write(WindowSpecification window)
+    {
+        if (window.WithinGroup is not null)
+        {
+            Write(window.WithinGroup);
+        }
+        if (window.WithinGroup is not null && window.Over is not null)
+        {
+            Write(" ");
+        }
+        if (window.Over is not null)
+        {
+            Write(window.Over);
+        }
+
     }
 
     protected virtual void Write(BracketedExpression val)
@@ -764,27 +826,6 @@ public class SqlWriter
             Write(" ");
             Write(func.Window);
         }
-    }
-    protected virtual void Write(WindowSpecification window)
-    {
-        Write("OVER ");
-        Write("(");
-        if (window.Partions.Any())
-        {
-            Write("PARTITION BY ");
-            Write(window.Partions.First());
-            foreach (var partition in window.Partions.Skip(1))
-            {
-                Write(", ");
-                Write(partition);
-            }
-        }
-        if (window.OrderBy is not null)
-        {
-            Write(" ");
-            Write(window.OrderBy, true);
-        }
-        Write(")");
     }
 
     protected virtual void Write(BracketedCondition BracketedCondition)

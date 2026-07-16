@@ -4,31 +4,32 @@ namespace Tabliq.Sql.Ast;
 
 public class WindowSpecification : SyntaxNode
 {
-    public WindowSpecification(IEnumerable<Expression> partions, OrderByClause? orderBy)
+    public WindowSpecification(OverClause? over, WithinGroupClause? withinGroup)
     {
-        Partions = partions;
-        OrderBy = orderBy;
+        Over = over;
+        WithinGroup = withinGroup;
     }
 
-    public IEnumerable<Expression> Partions { get; }
-    public OrderByClause? OrderBy { get; }
+    public OverClause? Over { get; }
+
+    public WithinGroupClause? WithinGroup { get; }
 
     public override bool Equals(SyntaxNode? other)
     {
         return other is WindowSpecification window &&
-            Partions.SyntaxSequenceEqual(window.Partions) &&
-            (OrderBy is null && window.OrderBy is null || OrderBy?.Equals(window.OrderBy) == true);
+            (Over is null && window.Over is null || Over?.Equals(window.Over) == true) &&
+            (WithinGroup is null && window.WithinGroup is null || WithinGroup?.Equals(window.WithinGroup) == true);
     }
 
     public override IEnumerable<SyntaxNode> GetChildren()
     {
-        foreach (var partition in Partions)
+        if (WithinGroup != null)
         {
-            yield return partition;
+            yield return WithinGroup;
         }
-        if (OrderBy != null)
+        if (Over is not null)
         {
-            yield return OrderBy;
+            yield return Over;
         }
     }
 }

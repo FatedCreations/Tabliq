@@ -232,14 +232,37 @@ public sealed partial class Parser
 
         MatchToken(SyntaxKind.CloseParenToken);
 
-        WindowSpecification? window = null;
-        if (Current.Kind == SyntaxKind.OverKeyword)
+        var window = TryParseWindowSpecification();
+
+        return new FunctionCallExpression(functionName, arguments, window).WithLocation(loc);
+    }
+
+    private WindowSpecification? TryParseWindowSpecification()
+    {
+        var windowLoc = Track();
+
+        WithinGroupClause? withinGroupClause = null;
+        OverClause? overClause = null;
+
+        if (TryMatchTokens(SyntaxKind.WithinKeyword, SyntaxKind.GroupKeyword))
         {
-            var windowLoc = Track();
-            NextToken(); // read 'over'
+            var loc = Track();
             MatchToken(SyntaxKind.OpenParenToken);
 
-            List<Expression> partitions = new List<Expression>();
+            var withinGroup = TryParseOrderBy();
+
+            withinGroupClause = new WithinGroupClause(withinGroup).WithLocation(loc);
+
+            MatchToken(SyntaxKind.CloseParenToken);
+        }
+
+        if (TryMatchToken(SyntaxKind.OverKeyword))
+        {
+            var loc = Track();
+            MatchToken(SyntaxKind.OpenParenToken);
+
+            var partitions = new List<Expression>();
+
             // partition by
             if (TryMatchTokens([SyntaxKind.PartitionKeyword, SyntaxKind.ByKeyword]))
             {
@@ -251,21 +274,22 @@ public sealed partial class Parser
                 }
                 while (TryMatchToken(SyntaxKind.CommaToken));
             }
-            OrderByClause? orderBy = null;
-            if (IsMatch([SyntaxKind.OrderKeyword, SyntaxKind.ByKeyword]))
-            {
-                orderBy = ParseOrderBy();
-            }
+
+            var orderBy = TryParseOrderBy();
 
             //todo: add "Frame Clause" (range or rows clause) https://en.wikipedia.org/wiki/Window_function_(SQL)
 
             MatchToken(SyntaxKind.CloseParenToken);
 
-            window = new WindowSpecification(partitions, orderBy).WithLocation(windowLoc);
-
+            overClause = new OverClause(partitions, orderBy).WithLocation(loc);
         }
 
-        return new FunctionCallExpression(functionName, arguments, window).WithLocation(loc);
+        if (overClause is not null || withinGroupClause is not null)
+        {
+            return new WindowSpecification(overClause, withinGroupClause).WithLocation(windowLoc);
+        }
+
+        return null;
     }
 
     private Expression ParseIdentifierExpression()

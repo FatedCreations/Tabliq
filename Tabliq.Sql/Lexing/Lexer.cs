@@ -281,6 +281,7 @@ public sealed class Lexer
             "JOIN" => SyntaxKind.JoinKeyword,
             "ON" => SyntaxKind.OnKeyword,
             "OVER" => SyntaxKind.OverKeyword,
+            "WITHIN" => SyntaxKind.WithinKeyword,
             "ORDER" => SyntaxKind.OrderKeyword,
             "PARTITION" => SyntaxKind.PartitionKeyword,
             "BY" => SyntaxKind.ByKeyword,

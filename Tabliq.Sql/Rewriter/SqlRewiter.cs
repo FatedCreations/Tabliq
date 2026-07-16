@@ -90,10 +90,48 @@ namespace Tabliq.Sql.Rewriter
                 CurrentTime s => Rewrite(s),
                 NullValue s => Rewrite(s),
                 EmptyStatement s => Rewrite(s),
+                WithinGroupClause s => Rewrite(s),
+                OverClause s => Rewrite(s),
                 _ => throw new Exception($"Unhandled node type: {node?.GetType().Name}")
             };
             resultSyntaxNode.Span = node.Span;
             return resultSyntaxNode;
+        }
+
+        protected virtual OverClause Rewrite(OverClause node)
+        {
+            var rewritten = false;
+            var Partions = TryRewrite(node.Partions, ref rewritten);
+            var OrderBy = TryRewrite(node.OrderBy, ref rewritten);
+            if (!rewritten)
+            {
+                return node;
+            }
+
+            return new OverClause(Partions, OrderBy).WithLocation(node.Span);
+        }
+
+        protected virtual WithinGroupClause Rewrite(WithinGroupClause node)
+        {
+            var rewritten = false;
+            var OrderBy = TryRewrite(node.OrderBy, ref rewritten);
+            if (!rewritten)
+            {
+                return node;
+            }
+            return new WithinGroupClause(OrderBy).WithLocation(node.Span);
+        }
+
+        protected virtual WindowSpecification Rewrite(WindowSpecification node)
+        {
+            var rewritten = false;
+            var WithinGroup = TryRewrite(node.WithinGroup, ref rewritten);
+            var Over = TryRewrite(node.Over, ref rewritten);
+            if (!rewritten)
+            {
+                return node;
+            }
+            return new WindowSpecification(Over, WithinGroup).WithLocation(node.Span);
         }
 
         protected virtual EmptyStatement Rewrite(EmptyStatement node) => node;
@@ -183,18 +221,6 @@ namespace Tabliq.Sql.Rewriter
                 return node;
             }
             return new DistinctValueExpression(distinctness, Expression).WithLocation(node.Span);
-        }
-
-        protected virtual WindowSpecification Rewrite(WindowSpecification node)
-        {
-            var rewritten = false;
-            var Partions = TryRewrite(node.Partions, ref rewritten);
-            var OrderBy = TryRewrite(node.OrderBy, ref rewritten);
-            if (!rewritten)
-            {
-                return node;
-            }
-            return new WindowSpecification(Partions, OrderBy).WithLocation(node.Span);
         }
 
         protected virtual ParameterIdentifier Rewrite(ParameterIdentifier node)

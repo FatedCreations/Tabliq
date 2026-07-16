@@ -60,6 +60,7 @@ public enum SyntaxKind
     JoinKeyword,
     OnKeyword,
     OverKeyword,
+    WithinKeyword,
     OrderKeyword,
     PartitionKeyword,
     ByKeyword,
