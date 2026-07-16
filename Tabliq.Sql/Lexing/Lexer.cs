@@ -146,6 +146,18 @@ public sealed class Lexer
                         _tokens.Add(new SyntaxToken(SyntaxKind.LessToken, "<", null, start));
                     }
                     break;
+                case '!':
+                    Next();
+                    if (Current == '=')
+                    {
+                        _tokens.Add(new SyntaxToken(SyntaxKind.NotEqualsToken, "!=", null, start));
+                        Next();
+                    }
+                    else
+                    {
+                        _tokens.Add(new SyntaxToken(SyntaxKind.BadToken, "!", null, start));
+                    }
+                    break;
                 case '>':
                     Next();
                     if (Current == '=')

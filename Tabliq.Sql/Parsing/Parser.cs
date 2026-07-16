@@ -513,11 +513,13 @@ public sealed partial class Parser
 
     private bool IsBinaryComparisonOperator(SyntaxKind kind)
         => GetBinaryComparisonOperator(kind) != BinaryCompararisonOperator.Unknown;
+
     private BinaryCompararisonOperator GetBinaryComparisonOperator(SyntaxKind kind)
         => kind switch
         {
             SyntaxKind.EqualsToken => BinaryCompararisonOperator.Equals,
             SyntaxKind.NotEqualsToken => BinaryCompararisonOperator.NotEquals,
+            SyntaxKind.NotEqualsAlt1Token => BinaryCompararisonOperator.NotEquals,
             SyntaxKind.LessToken => BinaryCompararisonOperator.LessThan,
             SyntaxKind.GreaterToken => BinaryCompararisonOperator.GreaterThan,
             SyntaxKind.LessOrEqualsToken => BinaryCompararisonOperator.LessThanOrEqual,

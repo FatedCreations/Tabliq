@@ -17,6 +17,7 @@ public enum SyntaxKind
     CloseParenToken,
     EqualsToken,
     NotEqualsToken,
+    NotEqualsAlt1Token,
     LessToken,
     GreaterToken,
     LessOrEqualsToken,
