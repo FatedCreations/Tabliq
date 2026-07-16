@@ -77,6 +77,10 @@ public sealed class Lexer
 
             switch (Current)
             {
+                case ';':
+                    _tokens.Add(new SyntaxToken(SyntaxKind.SemicolonToken, ";", null, start));
+                    Next();
+                    break;
                 case ',':
                     _tokens.Add(new SyntaxToken(SyntaxKind.CommaToken, ",", null, start));
                     Next();

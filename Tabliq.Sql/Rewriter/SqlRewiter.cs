@@ -89,13 +89,17 @@ namespace Tabliq.Sql.Rewriter
                 CurrentTimestamp s => Rewrite(s),
                 CurrentTime s => Rewrite(s),
                 NullValue s => Rewrite(s),
+                EmptyStatement s => Rewrite(s),
                 _ => throw new Exception($"Unhandled node type: {node?.GetType().Name}")
             };
             resultSyntaxNode.Span = node.Span;
             return resultSyntaxNode;
         }
 
-        protected virtual BracketedExpression Rewrite(BracketedExpression node){
+        protected virtual EmptyStatement Rewrite(EmptyStatement node) => node;
+
+        protected virtual BracketedExpression Rewrite(BracketedExpression node)
+        {
 
             var rewritten = false;
             var Expression = TryRewrite(node.Expression, ref rewritten);

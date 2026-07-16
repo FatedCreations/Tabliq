@@ -45,9 +45,21 @@ public class SqlWriter
         {
             Write(selectStatement);
         }
+        else if(statement is EmptyStatement emptyStatement)
+        {
+            Write(emptyStatement);
+        }
         else
         {
             throw new NotImplementedException($"Writing for {statement.GetType().Name} is not implemented.");
+        }
+    }
+
+    protected virtual void Write(EmptyStatement emptyStatement)
+    {
+        if (emptyStatement.HasSemicolon)
+        {
+            Write(";");
         }
     }
 
@@ -68,6 +80,10 @@ public class SqlWriter
             WriteLine();
         }
         Write(selectStatement.SelectQuery);
+        if (selectStatement.HasSemicolon)
+        {
+            Write(";");
+        }
     }
 
     protected virtual void Write(CommonTableExpression commonTableExpression)

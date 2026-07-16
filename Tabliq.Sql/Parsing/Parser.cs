@@ -172,13 +172,16 @@ public sealed class Parser
         List<Statement> statements = new List<Statement>();
         while (Current.Kind != SyntaxKind.EndOfFileToken)
         {
-            var bad = ConsumeUntil(k => k.Kind == SyntaxKind.SelectKeyword || k.Kind == SyntaxKind.WithKeyword);
+            var bad = ConsumeUntil(k => k.Kind == SyntaxKind.SelectKeyword || k.Kind == SyntaxKind.WithKeyword || k.Kind == SyntaxKind.SemicolonToken);
             if (bad != null)
                 statements.Add(bad);
             if (Current.Kind != SyntaxKind.EndOfFileToken)
             {
-                var statment = ParseSelectStatement();
-                statements.Add(statment);
+                var statment = ParseStatement();
+                if (statment is not null)
+                {
+                    statements.Add(statment);
+                }
             }
         }
         return new SqlScript(statements).WithLocation(loc);
@@ -198,6 +201,21 @@ public sealed class Parser
         _diagnostics.Report("UnexpectedToken", $"'{loc.Span.StartToken.Text}' was unexpected", loc.Span);
 
         return new BadStatement(loc.Span);
+    }
+
+    private Statement? ParseStatement()
+    {
+        if (IsMatch(SyntaxKind.SelectKeyword) || IsMatch(SyntaxKind.WithKeyword))
+        {
+            return ParseSelectStatement();
+        }
+        else if (TryMatchToken(SyntaxKind.SemicolonToken))
+        {
+            var loc = Track();
+            return new EmptyStatement(true).WithLocation(loc);
+        }
+
+        return null;
     }
 
     private SelectStatement ParseSelectStatement()
@@ -228,7 +246,9 @@ public sealed class Parser
         }
         var selectExpression = ParseSelectExpression();
 
-        return new SelectStatement(ctes, selectExpression).WithLocation(loc);
+        bool hasSemicolon = TryMatchToken(SyntaxKind.SemicolonToken);
+
+        return new SelectStatement(ctes, selectExpression, hasSemicolon).WithLocation(loc);
     }
 
     private SelectExpression ParseSelectExpression()

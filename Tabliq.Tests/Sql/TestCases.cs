@@ -9,7 +9,32 @@ public class TestCases
 {
 
     [Fact]
-    public void Between ()
+    public void SemiColonStatemntSeperator()
+        => AssertSql
+            .SkipBinder()
+            .Equal(
+                """
+                SELECT * FROM landscapeQuery_strategy_A.BE;
+                """,
+                """
+                SELECT *
+                FROM landscapeQuery_strategy_A.BE;
+                """);
+
+    [Fact]
+    public void SemiColonStatemntSeperatorWithEmpty()
+        => AssertSql
+            .SkipBinder()
+            .Equal(
+                """
+                SELECT * FROM landscapeQuery_strategy_A.BE;;
+                """,
+                """
+                SELECT *
+                FROM landscapeQuery_strategy_A.BE;;
+                """);
+    [Fact]
+    public void Between()
         => AssertSql
             .SkipBinder()
             .Equal(

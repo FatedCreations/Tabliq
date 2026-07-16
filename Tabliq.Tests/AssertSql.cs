@@ -125,7 +125,7 @@ public class AssertSql
                     Console.WriteLine("--- ASSERTSQL DIAGNOSTIC END ---");
 
                     Assert.Equal(errors, messages);
-                    
+
                 }, new CancellationTokenSource(100).Token).GetAwaiter().GetResult();
             }
             catch (TaskCanceledException)
@@ -294,6 +294,9 @@ public class DeepCloneRewiter : SqlRewiter
             }
         }
     }
+
+    protected override EmptyStatement Rewrite(EmptyStatement node)
+        => new EmptyStatement(node.HasSemicolon);
 
     protected override DataType Rewrite(DataType node)
         => new DataType(node.Name, node.Size);

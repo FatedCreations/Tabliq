@@ -19,6 +19,7 @@ public static class Resources
 
     public static class Schemas
     {
+        public static string WmsSchema => GetFile("Schemas.WmsSchema.json");
         public static string AnonSchema => GetFile("Schemas.AnonSchema.json");
         public static string Default => GetFile("Schemas.Default.json");
         public static string FriendlyNames => GetFile("Schemas.FriendlyNames.json");

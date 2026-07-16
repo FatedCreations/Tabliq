@@ -4,7 +4,7 @@ namespace Tabliq.Sql.Ast;
 
 public class BadStatement : Statement
 {
-    public BadStatement(SyntaxTokenSpan span)
+    public BadStatement(SyntaxTokenSpan span) : base(false)
     {
         Span = span;
     }

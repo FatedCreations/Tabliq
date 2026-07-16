@@ -88,11 +88,12 @@ public class Binder
             Current.InsideGroupBy = prev;
         }
     }
-    void InsideAggregate(Action action)
+
+    void InsideAggregate(bool isAgg, Action action)
     {
-        Current.HasAggregates = true;
+        Current.HasAggregates = Current.HasAggregates || isAgg;
         var prev = Current.InsideAggregate;
-        Current.InsideAggregate = true;
+        Current.InsideAggregate = prev || isAgg;
         try
         {
             action();
@@ -354,9 +355,8 @@ public class Binder
             return;
         }
 
-        InsideAggregate(() =>
+        InsideAggregate(def.IsAggregate, () =>
         {
-
             var countOfRequired = def.Arguments.Count(a => !a.Optional);
 
             if (p.Arguments.Count < countOfRequired)

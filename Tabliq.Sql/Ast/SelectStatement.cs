@@ -5,7 +5,7 @@ namespace Tabliq.Sql.Ast;
 // this is the top level select statement, that can include ctes
 public class SelectStatement : Statement
 {
-    public SelectStatement(IEnumerable<CommonTableExpression> commonTableExpressions, SelectExpression selectQuery)
+    public SelectStatement(IEnumerable<CommonTableExpression> commonTableExpressions, SelectExpression selectQuery, bool hasSemicolon = false) : base(hasSemicolon)
     {
         CommonTableExpressions = new List<CommonTableExpression>(commonTableExpressions);
         SelectQuery = selectQuery;

@@ -13,11 +13,12 @@ public class TestConfigSchema
     private static readonly Lazy<VirtualSchema> _schemaFriendlyNamesVirtualSchema;
     private static readonly Lazy<VirtualSchema> _schemaVirtualSchema;
     private static readonly Lazy<VirtualSchema> _anonSVirtualSchema;
+    private static readonly Lazy<VirtualSchema> _wmsSVirtualSchema;
 
     public static VirtualSchema SchemaFriendlyNamesSchema => _schemaFriendlyNamesVirtualSchema.Value;
     public static VirtualSchema SchemaVirtualSchema => _schemaVirtualSchema.Value;
-
     public static VirtualSchema AnonVirtualSchema => _anonSVirtualSchema.Value;
+    public static VirtualSchema WmsVirtualSchema => _wmsSVirtualSchema.Value;
 
     private static VirtualSchema Load(string json)
     {
@@ -33,6 +34,7 @@ public class TestConfigSchema
         _schemaVirtualSchema = new Lazy<VirtualSchema>(() => Load(Resources.Schemas.Default));
         _schemaFriendlyNamesVirtualSchema = new Lazy<VirtualSchema>(() => Load(Resources.Schemas.FriendlyNames));
         _anonSVirtualSchema = new Lazy<VirtualSchema>(() => Load(Resources.Schemas.AnonSchema));
+        _wmsSVirtualSchema = new Lazy<VirtualSchema>(() => Load(Resources.Schemas.WmsSchema));
     }
 
     public class DatabaseTable
