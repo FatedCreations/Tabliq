@@ -1,5 +1,4 @@
-﻿using System.Text.Json.Serialization;
-using Tabliq.Sql.Ast;
+﻿using Tabliq.Sql.Ast;
 using Tabliq.Sql.Core;
 using Tabliq.Sql.Lexing;
 

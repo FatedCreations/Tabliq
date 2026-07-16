@@ -150,7 +150,7 @@ public sealed class Lexer
                     Next();
                     if (Current == '=')
                     {
-                        _tokens.Add(new SyntaxToken(SyntaxKind.NotEqualsToken, "!=", null, start));
+                        _tokens.Add(new SyntaxToken(SyntaxKind.NotEqualsAlt1Token, "!=", null, start));
                         Next();
                     }
                     else

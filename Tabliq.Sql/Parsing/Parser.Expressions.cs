@@ -244,21 +244,21 @@ public sealed partial class Parser
         WithinGroupClause? withinGroupClause = null;
         OverClause? overClause = null;
 
+        var withinLoc = Track();
         if (TryMatchTokens(SyntaxKind.WithinKeyword, SyntaxKind.GroupKeyword))
         {
-            var loc = Track();
             MatchToken(SyntaxKind.OpenParenToken);
 
             var withinGroup = TryParseOrderBy();
 
-            withinGroupClause = new WithinGroupClause(withinGroup).WithLocation(loc);
+            withinGroupClause = new WithinGroupClause(withinGroup).WithLocation(withinLoc);
 
             MatchToken(SyntaxKind.CloseParenToken);
         }
 
+        var overLoc = Track();
         if (TryMatchToken(SyntaxKind.OverKeyword))
         {
-            var loc = Track();
             MatchToken(SyntaxKind.OpenParenToken);
 
             var partitions = new List<Expression>();
@@ -281,7 +281,7 @@ public sealed partial class Parser
 
             MatchToken(SyntaxKind.CloseParenToken);
 
-            overClause = new OverClause(partitions, orderBy).WithLocation(loc);
+            overClause = new OverClause(partitions, orderBy).WithLocation(overLoc);
         }
 
         if (overClause is not null || withinGroupClause is not null)
