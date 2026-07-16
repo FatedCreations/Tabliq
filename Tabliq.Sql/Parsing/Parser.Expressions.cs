@@ -31,7 +31,7 @@ public sealed partial class Parser
             return condition;
         }
 
-        _diagnostics.Report("ExpectedCondition", "Expected a condition but found just as expression", conditionLoc.Span);
+        _diagnostics.Report("ExpectedCondition", "Expected a condition but found just an expression", conditionLoc.Span);
         // If the expression is not a condition, wrap it in a default condition
         return new BadCondition(conditionLoc.Span).WithLocation(conditionLoc);
     }
@@ -40,6 +40,14 @@ public sealed partial class Parser
     {
         var loc = Track();
         var left = ParsePrimaryExpression();
+
+        while (IsBinaryOperator(Current.Kind))
+        {
+            var opToken = NextToken();
+            var op = GetBinaryOperator(opToken.Kind);
+            var right = ParseExpressionOrCondition();
+            left = new BinaryOperatorExpression(left, op, right).WithLocation(loc);
+        }
 
         if (IsBinaryComparisonOperator(Current.Kind))
         {
@@ -107,22 +115,17 @@ public sealed partial class Parser
 
         if (left is Condition condition)
         {
+            var leftCondition = condition;
             while (Current.Kind == SyntaxKind.AndKeyword || Current.Kind == SyntaxKind.OrKeyword)
             {
                 var opToken = NextToken();
                 var op = GetLogicalOperator(opToken.Kind);
                 var right = ParseCondition();
                 // todo: correctly handle precedence here to enable future processing order of operations, for now we will just treat it as left associative
-                left = new LogicalCondition(condition, op, right).WithLocation(loc);
+                leftCondition = new LogicalCondition(leftCondition, op, right).WithLocation(loc);
             }
-        }
 
-        while (IsBinaryOperator(Current.Kind))
-        {
-            var opToken = NextToken();
-            var op = GetBinaryOperator(opToken.Kind);
-            var right = ParseExpressionOrCondition();
-            left = new BinaryOperatorExpression(left, op, right).WithLocation(loc);
+            left = leftCondition;
         }
 
         return left;
@@ -157,7 +160,7 @@ public sealed partial class Parser
     {
         if (!IsIdentifierPart(Current.Kind))
         {
-            ReportWrongToken("Indentifier");
+            ReportWrongToken("Identifier");
         }
 
         var loc = Track();
@@ -376,6 +379,7 @@ public sealed partial class Parser
         {
             return new CurrentDate().WithLocation(loc);
         }
+
         if (TryMatchToken(SyntaxKind.CurrentTimeKeyword))
         {
             return new CurrentTime().WithLocation(loc);
@@ -384,11 +388,6 @@ public sealed partial class Parser
         if (TryMatchToken(SyntaxKind.CurrentTimestampKeyword))
         {
             return new CurrentTimestamp().WithLocation(loc);
-        }
-
-        if (TryMatchToken(SyntaxKind.CurrentDateKeyword))
-        {
-            return new CurrentDate().WithLocation(loc);
         }
 
         if (Current.Kind == SyntaxKind.ParameterToken)

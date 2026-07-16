@@ -15,7 +15,7 @@ public class Issue3
             """,
             "UnexpectedToken: [148:7] : 'LIMIT' was unexpected");
 
-    // rewitten alternative syntax
+    // rewritten alternative syntax
     [Fact]
     public void AlternativeSyntax()
         => AssertExecuterSql
