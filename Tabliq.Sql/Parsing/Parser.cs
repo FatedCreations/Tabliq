@@ -618,12 +618,16 @@ public sealed partial class Parser
 
         var dataType = NextToken(); // consume data type
         string? length = null;
-        if (IsMatch(0, SyntaxKind.OpenParenToken) && IsMatch(1, SyntaxKind.NumberToken, SyntaxKind.MaxKeyword) && IsMatch(2, SyntaxKind.CloseParenToken))
+        if (IsMatch(0, SyntaxKind.OpenParenToken) && (IsMatch(1, SyntaxKind.NumberToken) || IsMatch(1, SyntaxKind.MaxKeyword)) && IsMatch(2, SyntaxKind.CloseParenToken))
         {
             MatchToken(SyntaxKind.OpenParenToken);
-            length = MatchToken(SyntaxKind.NumberToken)?.Value?.ToString() ?? MatchToken(SyntaxKind.MaxKeyword).Text.ToUpperInvariant();
+            var token = NextToken();
+
+            length = token.Value?.ToString() ?? token.Text.ToUpperInvariant();
+
             MatchToken(SyntaxKind.CloseParenToken);
         }
+
         return new DataType(dataType.Text, length).WithLocation(loc);
     }
 

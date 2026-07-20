@@ -23,4 +23,17 @@ public class WmsQueryRewiterTests
             ORDER BY [EOL / End of Extended Support Date] ASC
             """);
 
+    [Fact]
+    public void Issue2()
+        => AssertExecuterSql
+        .WithSchema(TestConfigSchema.WmsVirtualSchema)
+        .Equal(
+            """
+            SELECT COUNT(*) as RowCount FROM [Server Assets] WHERE [EOL / End of Extended Support Date] IS NOT NULL
+            """,
+            """
+            SELECT COUNT(*) AS RowCount
+            FROM landscapeQuery_strategy_A.UB AS [Server Assets]
+            WHERE [Server Assets].UB_OLE IS NOT NULL
+            """);
 }

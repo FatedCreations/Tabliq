@@ -113,6 +113,26 @@ public class TestCases
             """);
 
     [Fact]
+    public void CastExpressionWithDataTypeKeywordsSize_Number()
+        => AssertSql.Equal(
+            """
+            SELECT Cast('foo' as varchar(10)) AS month
+            """,
+            """            
+            SELECT CAST('foo' AS varchar(10)) AS month
+            """);
+
+    [Fact]
+    public void CastExpressionWithDataTypeKeywordsSize_Max()
+        => AssertSql.Equal(
+            """
+            SELECT Cast('foo' as varchar(max)) AS month
+            """,
+            """            
+            SELECT CAST('foo' AS varchar(MAX)) AS month
+            """);
+
+    [Fact]
     public void CastExpressionWithDataTypeKeywords()
         => AssertSql.Equal(
             """
