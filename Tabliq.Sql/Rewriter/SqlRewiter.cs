@@ -92,10 +92,24 @@ namespace Tabliq.Sql.Rewriter
                 EmptyStatement s => Rewrite(s),
                 WithinGroupClause s => Rewrite(s),
                 OverClause s => Rewrite(s),
+                InExpression s => Rewrite(s),
                 _ => throw new Exception($"Unhandled node type: {node?.GetType().Name}")
             };
             resultSyntaxNode.Span = node.Span;
             return resultSyntaxNode;
+        }
+
+        protected virtual InExpression Rewrite(InExpression node)
+        {
+            var rewritten = false;
+            var SubValue = TryRewrite(node.SubValue, ref rewritten);
+            var Expression = TryRewrite(node.Expression, ref rewritten);
+            if (!rewritten)
+            {
+                return node;
+            }
+
+            return new InExpression(SubValue, Expression).WithLocation(node.Span);
         }
 
         protected virtual OverClause Rewrite(OverClause node)

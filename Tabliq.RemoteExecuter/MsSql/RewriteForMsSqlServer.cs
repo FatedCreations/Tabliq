@@ -23,6 +23,17 @@ internal class RewriteForMsSqlServer : SqlRewiter
                 Binding = node.Binding,
             };
         }
+        else if (node.FunctionName.Equals("POSITION", StringComparison.OrdinalIgnoreCase) && node.Arguments.Count == 1 && node.Arguments[0] is InExpression inExp)
+        {
+            node = new FunctionCallExpression("CHARINDEX", [
+                inExp.SubValue,
+                inExp.Expression
+                ], node.Window)
+            {
+                Span = node.Span,
+                Binding = node.Binding,
+            };
+        }
         return base.Rewrite(node);
     }
 

@@ -133,6 +133,16 @@ public class TestCases
             """);
 
     [Fact]
+    public void PositionIn()
+        => AssertSql.Equal(
+            """
+            SELECT position('foo' in 'foobar') AS month
+            """,
+            """
+            SELECT POSITION('foo' IN 'foobar') AS month
+            """);
+
+    [Fact]
     public void CastExpressionWithDataTypeKeywords()
         => AssertSql.Equal(
             """

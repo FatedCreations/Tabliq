@@ -2,6 +2,17 @@
 
 public class QueryRewiterTests
 {
+
+    [Fact]
+    public void PositionIn()
+        => AssertExecuterSql.Equal(
+            """
+            SELECT position('foo' in 'foobar') AS month
+            """,
+            """
+            SELECT CHARINDEX('foo', 'foobar') AS month
+            """);
+
     [Fact]
     public void Issue1()
         => AssertExecuterSql
