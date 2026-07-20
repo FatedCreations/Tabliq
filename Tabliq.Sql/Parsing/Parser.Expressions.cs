@@ -212,10 +212,11 @@ public sealed partial class Parser
                         NextToken(); // consume 'AS'
                         var dataType = ParseDataType();
                         expression = new AsExpression(expression, dataType).WithLocation(argLocation);
-                    }else if (Current.Kind == SyntaxKind.InKeyword)
+                    }
+                    else if (Current.Kind == SyntaxKind.InKeyword)
                     {
                         NextToken(); // consume 'IN'
-                        var right = ParseExpressionOrCondition(); 
+                        var right = ParseExpressionOrCondition();
                         expression = new InExpression(expression, right).WithLocation(argLocation);
                     }
                 }
