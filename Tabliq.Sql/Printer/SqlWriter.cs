@@ -398,10 +398,21 @@ public class SqlWriter
             case WithinGroupClause WithinGroupClause:
                 Write(WithinGroupClause);
                 break;
+            case InExpression InExpression:
+                Write(InExpression);
+                break;
             default:
                 throw new NotImplementedException($"Writing for {node.GetType().Name} is not implemented.");
         }
     }
+
+    protected virtual void Write(InExpression inExpression)
+    {
+        Write(inExpression.SubValue);
+        Write(" IN ");
+        Write(inExpression.Expression);
+    }
+
     protected virtual void Write(OverClause overClause)
     {
         var hasPartitions = overClause.Partions?.Any() == true;

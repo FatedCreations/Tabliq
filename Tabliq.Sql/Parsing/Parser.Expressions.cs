@@ -36,7 +36,7 @@ public sealed partial class Parser
         return new BadCondition(conditionLoc.Span).WithLocation(conditionLoc);
     }
 
-    private Expression ParseExpressionOrCondition(bool enableAsExpressions = false)
+    private Expression ParseExpressionOrCondition()
     {
         var loc = Track();
         var left = ParsePrimaryExpression();
@@ -71,7 +71,7 @@ public sealed partial class Parser
                 val2)
                 .WithLocation(loc);
         }
-        else if (IsMatch(SyntaxKind.NotKeyword, SyntaxKind.InKeyword) || IsMatch(SyntaxKind.InKeyword))
+        else if (IsMatch(SyntaxKind.NotKeyword, SyntaxKind.InKeyword, SyntaxKind.OpenParenToken) || IsMatch(SyntaxKind.InKeyword, SyntaxKind.OpenParenToken))
         {
             var isNot = TryMatchToken(SyntaxKind.NotKeyword);
             MatchToken(SyntaxKind.InKeyword);//between
@@ -212,6 +212,12 @@ public sealed partial class Parser
                         NextToken(); // consume 'AS'
                         var dataType = ParseDataType();
                         expression = new AsExpression(expression, dataType).WithLocation(argLocation);
+                    }
+                    else if (Current.Kind == SyntaxKind.InKeyword)
+                    {
+                        NextToken(); // consume 'IN'
+                        var right = ParseExpressionOrCondition();
+                        expression = new InExpression(expression, right).WithLocation(argLocation);
                     }
                 }
 
