@@ -46,7 +46,20 @@ public sealed partial class Parser
             var opToken = NextToken();
             var op = GetBinaryOperator(opToken.Kind);
             var right = ParseExpressionOrCondition();
-            left = new BinaryOperatorExpression(left, op, right).WithLocation(loc);
+            if (right is BinaryComparisonCondition con)
+            {
+                left = new BinaryOperatorExpression(left, op, con.Left).WithLocation(loc);
+                left = new BinaryComparisonCondition(left, con.Operator, con.Right).WithLocation(loc);
+            }
+            else if (left is BinaryComparisonCondition conLeft)
+            {
+                right = new BinaryOperatorExpression(conLeft.Right, op, right).WithLocation(loc);
+                left = new BinaryComparisonCondition(conLeft.Left, conLeft.Operator, right).WithLocation(loc);
+            }
+            else
+            {
+                left = new BinaryOperatorExpression(left, op, right).WithLocation(loc);
+            }
         }
 
         if (IsBinaryComparisonOperator(Current.Kind))
