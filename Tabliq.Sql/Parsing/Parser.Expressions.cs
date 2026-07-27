@@ -378,6 +378,14 @@ public sealed partial class Parser
     {
         var loc = Track();
 
+        if (IsUnaryOperator(Current.Kind))
+        {
+            var opToken = NextToken();
+            var op = GetUnaryOperator(opToken.Kind);
+            var operand = ParseExpression();
+            return new UnaryOperatorExpression(operand, op).WithLocation(loc);
+        }
+
         if (IsUnaryComparisonOperator(Current.Kind))
         {
             var opToken = NextToken();

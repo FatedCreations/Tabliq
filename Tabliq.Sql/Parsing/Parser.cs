@@ -529,11 +529,22 @@ public sealed partial class Parser
 
     private bool IsUnaryComparisonOperator(SyntaxKind kind)
         => GetUnaryComparisonOperator(kind) != UnaryCompararisonOperator.Unknown;
+
     private UnaryCompararisonOperator GetUnaryComparisonOperator(SyntaxKind kind)
         => kind switch
         {
             SyntaxKind.NotKeyword => UnaryCompararisonOperator.Not,
             _ => UnaryCompararisonOperator.Unknown
+        };
+
+    private bool IsUnaryOperator(SyntaxKind kind)
+        => GetUnaryOperator(kind) != UnaryOperator.Unknown;
+
+    private UnaryOperator GetUnaryOperator(SyntaxKind kind)
+        => kind switch
+        {
+            SyntaxKind.MinusToken => UnaryOperator.Negate,
+            _ => UnaryOperator.Unknown
         };
 
     private GroupByClause ParseGroupBy()

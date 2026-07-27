@@ -401,9 +401,22 @@ public class SqlWriter
             case InExpression InExpression:
                 Write(InExpression);
                 break;
+            case UnaryOperatorExpression UnaryOperatorExpression:
+                Write(UnaryOperatorExpression);
+                break;
             default:
                 throw new NotImplementedException($"Writing for {node.GetType().Name} is not implemented.");
         }
+    }
+
+    protected virtual void Write(UnaryOperatorExpression unaryOperatorExpression)
+    {
+        Write(unaryOperatorExpression.Operator switch
+        {
+            UnaryOperator.Negate => "-",
+            _ => throw new NotImplementedException($"Writing for {unaryOperatorExpression.Operator} is not implemented.")
+        });
+        Write(unaryOperatorExpression.Expression);
     }
 
     protected virtual void Write(InExpression inExpression)
