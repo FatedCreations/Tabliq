@@ -416,6 +416,15 @@ public class SqlWriter
             UnaryOperator.Negate => "-",
             _ => throw new NotImplementedException($"Writing for {unaryOperatorExpression.Operator} is not implemented.")
         });
+
+        if (unaryOperatorExpression.Operator == UnaryOperator.Negate &&
+            (
+            unaryOperatorExpression.Expression is UnaryOperatorExpression { Operator: UnaryOperator.Negate } ||
+            unaryOperatorExpression.Expression is LiteralExpression lit && lit.Value?.ToString()?.StartsWith("-") == true
+            ))
+        {
+            Write(" ");
+        }
         Write(unaryOperatorExpression.Expression);
     }
 

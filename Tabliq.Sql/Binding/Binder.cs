@@ -113,13 +113,10 @@ public class Binder
         }
         finally
         {
-            if (!previous.InsideUnion) // suppress exposing the binding wehn inside a union block
+            var boundTable = Current.Build();
+            if (boundTable is not null)
             {
-                var boundTable = Current.Build();
-                if (boundTable is not null)
-                {
-                    previous.AddTableToCatalog(boundTable); // ?? this might be wrong and we need to add to a scoped catalog!
-                }
+                previous.AddTableToCatalog(boundTable);
             }
             Current = previous;
         }
@@ -127,14 +124,16 @@ public class Binder
 
     void InsideUnion(string name, Action action)
     {
-        var previous = Current.InsideUnion;
+        var previous = Current;
+        Current = new BindingScope(name, previous);
         try
         {
             action();
         }
         finally
         {
-            Current.InsideUnion = previous;
+            // we discard the tables inside a union block as they are not visible outside of the union block
+            Current = previous;
         }
     }
 
@@ -626,10 +625,7 @@ public class Binder
     private void Bind(UnionStatement unionStatement)
         => InsideUnion(string.Empty, () =>
         {
-            WithNewTable(string.Empty, () =>
-            {
-                BindChildren(unionStatement);
-            });
+            BindChildren(unionStatement);
         });
 
     private void Bind(SelectStatement selectStatement)
@@ -784,7 +780,6 @@ public class BindingScope
     public bool InsideOrderBy { get; set; } = false;
     public bool InsideAggregate { get; set; } = false;
     public bool InsideGroupBy { get; set; } = false;
-    public bool InsideUnion { get; set; } = false;
     public bool HasGroupBy { get; internal set; }
     public bool HasAggregates { get; internal set; }
 
