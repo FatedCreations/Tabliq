@@ -618,7 +618,9 @@ public sealed partial class Parser
 
         var dataType = NextToken(); // consume data type
         string? length = null;
-        if (IsMatch(0, SyntaxKind.OpenParenToken) && (IsMatch(1, SyntaxKind.NumberToken) || IsMatch(1, SyntaxKind.MaxKeyword)) && IsMatch(2, SyntaxKind.CloseParenToken))
+        string? precision = null;
+        string? scale = null;
+        if (IsMatch(SyntaxKind.OpenParenToken, SyntaxKind.NumberToken, SyntaxKind.CloseParenToken))
         {
             MatchToken(SyntaxKind.OpenParenToken);
             var token = NextToken();
@@ -627,8 +629,29 @@ public sealed partial class Parser
 
             MatchToken(SyntaxKind.CloseParenToken);
         }
+        else if (IsMatch(SyntaxKind.OpenParenToken, SyntaxKind.NumberToken, SyntaxKind.CommaToken, SyntaxKind.NumberToken, SyntaxKind.CloseParenToken))
+        {
+            MatchToken(SyntaxKind.OpenParenToken);
+            var precisionToken = NextToken();
+            _ = NextToken(); //comma
+            var scaleToken = NextToken();
 
-        return new DataType(dataType.Text, length).WithLocation(loc);
+            precision = precisionToken.Value?.ToString() ?? precisionToken.Text.ToUpperInvariant();
+            scale = scaleToken.Value?.ToString() ?? scaleToken.Text.ToUpperInvariant();
+
+            MatchToken(SyntaxKind.CloseParenToken);
+        }
+        else if(IsMatch(SyntaxKind.OpenParenToken, SyntaxKind.MaxKeyword, SyntaxKind.CloseParenToken))
+        {
+            MatchToken(SyntaxKind.OpenParenToken);
+            var token = NextToken();
+
+            length = token.Text.ToUpperInvariant();
+
+            MatchToken(SyntaxKind.CloseParenToken);
+        }
+
+        return new DataType(dataType.Text, length, precision, scale).WithLocation(loc);
     }
 
     private bool IsKeyword(SyntaxKind kind)

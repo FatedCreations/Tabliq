@@ -538,11 +538,34 @@ public class SqlWriter
 
     protected virtual void Write(DataType val)
     {
+        bool hasLength = val.Length is not null;
+        bool hasPrecision = val.Precision is not null;
+        bool hasScale = val.Scale is not null;
+
         Write(val.Name);
-        if (!string.IsNullOrEmpty(val.Size))
+        if (hasLength || hasPrecision || hasScale)
         {
             Write("(");
-            Write(val.Size);
+            if (hasLength)
+            {
+                Write(val.Length!);
+                if (hasPrecision || hasScale)
+                {
+                    Write(", ");
+                }
+            }
+            if (hasPrecision)
+            {
+                Write(val.Precision!);
+                if (hasScale)
+                {
+                    Write(", ");
+                }
+            }
+            if (hasScale)
+            {
+                Write(val.Scale!);
+            }
             Write(")");
         }
     }

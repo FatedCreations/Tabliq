@@ -299,7 +299,7 @@ public class DeepCloneRewiter : SqlRewiter
         => new EmptyStatement(node.HasSemicolon);
 
     protected override DataType Rewrite(DataType node)
-        => new DataType(node.Name, node.Size);
+        => new DataType(node.Name, node.Length, node.Precision, node.Scale);
 
     protected override ParameterIdentifier Rewrite(ParameterIdentifier node)
         => new ParameterIdentifier(node.ParamterName);
