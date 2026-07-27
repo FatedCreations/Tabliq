@@ -529,11 +529,22 @@ public sealed partial class Parser
 
     private bool IsUnaryComparisonOperator(SyntaxKind kind)
         => GetUnaryComparisonOperator(kind) != UnaryCompararisonOperator.Unknown;
+
     private UnaryCompararisonOperator GetUnaryComparisonOperator(SyntaxKind kind)
         => kind switch
         {
             SyntaxKind.NotKeyword => UnaryCompararisonOperator.Not,
             _ => UnaryCompararisonOperator.Unknown
+        };
+
+    private bool IsUnaryOperator(SyntaxKind kind)
+        => GetUnaryOperator(kind) != UnaryOperator.Unknown;
+
+    private UnaryOperator GetUnaryOperator(SyntaxKind kind)
+        => kind switch
+        {
+            SyntaxKind.MinusToken => UnaryOperator.Negate,
+            _ => UnaryOperator.Unknown
         };
 
     private GroupByClause ParseGroupBy()
@@ -618,7 +629,9 @@ public sealed partial class Parser
 
         var dataType = NextToken(); // consume data type
         string? length = null;
-        if (IsMatch(0, SyntaxKind.OpenParenToken) && (IsMatch(1, SyntaxKind.NumberToken) || IsMatch(1, SyntaxKind.MaxKeyword)) && IsMatch(2, SyntaxKind.CloseParenToken))
+        string? precision = null;
+        string? scale = null;
+        if (IsMatch(SyntaxKind.OpenParenToken, SyntaxKind.NumberToken, SyntaxKind.CloseParenToken))
         {
             MatchToken(SyntaxKind.OpenParenToken);
             var token = NextToken();
@@ -627,8 +640,29 @@ public sealed partial class Parser
 
             MatchToken(SyntaxKind.CloseParenToken);
         }
+        else if (IsMatch(SyntaxKind.OpenParenToken, SyntaxKind.NumberToken, SyntaxKind.CommaToken, SyntaxKind.NumberToken, SyntaxKind.CloseParenToken))
+        {
+            MatchToken(SyntaxKind.OpenParenToken);
+            var precisionToken = NextToken();
+            _ = NextToken(); //comma
+            var scaleToken = NextToken();
 
-        return new DataType(dataType.Text, length).WithLocation(loc);
+            precision = precisionToken.Value?.ToString() ?? precisionToken.Text.ToUpperInvariant();
+            scale = scaleToken.Value?.ToString() ?? scaleToken.Text.ToUpperInvariant();
+
+            MatchToken(SyntaxKind.CloseParenToken);
+        }
+        else if(IsMatch(SyntaxKind.OpenParenToken, SyntaxKind.MaxKeyword, SyntaxKind.CloseParenToken))
+        {
+            MatchToken(SyntaxKind.OpenParenToken);
+            var token = NextToken();
+
+            length = token.Text.ToUpperInvariant();
+
+            MatchToken(SyntaxKind.CloseParenToken);
+        }
+
+        return new DataType(dataType.Text, length, precision, scale).WithLocation(loc);
     }
 
     private bool IsKeyword(SyntaxKind kind)
@@ -703,5 +737,6 @@ public sealed partial class Parser
             SyntaxKind.VarcharDataType or
             SyntaxKind.NcharDataType or
             SyntaxKind.NvarcharDataType or
-            SyntaxKind.UniqueidentifierDataType;
+            SyntaxKind.UniqueidentifierDataType or
+            SyntaxKind.BigIntDataType;
 }

@@ -401,9 +401,31 @@ public class SqlWriter
             case InExpression InExpression:
                 Write(InExpression);
                 break;
+            case UnaryOperatorExpression UnaryOperatorExpression:
+                Write(UnaryOperatorExpression);
+                break;
             default:
                 throw new NotImplementedException($"Writing for {node.GetType().Name} is not implemented.");
         }
+    }
+
+    protected virtual void Write(UnaryOperatorExpression unaryOperatorExpression)
+    {
+        Write(unaryOperatorExpression.Operator switch
+        {
+            UnaryOperator.Negate => "-",
+            _ => throw new NotImplementedException($"Writing for {unaryOperatorExpression.Operator} is not implemented.")
+        });
+
+        if (unaryOperatorExpression.Operator == UnaryOperator.Negate &&
+            (
+            unaryOperatorExpression.Expression is UnaryOperatorExpression { Operator: UnaryOperator.Negate } ||
+            unaryOperatorExpression.Expression is LiteralExpression lit && lit.Value?.ToString()?.StartsWith("-") == true
+            ))
+        {
+            Write(" ");
+        }
+        Write(unaryOperatorExpression.Expression);
     }
 
     protected virtual void Write(InExpression inExpression)
@@ -538,11 +560,34 @@ public class SqlWriter
 
     protected virtual void Write(DataType val)
     {
+        bool hasLength = val.Length is not null;
+        bool hasPrecision = val.Precision is not null;
+        bool hasScale = val.Scale is not null;
+
         Write(val.Name);
-        if (!string.IsNullOrEmpty(val.Size))
+        if (hasLength || hasPrecision || hasScale)
         {
             Write("(");
-            Write(val.Size);
+            if (hasLength)
+            {
+                Write(val.Length!);
+                if (hasPrecision || hasScale)
+                {
+                    Write(", ");
+                }
+            }
+            if (hasPrecision)
+            {
+                Write(val.Precision!);
+                if (hasScale)
+                {
+                    Write(", ");
+                }
+            }
+            if (hasScale)
+            {
+                Write(val.Scale!);
+            }
             Write(")");
         }
     }

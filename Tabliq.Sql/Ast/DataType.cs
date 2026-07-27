@@ -4,15 +4,18 @@ namespace Tabliq.Sql.Ast;
 
 public class DataType : SyntaxNode
 {
-    public DataType(string name, string? size = null)
+    public DataType(string name, string? length = null, string? precision = null, string? scale = null)
     {
         Name = name;
-        Size = size;
+        Length = length;
+        Precision = precision;
+        Scale = scale;
     }
 
     public string Name { get; }
-
-    public string? Size { get; }
+    public string? Length { get; }
+    public string? Precision { get; }
+    public string? Scale { get; }
 
     public override IEnumerable<SyntaxNode> GetChildren()
     {
@@ -21,6 +24,6 @@ public class DataType : SyntaxNode
 
     public override bool Equals(SyntaxNode? other)
     {
-        return other is DataType otherType && Name == otherType.Name && Size == otherType.Size;
+        return other is DataType otherType && Name == otherType.Name && Length == otherType.Length && Precision == otherType.Precision && Scale == otherType.Scale;
     }
 }

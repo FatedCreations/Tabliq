@@ -116,8 +116,23 @@ public class Binder
             var boundTable = Current.Build();
             if (boundTable is not null)
             {
-                previous.AddTableToCatalog(boundTable); // ?? this might be wrong and we need to add to a scoped catalog!
+                previous.AddTableToCatalog(boundTable);
             }
+            Current = previous;
+        }
+    }
+
+    void InsideUnion(string name, Action action)
+    {
+        var previous = Current;
+        Current = new BindingScope(name, previous);
+        try
+        {
+            action();
+        }
+        finally
+        {
+            // we discard the tables inside a union block as they are not visible outside of the union block
             Current = previous;
         }
     }
@@ -134,6 +149,10 @@ public class Binder
             case StarIdentifierExpression StarIdentifierExpression:
                 Bind(StarIdentifierExpression);
                 // we need to suppress walking the from clause, as it will be handled separately as it needs preprocessing before the other part to discover/process tables in scope
+                break;
+            case UnionStatement unionStatement:
+                // we need to init a new catalog scope for the select statment, with inline names/aliases overriding parent scope tables
+                Bind(unionStatement);
                 break;
             case SelectStatement selectStatement:
                 // we need to init a new catalog scope for the select statment, with inline names/aliases overriding parent scope tables
@@ -603,6 +622,12 @@ public class Binder
             BindChildren(cte);
         });
 
+    private void Bind(UnionStatement unionStatement)
+        => InsideUnion(string.Empty, () =>
+        {
+            BindChildren(unionStatement);
+        });
+
     private void Bind(SelectStatement selectStatement)
         => WithNewTable(string.Empty, () =>
         {
@@ -620,6 +645,7 @@ public class Binder
                 Bind(c);
             }
         }
+
         // bind remaining children, from will be skipped as the case statment skips it!
         BindChildren(selectExpression);
     }
