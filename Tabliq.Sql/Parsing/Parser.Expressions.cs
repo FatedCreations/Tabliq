@@ -382,7 +382,7 @@ public sealed partial class Parser
         {
             var opToken = NextToken();
             var op = GetUnaryOperator(opToken.Kind);
-            var operand = ParseExpression();
+            var operand = ParsePrimaryExpression();
             return new UnaryOperatorExpression(operand, op).WithLocation(loc);
         }
 
