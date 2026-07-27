@@ -113,12 +113,28 @@ public class Binder
         }
         finally
         {
-            var boundTable = Current.Build();
-            if (boundTable is not null)
+            if (!previous.InsideUnion) // suppress exposing the binding wehn inside a union block
             {
-                previous.AddTableToCatalog(boundTable); // ?? this might be wrong and we need to add to a scoped catalog!
+                var boundTable = Current.Build();
+                if (boundTable is not null)
+                {
+                    previous.AddTableToCatalog(boundTable); // ?? this might be wrong and we need to add to a scoped catalog!
+                }
             }
             Current = previous;
+        }
+    }
+
+    void InsideUnion(string name, Action action)
+    {
+        var previous = Current.InsideUnion;
+        try
+        {
+            action();
+        }
+        finally
+        {
+            Current.InsideUnion = previous;
         }
     }
 
@@ -134,6 +150,10 @@ public class Binder
             case StarIdentifierExpression StarIdentifierExpression:
                 Bind(StarIdentifierExpression);
                 // we need to suppress walking the from clause, as it will be handled separately as it needs preprocessing before the other part to discover/process tables in scope
+                break;
+            case UnionStatement unionStatement:
+                // we need to init a new catalog scope for the select statment, with inline names/aliases overriding parent scope tables
+                Bind(unionStatement);
                 break;
             case SelectStatement selectStatement:
                 // we need to init a new catalog scope for the select statment, with inline names/aliases overriding parent scope tables
@@ -603,6 +623,15 @@ public class Binder
             BindChildren(cte);
         });
 
+    private void Bind(UnionStatement unionStatement)
+        => InsideUnion(string.Empty, () =>
+        {
+            WithNewTable(string.Empty, () =>
+            {
+                BindChildren(unionStatement);
+            });
+        });
+
     private void Bind(SelectStatement selectStatement)
         => WithNewTable(string.Empty, () =>
         {
@@ -620,6 +649,7 @@ public class Binder
                 Bind(c);
             }
         }
+
         // bind remaining children, from will be skipped as the case statment skips it!
         BindChildren(selectExpression);
     }
@@ -754,6 +784,7 @@ public class BindingScope
     public bool InsideOrderBy { get; set; } = false;
     public bool InsideAggregate { get; set; } = false;
     public bool InsideGroupBy { get; set; } = false;
+    public bool InsideUnion { get; set; } = false;
     public bool HasGroupBy { get; internal set; }
     public bool HasAggregates { get; internal set; }
 

@@ -726,5 +726,6 @@ public sealed partial class Parser
             SyntaxKind.VarcharDataType or
             SyntaxKind.NcharDataType or
             SyntaxKind.NvarcharDataType or
-            SyntaxKind.UniqueidentifierDataType;
+            SyntaxKind.UniqueidentifierDataType or
+            SyntaxKind.BigIntDataType;
 }

@@ -348,8 +348,7 @@ public sealed class Lexer
             "NCHAR" => SyntaxKind.NcharDataType,
             "NVARCHAR" => SyntaxKind.NvarcharDataType,
             "UNIQUEIDENTIFIER" => SyntaxKind.UniqueidentifierDataType,
-
-            
+            "BIGINT" => SyntaxKind.BigIntDataType,
 
             _ => SyntaxKind.IdentifierToken
         };

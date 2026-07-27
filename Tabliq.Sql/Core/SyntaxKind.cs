@@ -44,6 +44,7 @@ public enum SyntaxKind
     NcharDataType,
     NvarcharDataType,
     UniqueidentifierDataType,
+    BigIntDataType,
 
     // Keywords
     SelectKeyword,
