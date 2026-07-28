@@ -11,7 +11,6 @@ public class TestCases
     [Fact]
     public void UnknownFunctionFailsToParse()
         => AssertSql
-            .SkipBinder()
             .WithErrors(
                 """
                 SELECT FOO(*) FROM BE;
