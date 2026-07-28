@@ -18,7 +18,8 @@ public static class BuiltInFunctions
                 new FunctionArgumentSymbol("as_expression", RequiredType: typeof(AsExpression)),
             ]),
             new FunctionSymbol("COALESCE", IsAggregate: false, [
-                new FunctionArgumentSymbol("val")
+                new FunctionArgumentSymbol("val1"),
+                new FunctionArgumentSymbol("val2")
             ], ParamsArgument: new FunctionArgumentSymbol("fallbacks")),
             new FunctionSymbol("NULLIF", IsAggregate: false, [
                 new FunctionArgumentSymbol("a"),

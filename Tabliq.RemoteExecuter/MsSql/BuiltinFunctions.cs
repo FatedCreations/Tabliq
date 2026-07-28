@@ -215,15 +215,15 @@ public static class BuiltinFunctions
 
         // Analytic functions
         // https://learn.microsoft.com/en-us/sql/t-sql/functions/cume-dist-transact-sql?view=sql-server-ver17
-        new FunctionSymbol("CUME_DIST", IsAggregate: true, []),
+        new FunctionSymbol("CUME_DIST", IsAggregate: false, []),
 
         // https://learn.microsoft.com/en-us/sql/t-sql/functions/first-value-transact-sql?view=sql-server-ver17
-        new FunctionSymbol("FIRST_VALUE", IsAggregate: true, [new FunctionArgumentSymbol("scalar_expression", Optional: true)]),
+        new FunctionSymbol("FIRST_VALUE", IsAggregate: false, [new FunctionArgumentSymbol("scalar_expression", Optional: true)]),
 
         // https://learn.microsoft.com/en-us/sql/t-sql/functions/lag-transact-sql?view=sql-server-ver17
         new FunctionSymbol(
             "LAG",
-            IsAggregate: true,
+            IsAggregate: false,
             [
                 new FunctionArgumentSymbol("scalar_expression"),
                 new FunctionArgumentSymbol("offset", Optional: true),
@@ -233,7 +233,7 @@ public static class BuiltinFunctions
         // https://learn.microsoft.com/en-us/sql/t-sql/functions/last-value-transact-sql?view=sql-server-ver17
         new FunctionSymbol(
             "LAST_VALUE",
-            IsAggregate: true,
+            IsAggregate: false,
             [
                 new FunctionArgumentSymbol("scalar_expression", Optional: true)
             ]),
@@ -241,7 +241,7 @@ public static class BuiltinFunctions
         // https://learn.microsoft.com/en-us/sql/t-sql/functions/lead-transact-sql?view=sql-server-ver17
         new FunctionSymbol(
             "LEAD",
-            IsAggregate: true,
+            IsAggregate: false,
             [
                 new FunctionArgumentSymbol("scalar_expression"),
                 new FunctionArgumentSymbol("offset", Optional: true),
@@ -250,20 +250,20 @@ public static class BuiltinFunctions
         // https://learn.microsoft.com/en-us/sql/t-sql/functions/percentile-cont-transact-sql?view=sql-server-ver17
         new FunctionSymbol(
             "PERCENTILE_CONT",
-            IsAggregate: true,
+            IsAggregate: false,
             [
                 new FunctionArgumentSymbol("numeric_literal")
             ]),
         // https://learn.microsoft.com/en-us/sql/t-sql/functions/percentile-disc-transact-sql?view=sql-server-ver17
         new FunctionSymbol(
             "PERCENTILE_DISC",
-            IsAggregate: true,
+            IsAggregate: false,
             [
                 new FunctionArgumentSymbol("numeric_literal"),
             ]),
 
         // https://learn.microsoft.com/en-us/sql/t-sql/functions/percent-rank-transact-sql?view=sql-server-ver17
-        new FunctionSymbol("PERCENT_RANK", IsAggregate: true, []),
+        new FunctionSymbol("PERCENT_RANK", IsAggregate: false, []),
 
         // Conversion
 
