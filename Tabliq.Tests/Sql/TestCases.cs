@@ -9,6 +9,16 @@ public class TestCases
 {
 
     [Fact]
+    public void UnknownFunctionFailsToParse()
+        => AssertSql
+            .SkipBinder()
+            .WithErrors(
+                """
+                SELECT FOO(*) FROM BE;
+                """,
+                "FunctionNotFound: [7:6] : Function 'FOO' not found.");
+
+    [Fact]
     public void SemiColonStatemntSeperator()
         => AssertSql
             .SkipBinder()
@@ -97,7 +107,9 @@ public class TestCases
 
     [Fact]
     public void ConvertExpressionWithDataTypeKeywords()
-        => AssertSql.Equal(
+        => AssertSql
+        .WithSchema(s => s.AddFunctions(Tabliq.RemoteExecuter.MsSql.BuiltinFunctions.functions))
+        .Equal(
             """
             SELECT CONVERT(date, DATEFROMPARTS(YEAR(SE_CRE), MONTH(SE_CRE), 1)) AS month, COUNT(*) AS incident_count FROM SE GROUP BY YEAR(SE_CRE), MONTH(SE_CRE) ORDER BY month
             """,
@@ -144,7 +156,11 @@ public class TestCases
 
     [Fact]
     public void CastExpressionWithDataTypeKeywords()
-        => AssertSql.Equal(
+        => AssertSql
+        .WithSchema(s=>
+            s.AddFunctions(Tabliq.RemoteExecuter.MsSql.BuiltinFunctions.functions)
+        )
+        .Equal(
             """
             SELECT Cast(DATEFROMPARTS(YEAR(SE_CRE), MONTH(SE_CRE), 1) as date) AS month, COUNT(*) AS incident_count FROM SE GROUP BY YEAR(SE_CRE), MONTH(SE_CRE) ORDER BY month
             """,
@@ -182,7 +198,9 @@ public class TestCases
 
     [Fact]
     public void DatePart()
-        => AssertSql.Equal(
+        => AssertSql
+        .WithSchema(s => s.AddFunctions(Tabliq.RemoteExecuter.MsSql.BuiltinFunctions.functions))
+        .Equal(
             """
             SELECT DatePart(YEAR, SE_CRE) FROM SE
             """,
@@ -193,7 +211,9 @@ public class TestCases
 
     [Fact]
     public void PArseExpressionWithDataTypeKeywords()
-        => AssertSql.Equal(
+        => AssertSql
+        .WithSchema(s => s.AddFunctions(Tabliq.RemoteExecuter.MsSql.BuiltinFunctions.functions))
+        .Equal(
             """
             SELECT Parse(DATEFROMPARTS(YEAR(SE_CRE), MONTH(SE_CRE), 1) as date) AS month, COUNT(*) AS incident_count FROM SE GROUP BY YEAR(SE_CRE), MONTH(SE_CRE) ORDER BY month
             """,
@@ -210,7 +230,9 @@ public class TestCases
 
     [Fact]
     public void ParseExpressionWithDataTypeKeywords()
-        => AssertSql.Equal(
+        => AssertSql
+        .WithSchema(s => s.AddFunctions(Tabliq.RemoteExecuter.MsSql.BuiltinFunctions.functions))
+        .Equal(
             """
             SELECT Parse(SE_CRE as date) AS month, COUNT(*) AS incident_count FROM SE GROUP BY PARSE(SE_CRE AS date) ORDER BY month
             """,
@@ -286,7 +308,9 @@ public class TestCases
 
     [Fact]
     public void WindowFunctionRowNumber()
-        => AssertSql.Equal(
+        => AssertSql
+        .WithSchema(s => s.AddFunctions(Tabliq.RemoteExecuter.MsSql.BuiltinFunctions.functions))
+        .Equal(
             """
             SELECT OFId,OF_UID,ROW_NUMBER()OVER(PARTITION BY OF_UID ORDER BY OF_LAS DESC) rn FROM [OF] WHERE OF_LAS IS NOT NULL
             """,
@@ -728,7 +752,9 @@ public class TestCases
 
     [Fact]
     public void GroupingSetsRollupCubeExamples()
-        => AssertSql.Equal(
+        => AssertSql
+        .WithSchema(s => s.AddFunctions(Tabliq.RemoteExecuter.MsSql.BuiltinFunctions.functions))
+        .Equal(
             """
             SELECT OF_UID,OF_OFT,COUNT(*) FROM [OF] GROUP BY ROLLUP(OF_UID,OF_OFT)
             """,

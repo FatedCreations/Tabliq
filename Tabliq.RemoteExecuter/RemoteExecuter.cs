@@ -63,7 +63,7 @@ public class RemoteSqlExecuter
             _context = context;
             _paramaters = paramaters.ToList();
         }
-        public FunctionSymbol? GetFunction(string name) => null;
+        public FunctionSymbol? GetFunction(string name) => _context.Schema.Functions.FirstOrDefault(x => x.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
         public ParameterSymbol? GetParameter(string name) => _paramaters.FirstOrDefault(x => x.Name.Equals(name, StringComparison.OrdinalIgnoreCase))?.AsSymbol();
         public TableSymbol? GetTable(string name) => _context.Schema.Tables.FirstOrDefault(x => x.TableName.Equals(name, StringComparison.OrdinalIgnoreCase))?.AsSymbol();
     }

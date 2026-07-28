@@ -25,10 +25,11 @@ public class TestConfigSchema
         var tables = JsonSerializer.Deserialize<List<DatabaseTable>>(json)!;
         return new VirtualSchema
         {
-            Tables = tables.Select(x => x.AsVirtualTable()).ToList()
+            Tables = tables.Select(x => x.AsVirtualTable()).ToList(),
+            Functions = Tabliq.RemoteExecuter.MsSql.BuiltinFunctions.Functions
         };
     }
-    
+
     static TestConfigSchema()
     {
         _schemaVirtualSchema = new Lazy<VirtualSchema>(() => Load(Resources.Schemas.Default));
