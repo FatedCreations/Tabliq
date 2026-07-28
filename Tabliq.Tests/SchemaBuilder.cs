@@ -35,7 +35,7 @@ public class SchemaBuilder
         foreach (var func in functions)
         {
             var b = AddFunction(func.Name);
-            b.IsAggFunction(b.IsAgg);
+            b.IsAggFunction(func.IsAggregate);
             foreach (var a in func.Arguments)
             {
                 b.AddArgument(a, false);

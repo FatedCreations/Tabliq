@@ -354,26 +354,26 @@ public class Issue15
                 cam.strategic_status,
                 COUNT(*) AS changed_asset_change_events,
                 AVG(CAST(cam.post_incident_count AS FLOAT)) AS mean_post_incident_count,
-                VARP(CAST(cam.post_incident_count AS FLOAT)) AS var_post_incident_count,
+                VAR(CAST(cam.post_incident_count AS FLOAT)) AS var_post_incident_count,
                 AVG(CAST(cam.pre_incident_count AS FLOAT)) AS mean_pre_incident_count,
-                VARP(CAST(cam.pre_incident_count AS FLOAT)) AS var_pre_incident_count,
+                VAR(CAST(cam.pre_incident_count AS FLOAT)) AS var_pre_incident_count,
                 AVG(cam.post_priority_avg) AS mean_post_priority,
-                VARP(cam.post_priority_avg) AS var_post_priority,
+                VAR(cam.post_priority_avg) AS var_post_priority,
                 AVG(cam.pre_priority_avg) AS mean_pre_priority,
-                VARP(cam.pre_priority_avg) AS var_pre_priority,
+                VAR(cam.pre_priority_avg) AS var_pre_priority,
                 AVG(cam.post_business_duration_avg) AS mean_post_business_duration,
-                VARP(cam.post_business_duration_avg) AS var_post_business_duration,
+                VAR(cam.post_business_duration_avg) AS var_post_business_duration,
                 AVG(cam.pre_business_duration_avg) AS mean_pre_business_duration,
-                VARP(cam.pre_business_duration_avg) AS var_pre_business_duration,
+                VAR(cam.pre_business_duration_avg) AS var_pre_business_duration,
                 AVG(CAST(cam.post_incident_count - cam.pre_incident_count AS FLOAT)) AS mean_incident_count_delta,
                 AVG(cam.post_priority_avg - cam.pre_priority_avg) AS mean_priority_delta,
                 AVG(cam.post_business_duration_avg - cam.pre_business_duration_avg) AS mean_business_duration_delta,
                 AVG(CAST(ctrl.control_post_incident_count AS FLOAT)) AS mean_control_post_incident_count,
-                VARP(CAST(ctrl.control_post_incident_count AS FLOAT)) AS var_control_post_incident_count,
+                VAR(CAST(ctrl.control_post_incident_count AS FLOAT)) AS var_control_post_incident_count,
                 AVG(ctrl.control_post_priority_avg) AS mean_control_post_priority,
-                VARP(ctrl.control_post_priority_avg) AS var_control_post_priority,
+                VAR(ctrl.control_post_priority_avg) AS var_control_post_priority,
                 AVG(ctrl.control_post_business_duration_avg) AS mean_control_post_business_duration,
-                VARP(ctrl.control_post_business_duration_avg) AS var_control_post_business_duration
+                VAR(ctrl.control_post_business_duration_avg) AS var_control_post_business_duration
             FROM changed_asset_metrics AS cam
             LEFT JOIN control_asset_metrics AS ctrl
                 ON ctrl.change_id = cam.change_id AND
@@ -405,7 +405,7 @@ public class Issue15
                 FROM [Changes] c
             """,
             """
-            SELECT VARP(c.EA_DAT) AS change_applied_at
+            SELECT VAR(c.EA_DAT) AS change_applied_at
             FROM landscapeQuery_strategy_A.EA AS c
             """);
 }

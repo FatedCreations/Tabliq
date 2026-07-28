@@ -108,7 +108,7 @@ public class TestCases
     [Fact]
     public void ConvertExpressionWithDataTypeKeywords()
         => AssertSql
-        .WithSchema(s => s.AddFunctions(Tabliq.RemoteExecuter.MsSql.BuiltinFunctions.functions))
+        .WithSchema(s => s.AddFunctions(Tabliq.RemoteExecuter.MsSql.BuiltinFunctions.Functions))
         .Equal(
             """
             SELECT CONVERT(date, DATEFROMPARTS(YEAR(SE_CRE), MONTH(SE_CRE), 1)) AS month, COUNT(*) AS incident_count FROM SE GROUP BY YEAR(SE_CRE), MONTH(SE_CRE) ORDER BY month
@@ -158,7 +158,7 @@ public class TestCases
     public void CastExpressionWithDataTypeKeywords()
         => AssertSql
         .WithSchema(s=>
-            s.AddFunctions(Tabliq.RemoteExecuter.MsSql.BuiltinFunctions.functions)
+            s.AddFunctions(Tabliq.RemoteExecuter.MsSql.BuiltinFunctions.Functions)
         )
         .Equal(
             """
@@ -199,7 +199,7 @@ public class TestCases
     [Fact]
     public void DatePart()
         => AssertSql
-        .WithSchema(s => s.AddFunctions(Tabliq.RemoteExecuter.MsSql.BuiltinFunctions.functions))
+        .WithSchema(s => s.AddFunctions(Tabliq.RemoteExecuter.MsSql.BuiltinFunctions.Functions))
         .Equal(
             """
             SELECT DatePart(YEAR, SE_CRE) FROM SE
@@ -212,7 +212,7 @@ public class TestCases
     [Fact]
     public void PArseExpressionWithDataTypeKeywords()
         => AssertSql
-        .WithSchema(s => s.AddFunctions(Tabliq.RemoteExecuter.MsSql.BuiltinFunctions.functions))
+        .WithSchema(s => s.AddFunctions(Tabliq.RemoteExecuter.MsSql.BuiltinFunctions.Functions))
         .Equal(
             """
             SELECT Parse(DATEFROMPARTS(YEAR(SE_CRE), MONTH(SE_CRE), 1) as date) AS month, COUNT(*) AS incident_count FROM SE GROUP BY YEAR(SE_CRE), MONTH(SE_CRE) ORDER BY month
@@ -231,7 +231,7 @@ public class TestCases
     [Fact]
     public void ParseExpressionWithDataTypeKeywords()
         => AssertSql
-        .WithSchema(s => s.AddFunctions(Tabliq.RemoteExecuter.MsSql.BuiltinFunctions.functions))
+        .WithSchema(s => s.AddFunctions(Tabliq.RemoteExecuter.MsSql.BuiltinFunctions.Functions))
         .Equal(
             """
             SELECT Parse(SE_CRE as date) AS month, COUNT(*) AS incident_count FROM SE GROUP BY PARSE(SE_CRE AS date) ORDER BY month
@@ -309,7 +309,7 @@ public class TestCases
     [Fact]
     public void WindowFunctionRowNumber()
         => AssertSql
-        .WithSchema(s => s.AddFunctions(Tabliq.RemoteExecuter.MsSql.BuiltinFunctions.functions))
+        .WithSchema(s => s.AddFunctions(Tabliq.RemoteExecuter.MsSql.BuiltinFunctions.Functions))
         .Equal(
             """
             SELECT OFId,OF_UID,ROW_NUMBER()OVER(PARTITION BY OF_UID ORDER BY OF_LAS DESC) rn FROM [OF] WHERE OF_LAS IS NOT NULL
@@ -753,7 +753,7 @@ public class TestCases
     [Fact]
     public void GroupingSetsRollupCubeExamples()
         => AssertSql
-        .WithSchema(s => s.AddFunctions(Tabliq.RemoteExecuter.MsSql.BuiltinFunctions.functions))
+        .WithSchema(s => s.AddFunctions(Tabliq.RemoteExecuter.MsSql.BuiltinFunctions.Functions))
         .Equal(
             """
             SELECT OF_UID,OF_OFT,COUNT(*) FROM [OF] GROUP BY ROLLUP(OF_UID,OF_OFT)

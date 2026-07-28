@@ -1,5 +1,4 @@
-﻿using System.Xml.Linq;
-using Tabliq.Sql.Ast;
+﻿using Tabliq.Sql.Ast;
 using Tabliq.Sql.Core;
 using Tabliq.Sql.Rewriter;
 
@@ -11,10 +10,10 @@ internal class RewriteForMsSqlServer : SqlRewiter
 
     public Dictionary<string, string> FunctionNameRewrites { get; } = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
     {
-        ["STDDEV_POP"] = "STDEV",
-        ["STDDEV_SAMP"] = "STDEVP",
-        ["VAR_POP"] = "VAR",
-        ["VAR_SAMP"] = "VARP",
+        ["STDDEV_POP"] = "STDEVP",
+        ["STDDEV_SAMP"] = "STDEV",
+        ["VAR_POP"] = "VARP",
+        ["VAR_SAMP"] = "VAR",
         ["CHAR_LENGTH"] = "LEN",
         ["CHARACTER_LENGTH"] = "LEN",
         ["CEIL"] = "CEILING",
@@ -26,7 +25,10 @@ internal class RewriteForMsSqlServer : SqlRewiter
         if (FunctionNameRewrites.TryGetValue(node.FunctionName, out var newName))
         {
             // simple aliasing of function names.
-            return new FunctionCallExpression(newName, node.Arguments, node.Window);
+            node = new FunctionCallExpression(newName, node.Arguments, node.Window)
+            {
+                Span = node.Span,
+            };
         }
         else if (node.FunctionName.Equals("EXTRACT", StringComparison.OrdinalIgnoreCase) && node.Arguments.Count == 1 && node.Arguments[0] is ValueFromExpression from)
         {
@@ -65,27 +67,28 @@ internal class RewriteForMsSqlServer : SqlRewiter
 
     protected override SyntaxNode Rewrite(SyntaxNode node)
     {
-        if (TryCreateCovarSamp(node, out node) || TryCreateCovarPop(node, out node))
+        var newNode = node;
+        if (TryCreateCovarSamp(node, out newNode) || TryCreateCovarPop(node, out newNode))
         {
             // already handled
         }
         else if (node is FunctionCallExpression c && c.FunctionName.Equals("MOD", StringComparison.OrdinalIgnoreCase) && c.Arguments.Count == 2)
         {
-            node = new BinaryOperatorExpression(c.Arguments[0], BinaryOperator.Modulus, c.Arguments[1])
+            newNode = new BinaryOperatorExpression(c.Arguments[0], BinaryOperator.Modulus, c.Arguments[1])
             {
                 Span = node.Span,
             };
         }
         else if (node is CurrentTimestamp)
         {
-            node = new FunctionCallExpression("GETDATE", [], null)
+            newNode = new FunctionCallExpression("GETDATE", [], null)
             {
                 Span = node.Span,
             };
         }
         else if (node is CurrentTime)
         {
-            node = new FunctionCallExpression(
+            newNode = new FunctionCallExpression(
                 "CAST",
                 [
                     new AsExpression(
@@ -105,7 +108,7 @@ internal class RewriteForMsSqlServer : SqlRewiter
         }
         else if (node is CurrentDate)
         {
-            node = new FunctionCallExpression(
+            newNode = new FunctionCallExpression(
                 "CAST",
                 [
                     new AsExpression(
@@ -148,14 +151,15 @@ internal class RewriteForMsSqlServer : SqlRewiter
         {
             if (GetConcatinateExpressions(op).Any())
             {
-                node = new FunctionCallExpression("CONCAT", GetConcatinateExpressions(op), null)
+                newNode = new FunctionCallExpression("CONCAT", GetConcatinateExpressions(op), null)
                 {
                     Span = op.Span,
                 };
             }
         }
 
-        return base.Rewrite(node);
+        newNode.Span = node.Span;
+        return base.Rewrite(newNode);
     }
 
     private bool TryCreateCovarPop(SyntaxNode node, out SyntaxNode result)
@@ -165,12 +169,14 @@ internal class RewriteForMsSqlServer : SqlRewiter
         {
             return false;
         }
+
         var x = c.Arguments[0];
         var y = c.Arguments[1];
 
         result = CreateCovarPop(x, y);
         return true;
     }
+
     private Expression CreateCovarPop(Expression x, Expression y)
     {
         var caseExp = new CaseExpression(
@@ -201,19 +207,29 @@ internal class RewriteForMsSqlServer : SqlRewiter
         {
             return false;
         }
+
         var x = c.Arguments[0];
         var y = c.Arguments[1];
 
         var coVarPop = CreateCovarPop(x, y);
-        var count = new FunctionCallExpression("COUNT", [
-            new CaseExpression(null, [
-                new CaseWhenClause(new LogicalCondition(new IsNullCondition(true, x), LogicalOperator.And, new IsNullCondition(true, y)), new LiteralExpression(1))], null)], null);
+        var count = new FunctionCallExpression(
+            "COUNT",
+            [
+                new CaseExpression(
+                    null,
+                    [
+                        new CaseWhenClause(new LogicalCondition(new IsNullCondition(true, x), LogicalOperator.And, new IsNullCondition(true, y)), new LiteralExpression(1))
+                    ],
+                    null)
+            ],
+            null);
         var nullifCount = new FunctionCallExpression("NULLIF", [new BinaryOperatorExpression(count, BinaryOperator.Subtract, new LiteralExpression(1)), new LiteralExpression(0)], null);
         result =
             new BinaryOperatorExpression(
-            new BracketedExpression(
-            new BinaryOperatorExpression(count, BinaryOperator.Multiply, coVarPop)
-            ), BinaryOperator.Divide, nullifCount);
+                new BracketedExpression(
+                    new BinaryOperatorExpression(count, BinaryOperator.Multiply, coVarPop)),
+                BinaryOperator.Divide,
+                nullifCount);
 
         return true;
     }

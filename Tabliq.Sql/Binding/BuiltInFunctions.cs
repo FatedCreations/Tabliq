@@ -77,16 +77,16 @@ public static class BuiltInFunctions
             new FunctionSymbol("MAX", IsAggregate: true, [
                 new FunctionArgumentSymbol("x"),
             ]),
-            new FunctionSymbol("STDDEV_POP", IsAggregate: true, [ // STDEV in mssql
+            new FunctionSymbol("STDDEV_POP", IsAggregate: true, [ // STDEVP in mssql
                 new FunctionArgumentSymbol("expression"),
             ]),
-            new FunctionSymbol("STDDEV_SAMP", IsAggregate: true, [ // STDEVP in mssql
+            new FunctionSymbol("STDDEV_SAMP", IsAggregate: true, [ // STDEV in mssql
                 new FunctionArgumentSymbol("expression"),
             ]),
-            new FunctionSymbol("VAR_POP", IsAggregate: true, [ // VAR in mssql
+            new FunctionSymbol("VAR_POP", IsAggregate: true, [ // VARP in mssql
                 new FunctionArgumentSymbol("expression"),
             ]),
-            new FunctionSymbol("VAR_SAMP", IsAggregate: true, [ // VARP in mssql
+            new FunctionSymbol("VAR_SAMP", IsAggregate: true, [ // VAR in mssql
                 new FunctionArgumentSymbol("expression"),
             ]),
             /*
@@ -118,13 +118,13 @@ public static class BuiltInFunctions
              ]),
 
              // https://en.wikibooks.org/wiki/SQL_Dialects_Reference/Functions_and_expressions/String_functions
-             new FunctionSymbol("POSITION", IsAggregate: true, [ // CHARINDEX(expression.SubValue, expression.Expression)
+             new FunctionSymbol("POSITION", IsAggregate: false, [ // CHARINDEX(expression.SubValue, expression.Expression)
                 new FunctionArgumentSymbol("exp", RequiredType: typeof(InExpression)),
              ]),
-             new FunctionSymbol("LOWER", IsAggregate: true, [
+             new FunctionSymbol("LOWER", IsAggregate: false, [
                 new FunctionArgumentSymbol("x"),
              ]),
-             new FunctionSymbol("UPPER", IsAggregate: true, [
+             new FunctionSymbol("UPPER", IsAggregate: false, [
                 new FunctionArgumentSymbol("x"),
              ]),
              // require special parser handling for `TRIM({LEADING|TRAILING|BOTH} [' '] FROM x)`
@@ -137,10 +137,10 @@ public static class BuiltInFunctions
              //   new FunctionArgumentSymbol("x"),
              //]),
              
-             new FunctionSymbol("CHAR_LENGTH", IsAggregate: true, [ // LEN in mssql
+             new FunctionSymbol("CHAR_LENGTH", IsAggregate: false, [ // LEN in mssql
                 new FunctionArgumentSymbol("x"),
              ]),
-             new FunctionSymbol("CHARACTER_LENGTH", IsAggregate: true, [ // LEN in mssql
+             new FunctionSymbol("CHARACTER_LENGTH", IsAggregate: false, [ // LEN in mssql
                 new FunctionArgumentSymbol("x"),
              ]),
 
