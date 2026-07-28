@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Tabliq.RemoteExecuter;
 using Tabliq.Sql.Ast;
 using Tabliq.Sql.Binding;
 using Tabliq.Sql.Core;
@@ -9,6 +10,8 @@ using Tabliq.Tests;
 
 public class AssertSql
 {
+    public static Asserter WithSchema(VirtualSchema provider)
+        => new Asserter().WithSchema(provider);
     public static Asserter WithSchema(ISchemaProvider provider)
         => new Asserter(provider);
     public static Asserter WithSchema(Action<SchemaBuilder> builder)
@@ -54,6 +57,20 @@ public class AssertSql
             builder(newBuilder);
             return new Asserter(new CombineSchema(newBuilder.Build(), this._databaseSchema));
         }
+
+        internal Asserter WithSchema(VirtualSchema provider, bool includeFunctions = true)
+            => WithSchema(b =>
+            {
+                foreach (var t in provider.Tables)
+                {
+                    b.AddTable(t.AsSymbol());
+                }
+                if (includeFunctions)
+                {
+                    b.AddFunctions(provider.Functions);
+                }
+            });
+
         internal Asserter WithSchema(ISchemaProvider provider)
             => new Asserter(new CombineSchema(provider, this._databaseSchema));
 

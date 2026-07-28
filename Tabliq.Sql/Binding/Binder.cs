@@ -1,17 +1,6 @@
-//using System.Collections.Generic;
-//using Tabliq.Sql.Core;
-//using Tabliq.Sql.Diagnostics;
-//using Tabliq.Sql.Parsing.Nodes;
-
-using System.Net.Http.Headers;
-using System.Reflection;
-using System.Xml.Linq;
 using Tabliq.Sql.Ast;
 using Tabliq.Sql.Core;
 using Tabliq.Sql.Diagnostics;
-using Tabliq.Sql.Lexing;
-using Tabliq.Sql.Parsing;
-using Tabliq.Sql.Printer;
 
 namespace Tabliq.Sql.Binding;
 
@@ -370,6 +359,7 @@ public class Binder
 
         if (def is null)
         {
+            Diagnostics.Report("FunctionNotFound", $"Function '{p.FunctionName}' not found.", p);
             BindChildren(p);
             return;
         }
