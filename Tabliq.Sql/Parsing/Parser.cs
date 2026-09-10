@@ -595,9 +595,9 @@ public sealed partial class Parser
         // we now parse expression with options DESC ASC or DESCENDING ASCENDING
 
         OffsetClause? offsetClause = null;
+        var offsetLoc = Track();
         if (TryMatchToken(SyntaxKind.OffsetKeyword))
         {
-            var offsetLoc = Track();
             var offsetCount = ParseExpression();
             TryMatchToken(SyntaxKind.RowKeyword);// optional keyword that mean nothing, just consume if they exist
             TryMatchToken(SyntaxKind.RowsKeyword);// optional keyword that mean nothing, just consume if they exist
@@ -613,6 +613,17 @@ public sealed partial class Parser
                 TryMatchToken(SyntaxKind.OnlyKeyword);// optional keyword that mean nothing, just consume if they exist
             }
             offsetClause = new OffsetClause(offsetCount, fetchCount).WithLocation(offsetLoc);
+        }
+        else if (TryMatchToken(SyntaxKind.FetchKeyword))
+        {
+            TryMatchToken(SyntaxKind.FirstKeyword);// optional keyword that mean nothing, just consume if they exist
+            TryMatchToken(SyntaxKind.NextKeyword); // optional keyword that mean nothing, just consume if they exist
+            var fetchCount = ParseExpression();
+            TryMatchToken(SyntaxKind.RowKeyword);// optional keyword that mean nothing, just consume if they exist
+            TryMatchToken(SyntaxKind.RowsKeyword);// optional keyword that mean nothing, just consume if they exist
+            TryMatchToken(SyntaxKind.OnlyKeyword);// optional keyword that mean nothing, just consume if they exist
+
+            offsetClause = new OffsetClause(new LiteralExpression(0), fetchCount).WithLocation(offsetLoc);
         }
 
         return new OrderByClause(entries, offsetClause).WithLocation(loc);
@@ -652,7 +663,7 @@ public sealed partial class Parser
 
             MatchToken(SyntaxKind.CloseParenToken);
         }
-        else if(IsMatch(SyntaxKind.OpenParenToken, SyntaxKind.MaxKeyword, SyntaxKind.CloseParenToken))
+        else if (IsMatch(SyntaxKind.OpenParenToken, SyntaxKind.MaxKeyword, SyntaxKind.CloseParenToken))
         {
             MatchToken(SyntaxKind.OpenParenToken);
             var token = NextToken();
