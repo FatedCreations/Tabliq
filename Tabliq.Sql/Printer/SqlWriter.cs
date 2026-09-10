@@ -839,12 +839,21 @@ public class SqlWriter
 
     protected virtual void Write(OffsetClause offset)
     {
-        Write("OFFSET ");
-        Write(offset.OffsetCount);
-        Write(" ROWS");
+        if (offset.OffsetCount is not null)
+        {
+            Write("OFFSET ");
+            Write(offset.OffsetCount);
+            Write(" ROWS");
+
+            if (offset.FetchCount is not null)
+            {
+                Write(" ");
+            }
+        }
+
         if (offset.FetchCount is not null)
         {
-            Write(" FETCH NEXT ");
+            Write("FETCH NEXT ");
             Write(offset.FetchCount);
             Write(" ROWS ONLY");
         }

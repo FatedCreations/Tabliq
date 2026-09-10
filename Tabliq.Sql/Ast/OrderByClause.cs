@@ -4,23 +4,32 @@ namespace Tabliq.Sql.Ast;
 
 public class OffsetClause : SyntaxNode
 {
-    public OffsetClause(Expression offsetCount, Expression? fetchCount = null)
+    public OffsetClause(Expression? offsetCount, Expression? fetchCount = null)
     {
         OffsetCount = offsetCount;
         FetchCount = fetchCount;
+
+        if (OffsetCount is null && FetchCount is null)
+        {
+            throw new ArgumentException("At least one of offsetCount or fetchCount must be provided.");
+        }
     }
 
-    public Expression OffsetCount { get; }
-    public Expression? FetchCount { get; } = null;
+    public Expression? OffsetCount { get; }
+
+    public Expression? FetchCount { get; }
 
     public override bool Equals(SyntaxNode? other)
     {
-        return other is OffsetClause offset && OffsetCount.Equals(offset.OffsetCount) && Equals(FetchCount, offset.FetchCount);
+        return other is OffsetClause offset && Equals(OffsetCount, offset.OffsetCount) && Equals(FetchCount, offset.FetchCount);
     }
 
     public override IEnumerable<SyntaxNode> GetChildren()
     {
-        yield return OffsetCount;
+        if (OffsetCount != null)
+        {
+            yield return OffsetCount;
+        }
         if (FetchCount != null)
         {
             yield return FetchCount;
