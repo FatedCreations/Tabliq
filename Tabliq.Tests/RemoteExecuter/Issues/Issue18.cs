@@ -2,7 +2,7 @@
 namespace Tabliq.Tests.RemoteExecuter;
 
 /// <summary>
-/// https://github.com/FatedCreations/Tabliq/issues/15
+/// https://github.com/FatedCreations/Tabliq/issues/18
 /// </summary>
 public class Issue18
 {
