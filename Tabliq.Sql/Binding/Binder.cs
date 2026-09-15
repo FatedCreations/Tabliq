@@ -192,7 +192,6 @@ public class Binder
 
     private void Bind(WindowSpecification p)
     {
-        Current.InsideWindowOver = true;
         var prev = Current.InsideWindowOver;
         Current.InsideWindowOver = true;
         try
