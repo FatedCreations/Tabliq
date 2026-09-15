@@ -23,5 +23,6 @@ public static class Resources
         public static string AnonSchema => GetFile("Schemas.AnonSchema.json");
         public static string Default => GetFile("Schemas.Default.json");
         public static string FriendlyNames => GetFile("Schemas.FriendlyNames.json");
+        public static string SlaSchema => GetFile("Schemas.SlaSchema.json");
     }
 }
