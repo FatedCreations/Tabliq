@@ -181,9 +181,26 @@ public class Binder
             case OrderByEntry OrderByEntry:
                 Bind(OrderByEntry);
                 break;
+            case WindowSpecification WindowSpecification:
+                Bind(WindowSpecification);
+                break;
             default:
                 BindChildren(node);
                 break;
+        }
+    }
+
+    private void Bind(WindowSpecification p)
+    {
+        var prev = Current.InsideWindowOver;
+        Current.InsideWindowOver = true;
+        try
+        {
+            BindChildren(p);
+        }
+        finally
+        {
+            Current.InsideWindowOver = prev;
         }
     }
 
@@ -222,23 +239,26 @@ public class Binder
 
         Bind(e.Expression);
 
-        // only needed if we every called an aggregate function or we hit a groupby clause
-        if (Current.HasAggregates || Current.HasGroupBy)
+        if (!Current.InsideWindowOver)
         {
-            // For other expressions, allow them only if they contain an aggregate function
-            if (!ExpressionValidForOrderBy(e.Expression, out var exp))
+            // only needed if we every called an aggregate function or we hit a groupby clause
+            if (Current.HasAggregates || Current.HasGroupBy)
             {
-                if (exp.Binding is not null)
+                // For other expressions, allow them only if they contain an aggregate function
+                if (!ExpressionValidForOrderBy(e.Expression, out var exp))
                 {
-                    Diagnostics.Report("InvalidColumnInOrderBy",
-                        $"Expression '{exp.Binding.TableSymbol.Name}.{exp.Binding.ColumnSymbol.Name}' in ORDER BY must be either an aggregate or a grouped column.",
-                        e.Expression);
-                }
-                else
-                {
-                    Diagnostics.Report("InvalidColumnInOrderBy",
-                        $"Expression '{exp}' in ORDER BY must be either an aggregate or a grouped column.",
-                        e.Expression);
+                    if (exp.Binding is not null)
+                    {
+                        Diagnostics.Report("InvalidColumnInOrderBy",
+                            $"Expression '{exp.Binding.TableSymbol.Name}.{exp.Binding.ColumnSymbol.Name}' in ORDER BY must be either an aggregate or a grouped column.",
+                            e.Expression);
+                    }
+                    else
+                    {
+                        Diagnostics.Report("InvalidColumnInOrderBy",
+                            $"Expression '{exp}' in ORDER BY must be either an aggregate or a grouped column.",
+                            e.Expression);
+                    }
                 }
             }
         }
@@ -399,6 +419,11 @@ public class Binder
                 }
 
                 Bind(p.Arguments[i]);
+            }
+
+            if (p.Window is not null)
+            {
+                Bind(p.Window);
             }
         });
     }
@@ -768,9 +793,15 @@ public class BindingScope
 
     // are we in an order by, group by, having scope?
     public bool InsideOrderBy { get; set; } = false;
+
     public bool InsideAggregate { get; set; } = false;
+
     public bool InsideGroupBy { get; set; } = false;
+
+    public bool InsideWindowOver { get; set; } = false;
+
     public bool HasGroupBy { get; internal set; }
+
     public bool HasAggregates { get; internal set; }
 
     internal ColumnBinding? FindByAlias(string colName)
