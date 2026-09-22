@@ -36,10 +36,29 @@ public sealed partial class Parser
         return new BadCondition(conditionLoc.Span).WithLocation(conditionLoc);
     }
 
+    private Expression ParseSimpleExpression()
+    {
+        var loc = Track();
+
+        var left = ParsePrimaryExpression();
+
+        while (IsBinaryOperator(Current.Kind))
+        {
+            var opToken = NextToken();
+            var op = GetBinaryOperator(opToken.Kind);
+
+            var right = ParseSimpleExpression();
+            left = new BinaryOperatorExpression(left, op, right).WithLocation(loc);
+        }
+
+        return left;
+    }
+
     private Expression ParseExpressionOrCondition()
     {
         var loc = Track();
-        var left = ParsePrimaryExpression();
+
+        var left = ParseSimpleExpression();
 
         while (IsBinaryOperator(Current.Kind))
         {
@@ -107,12 +126,14 @@ public sealed partial class Parser
         {
             var isNot = TryMatchToken(SyntaxKind.NotKeyword);
             MatchToken(SyntaxKind.LikeKeyword);//like
-            var stringToken = MatchToken(SyntaxKind.StringToken);//like
+            var exp = ParseSimpleExpression();
+
+            // var stringToken = MatchToken(SyntaxKind.StringToken);//like
 
             // is not null
             left = new LikeCondition(isNot,
                 left,
-                new LiteralExpression(stringToken.Text).WithLocation(stringToken))
+                exp)
                 .WithLocation(loc);
         }
         else if (TryMatchTokens([SyntaxKind.IsKeyword, SyntaxKind.NotKeyword, SyntaxKind.NullKeyword]))

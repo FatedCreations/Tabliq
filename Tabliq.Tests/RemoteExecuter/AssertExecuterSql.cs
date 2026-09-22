@@ -46,6 +46,12 @@ public class AssertExecuterSql
             return new Asserter(_databaseSchema, parameters);
         }
 
+        internal Asserter WithParameters(params string[] parameters)
+            => WithParameters((IEnumerable<string>)parameters);
+
+        internal Asserter WithParameters(IEnumerable<string> parameters)
+            => WithParameters(parameters.Select(x => new ExecuterParameter(x, null)));
+
         //public void WithErrors(string underTest, List<string> errors)
         //{
         //    try
