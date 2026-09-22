@@ -343,6 +343,7 @@ public sealed class Lexer
             "TIME" => SyntaxKind.TimeDataType,
             "TIMESTAMP" => SyntaxKind.TimestampDataType,
             "DATETIME" => SyntaxKind.TimestampDataType,
+            "DATETIME2" => SyntaxKind.TimestampDataType,
             "CHAR" => SyntaxKind.CharDataType,
             "VARCHAR" => SyntaxKind.VarcharDataType,
             "NCHAR" => SyntaxKind.NcharDataType,
