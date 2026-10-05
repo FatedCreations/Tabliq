@@ -7,4 +7,6 @@ public interface IExecutionReader : IAsyncDisposable
     public Task<bool> ReadAsync(CancellationToken cancellationToken);
 
     public ReadOnlySpan<object?> GetValues();
+
+    RowAccessor GetRowAccessor();
 }

@@ -1,4 +1,5 @@
 using Tabliq.Execution.ExecutionReader;
+using Tabliq.Execution.Functions;
 using Tabliq.Sql.Ast;
 using Tabliq.Sql.Binding;
 using Tabliq.Sql.Core;
@@ -10,17 +11,23 @@ namespace Tabliq.Execution;
 public class ExecutionEngine
 {
     private readonly IEnumerable<IExecutionProvider> _providers;
+    private readonly IEnumerable<SqlFunction> _functions;
 
-    public ExecutionEngine(IEnumerable<IExecutionProvider> providers)
+    public ExecutionEngine(IEnumerable<IExecutionProvider> providers, IEnumerable<SqlFunction>? functions = null)
     {
         _providers = providers;
+        _functions = BuiltinFunctions.BuiltingFunctions;
+        if (functions is not null)
+        {
+            _functions = [.. functions, .. BuiltinFunctions.BuiltingFunctions];
+        }
     }
 
     public async Task<IExecutionReader> ExecuteAsync(string sql, IEnumerable<ExecuterParameter> parameters, CancellationToken cancellationToken)
     {
         parameters ??= Enumerable.Empty<ExecuterParameter>();
 
-        var schema = new ExecutionSchemaProvider(_providers, parameters);
+        var schema = new ExecutionSchemaProvider(_providers, parameters, _functions);
         var compilation = Parser.Parse(sql);
         compilation.ThrowIfInvalid();
 
@@ -130,7 +137,7 @@ public class ExecutionEngine
     {
         var provider = ResolveProvider(table);
 
-        var cols = table.Columns.Where(x=> referencedColumns?.Contains(x.Name, StringComparer.OrdinalIgnoreCase) ?? false).ToList();
+        var cols = table.Columns.Where(x => referencedColumns?.Contains(x.Name, StringComparer.OrdinalIgnoreCase) ?? false).ToList();
         return new TableScanExecutionPlanNode(table, alias, provider, cols);
     }
 

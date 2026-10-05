@@ -34,6 +34,8 @@ public class EnumeratorExecutionReader : IExecutionReader
     {
         return _enumerator.Current;
     }
+    public RowAccessor GetRowAccessor()
+        => new RowAccessor(GetFields(), GetValues());
 
     public Task<bool> ReadAsync(CancellationToken cancellationToken)
     {

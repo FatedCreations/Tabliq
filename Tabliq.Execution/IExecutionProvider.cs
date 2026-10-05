@@ -8,8 +8,5 @@ public interface IExecutionProvider
     IEnumerable<TableSymbol> GetTables();
 
     TableSymbol? GetTable(string tableName, string? schemaName = null);
-
-    FunctionSymbol? GetFunction(string functionName);
-
     ExecutionPlanNode TryRewrite(ExecutionPlanNode node);
 }

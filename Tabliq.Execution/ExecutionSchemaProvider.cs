@@ -1,4 +1,6 @@
-﻿using Tabliq.Sql.Binding;
+﻿using Tabliq.Execution.Functions;
+using Tabliq.Sql.Binding;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Tabliq.Execution;
 
@@ -9,12 +11,14 @@ internal sealed class ExecutionSchemaProvider : ISchemaProvider
 
     // todo: add information schema provider to the list of providers, so that we can get the information schema tables and functions from the providers
     //private readonly InformationSchemaProvider _infoSchema;
+    private readonly IEnumerable<SqlFunction> _functions;
 
-    public ExecutionSchemaProvider(IEnumerable<IExecutionProvider> providers, IEnumerable<ExecuterParameter> parameters)
+    public ExecutionSchemaProvider(IEnumerable<IExecutionProvider> providers, IEnumerable<ExecuterParameter> parameters, IEnumerable<SqlFunction> functions)
     {
         //_infoSchema = new InformationSchemaProvider(providers);
         // _providers = [.. providers, _infoSchema];
         _providers = providers;
+        _functions = functions;
 
         // Convert the parameters dictionary to a list of ParameterSymbol objects
         // projected the data types from the c# types of the values in the dictionary
@@ -39,20 +43,7 @@ internal sealed class ExecutionSchemaProvider : ISchemaProvider
     }
 
     public FunctionSymbol? GetFunction(string name)
-    {
-        var match = _providers.Select(x => (Provider: x, Function: x.GetFunction(name))).Where(x => x.Function is not null);
-
-        if (match.Any())
-        {
-            var first = match.First().Function!;
-
-            return new FunctionSymbol(first.Name, first.IsAggregate, first.Arguments, first.ParamsArgument)
-            {
-                State = new ExecutionProviderFunctionMetadata(match.ToDictionary(x => x.Provider, x => x.Function!)),
-            };
-        }
-        return null;
-    }
+        => _functions.FirstOrDefault(x => x.Name.Equals(name, StringComparison.OrdinalIgnoreCase))?.FunctionSymbol;
 
     public ParameterSymbol? GetParameter(string name)
     {
