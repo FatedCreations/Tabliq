@@ -1,0 +1,58 @@
+using Tabliq.Execution.ExecutionReader;
+using Tabliq.Sql.Ast;
+
+namespace Tabliq.Execution;
+
+public sealed class FilterExecutionPlanNode : ExecutionPlanNode
+{
+    private readonly ExecutionPlanNode _input;
+    private readonly Condition _condition;
+
+    public FilterExecutionPlanNode(ExecutionPlanNode input, Condition condition)
+    {
+        _input = input;
+        _condition = condition;
+    }
+
+    public override IExecutionProvider? Provider => null;
+
+    public override ExecutionPlanNode? TryRewrite()
+    {
+        ExecutionPlanNode currentNode = this;
+        var newInput = _input.TryRewrite() ?? _input;
+        if (newInput != _input)
+        {
+            currentNode = new FilterExecutionPlanNode(newInput, _condition);
+        }
+
+        currentNode = newInput?.Provider?.TryRewrite(currentNode) ?? currentNode;
+
+        return currentNode;
+    }
+
+    public override async Task<IExecutionReader> ExecuteAsync(CancellationToken cancellationToken)
+    {
+        await using var reader = await _input.ExecuteAsync(cancellationToken);
+
+        async IAsyncEnumerable<object?[]> Filter()
+        {
+            var row = new object?[reader.GetFields().Length];
+
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                var fields = reader.GetFields();
+                var values = reader.GetValues();
+
+                values.CopyTo(row);
+
+                if (EvaluationHelpers.EvaluateCondition(_condition, new RowAccessor(fields, values)))
+                {
+                    yield return row;
+                }
+            }
+        }
+
+        var keys = reader.GetFields();
+        return new AsyncEnumeratorExecutionReader(keys.ToArray(), Filter().GetAsyncEnumerator(cancellationToken), Array.Empty<IAsyncDisposable>());
+    }
+}
