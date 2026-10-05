@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using Tabliq.Execution.ExecutionReader;
+using Tabliq.Execution.Functions;
 using Tabliq.Sql.Ast;
 
 namespace Tabliq.Execution;
@@ -41,7 +42,7 @@ public static class EvaluationHelpers
         }
     }
 
-    internal static object? EvaluateExpression(Expression expression, RowAccessor row)
+    internal static object? EvaluateExpression(Expression expression, RowAccessor row, IReadOnlyDictionary<FunctionCallExpression, object?>? aggregateValues = null)
     {
         switch (expression)
         {
@@ -50,8 +51,8 @@ public static class EvaluationHelpers
             case IdentifierExpression identifier:
                 return ResolveIdentifierValue(row, identifier);
             case BinaryOperatorExpression binary:
-                var left = EvaluateExpression(binary.Left, row);
-                var right = EvaluateExpression(binary.Right, row);
+                var left = EvaluateExpression(binary.Left, row, aggregateValues);
+                var right = EvaluateExpression(binary.Right, row, aggregateValues);
                 return binary.Operator switch
                 {
                     BinaryOperator.Add => Convert.ToDouble(left) + Convert.ToDouble(right),
@@ -61,6 +62,20 @@ public static class EvaluationHelpers
                     BinaryOperator.Modulus => Convert.ToDouble(left) % Convert.ToDouble(right),
                     _ => right,
                 };
+            case UnaryOperatorExpression unary:
+                var value = EvaluateExpression(unary.Expression, row, aggregateValues);
+                return unary.Operator == UnaryOperator.Negate ? -Convert.ToDouble(value) : value;
+            case FunctionCallExpression functionCall:
+                if (aggregateValues?.TryGetValue(functionCall, out var aggregateValue) == true)
+                {
+                    return aggregateValue;
+                }
+                if (functionCall.Binding?.State is ValueFunction valueFunction)
+                {
+                    return valueFunction.Execute(functionCall, row); // are agg values needed?
+                }
+
+                throw new Exception("Unsupported function call");
             default:
                 return null;
         }
@@ -78,7 +93,7 @@ public static class EvaluationHelpers
         return GetValue(row, null, identifier.Column);
     }
 
-    private static object? GetValue(RowAccessor row, string? tableName, string columnName)
+    public static object? GetValue(RowAccessor row, string? tableName, string columnName)
     {
         if (tableName is not null)
         {
@@ -129,6 +144,25 @@ public static class EvaluationHelpers
         }
 
         return null;
+    }
+    public static object? NormalizeValue(object? value)
+    {
+        if (value is double doubleValue)
+        {
+            return Convert.ToInt32(doubleValue);
+        }
+
+        if (value is decimal decimalValue)
+        {
+            return Convert.ToInt32(decimalValue);
+        }
+
+        if (value is float floatValue)
+        {
+            return Convert.ToInt32(floatValue);
+        }
+
+        return value;
     }
 
     private static int Compare(object? left, object? right)

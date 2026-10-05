@@ -1,4 +1,5 @@
 using Tabliq.Execution.ExecutionReader;
+using Tabliq.Execution.Functions;
 using Tabliq.Sql.Ast;
 using Tabliq.Sql.Binding;
 
@@ -37,106 +38,271 @@ public sealed class ProjectionExecutionPlanNode : ExecutionPlanNode
 
     public override async Task<IExecutionReader> ExecuteAsync(CancellationToken cancellationToken)
     {
-        await using var reader = await _input.ExecuteAsync(cancellationToken);
-        var rows = new List<Dictionary<string, object?>>();
-
-        while (await reader.ReadAsync(cancellationToken))
+        var hasGroupBy = SourceSelect?.GroupBy is not null;
+        if (ContainsAggregateProjection())
         {
-            var row = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
-            var fields = reader.GetFields();
-            var values = reader.GetValues();
+            await using var aggregateReader = await _input.ExecuteAsync(cancellationToken);
+            var aggregateOutputFields = GetProjectedFields(aggregateReader.GetFields());
 
-            for (var i = 0; i < fields.Length && i < values.Length; i++)
+            if (hasGroupBy)
             {
-                row[fields[i]] = values[i];
+                var groupedRows = await ExecuteGroupedProjection(aggregateReader, cancellationToken);
+                return new EnumeratorExecutionReader(aggregateOutputFields, groupedRows.GetEnumerator(), Array.Empty<IAsyncDisposable>());
             }
 
-            rows.Add(row);
+            var outputRow = await ExecuteAggregateProjection(aggregateReader, aggregateOutputFields, cancellationToken);
+            return new EnumeratorExecutionReader(aggregateOutputFields, Enumerable.Repeat(outputRow, 1).GetEnumerator(), Array.Empty<IAsyncDisposable>());
         }
 
-        var outputFields = new List<string>();
-        var outputRows = new List<object?[]>();
+        var streamReader = await _input.ExecuteAsync(cancellationToken);
+        var outputFields = GetProjectedFields(streamReader.GetFields());
 
-        foreach (var row in rows)
+        async IAsyncEnumerable<object?[]> ReadRowsAsync()
         {
-            var current = new List<object?>();
-            foreach (var projection in _projections)
+            while (await streamReader.ReadAsync(cancellationToken))
             {
-                if (projection.Expression is StarIdentifierExpression star)
+                var accessor = streamReader.GetRowAccessor();
+                yield return ProjectRow(accessor, null);
+            }
+        }
+
+        return new AsyncEnumeratorExecutionReader(outputFields, ReadRowsAsync().GetAsyncEnumerator(cancellationToken), [streamReader]);
+    }
+
+    private async Task<List<object?[]>> ExecuteGroupedProjection(IExecutionReader executionReader, CancellationToken cancellationToken)
+    {
+        var groupedRows = new List<GroupProjectionState>();
+        var groups = new Dictionary<string, GroupProjectionState>(StringComparer.OrdinalIgnoreCase);
+        var aggregateCalls = GetAggregateFunctionCalls();
+        var groupByEntries = SourceSelect?.GroupBy?.Entries ?? [];
+
+        while (await executionReader.ReadAsync(cancellationToken))
+        {
+            var accessor = executionReader.GetRowAccessor();
+            var groupKey = BuildGroupKey(accessor, groupByEntries);
+            if (!groups.TryGetValue(groupKey, out var state))
+            {
+                state = new GroupProjectionState(accessor);
+                groups[groupKey] = state;
+                groupedRows.Add(state);
+            }
+
+            foreach (var aggregateCall in aggregateCalls)
+            {
+                if (aggregateCall.Binding?.State is not AggregateFunction aggregateFunction)
                 {
-                    foreach (var binding in star.Bindings.Count > 0 ? star.Bindings : row.Keys.Select(k => new ColumnBinding(new TableSymbol(string.Empty, Array.Empty<ColumnSymbol>()), new ColumnSymbol(k, string.Empty))))
-                    {
-                        var name = binding.ColumnSymbol.Name;
-                        if (!outputFields.Contains(name, StringComparer.OrdinalIgnoreCase))
-                        {
-                            outputFields.Add(name);
-                        }
-
-                        current.Add(GetValue(row, binding.TableSymbol.TableName, binding.ColumnSymbol.Name));
-                    }
-
                     continue;
                 }
 
-                var fieldName = projection.Alias ?? GetFieldName(projection.Expression);
-                if (!outputFields.Contains(fieldName, StringComparer.OrdinalIgnoreCase))
-                {
-                    outputFields.Add(fieldName);
-                }
+                state.AggregateStates.TryGetValue(aggregateCall, out var priorState);
+                state.AggregateStates[aggregateCall] = aggregateFunction.ProcessRow(aggregateCall, accessor, priorState);
+            }
+        }
 
-                current.Add(NormalizeValue(EvaluateExpression(projection.Expression, row)));
+        var result = new List<object?[]>();
+        foreach (var group in groupedRows)
+        {
+            var aggregateValues = group.AggregateStates.ToDictionary(x => x.Key, x => x.Value?.GetAggregateValue(cancellationToken));
+            result.Add(ProjectRow(group.RepresentativeRow, aggregateValues));
+        }
+
+        return result;
+    }
+
+    private static string BuildGroupKey(RowAccessor row, IReadOnlyList<Expression> groupByEntries)
+    {
+        if (groupByEntries.Count == 0)
+        {
+            return "__all__";
+        }
+
+        var parts = new List<string>();
+        foreach (var groupEntry in groupByEntries)
+        {
+            var value = EvaluationHelpers.EvaluateExpression(groupEntry, row);
+            parts.Add(value is null ? "<null>" : $"{value.GetType().FullName}:{value}");
+        }
+
+        return string.Join("|", parts);
+    }
+
+    private async Task<object?[]> ExecuteAggregateProjection(IExecutionReader executionReader, string[] outputFields, CancellationToken cancellationToken)
+    {
+        var aggregateCalls = GetAggregateFunctionCalls();
+        var aggregateStates = new Dictionary<FunctionCallExpression, AggregateFunctionState?>();
+
+        object?[]? firstRow = null;
+        while (await executionReader.ReadAsync(cancellationToken))
+        {
+            var accessor = executionReader.GetRowAccessor();
+
+            if (firstRow is null)
+            {
+                firstRow = new object?[executionReader.GetFields().Length];
+                executionReader.GetValues().CopyTo(firstRow);
             }
 
-            outputRows.Add(current.ToArray());
+            foreach (var aggregateCall in aggregateCalls)
+            {
+                if (aggregateCall.Binding?.State is not AggregateFunction aggregateFunction)
+                {
+                    continue;
+                }
+
+                aggregateStates.TryGetValue(aggregateCall, out var state);
+                aggregateStates[aggregateCall] = aggregateFunction.ProcessRow(aggregateCall, accessor, state);
+            }
         }
 
-        return new EnumeratorExecutionReader(outputFields.ToArray(), outputRows.GetEnumerator(), Array.Empty<IAsyncDisposable>());
+        var aggregateValues = aggregateStates.ToDictionary(x => x.Key, x => x.Value?.GetAggregateValue(cancellationToken));
+        var rowAccessor = firstRow is null
+            ? new RowAccessor(executionReader.GetFields(), Array.Empty<object?>())
+            : new RowAccessor(executionReader.GetFields(), firstRow);
+
+        return ProjectRow(rowAccessor, aggregateValues);
     }
 
-    private static object? EvaluateExpression(Expression expression, IReadOnlyDictionary<string, object?> row)
+    private sealed class GroupProjectionState
     {
-        switch (expression)
+        private readonly string[] _columns;
+        private readonly object?[] _row;
+
+        public GroupProjectionState(RowAccessor accessor)
         {
-            case LiteralExpression literal:
-                return literal.Value;
-            case IdentifierExpression identifier:
-                if (identifier.Binding is not null)
+            _columns = accessor.Columns.ToArray();
+            _row = new object?[accessor.Columns.Length];
+            for (var i = 0; i < accessor.Columns.Length; i++)
+            {
+                _row[i] = accessor[accessor.Columns[i]];
+            }
+
+            AggregateStates = new Dictionary<FunctionCallExpression, AggregateFunctionState?>();
+        }
+
+        public IDictionary<FunctionCallExpression, AggregateFunctionState?> AggregateStates { get; }
+
+        public RowAccessor RepresentativeRow => new RowAccessor(_columns, _row);
+    }
+
+    private object?[] ProjectRow(RowAccessor row, IReadOnlyDictionary<FunctionCallExpression, object?>? aggregateValues)
+    {
+        var current = new List<object?>();
+        foreach (var projection in _projections)
+        {
+            if (projection.Expression is StarIdentifierExpression star)
+            {
+                var bindings = star.Bindings.Count == 0
+                    ? ExpandStarBindings(row.Columns)
+                    : star.Bindings;
+
+                foreach (var binding in bindings)
                 {
-                    return GetValue(row, identifier.Binding.TableSymbol.TableName, identifier.Binding.ColumnSymbol.Name) ?? GetValue(row, null, identifier.Column);
+                    current.Add(GetValue(row, binding.TableSymbol.TableName, binding.ColumnSymbol.Name));
                 }
 
-                return GetValue(row, null, identifier.Column);
-            case BinaryOperatorExpression binary:
-                var left = EvaluateExpression(binary.Left, row);
-                var right = EvaluateExpression(binary.Right, row);
-                return binary.Operator switch
+                continue;
+            }
+
+            current.Add(EvaluationHelpers.NormalizeValue(EvaluateExpression(projection.Expression, row, aggregateValues)));
+        }
+
+        return current.ToArray();
+    }
+
+    private string[] GetProjectedFields(ReadOnlySpan<string> inputFields)
+    {
+        var outputFields = new List<string>();
+        foreach (var projection in _projections)
+        {
+            if (projection.Expression is StarIdentifierExpression star)
+            {
+                var bindings = star.Bindings.Count == 0
+                    ? ExpandStarBindings(inputFields)
+                    : star.Bindings;
+
+                foreach (var binding in bindings)
                 {
-                    BinaryOperator.Add => Convert.ToDouble(left) + Convert.ToDouble(right),
-                    BinaryOperator.Subtract => Convert.ToDouble(left) - Convert.ToDouble(right),
-                    BinaryOperator.Multiply => Convert.ToDouble(left) * Convert.ToDouble(right),
-                    BinaryOperator.Divide => Convert.ToDouble(left) / Convert.ToDouble(right),
-                    BinaryOperator.Modulus => Convert.ToDouble(left) % Convert.ToDouble(right),
-                    BinaryOperator.Concatenate => (left ?? string.Empty).ToString() + (right ?? string.Empty).ToString(),
-                    _ => right,
-                };
-            case UnaryOperatorExpression unary:
-                var value = EvaluateExpression(unary.Expression, row);
-                return unary.Operator == UnaryOperator.Negate ? -Convert.ToDouble(value) : value;
-            case FunctionCallExpression functionCall:
-                if (functionCall.Arguments.Count == 1)
-                {
-                    var arg = EvaluateExpression(functionCall.Arguments[0], row);
-                    return functionCall.FunctionName switch
+                    var name = binding.ColumnSymbol.Name;
+                    if (!outputFields.Contains(name, StringComparer.OrdinalIgnoreCase))
                     {
-                        "ABS" => Math.Abs(Convert.ToDouble(arg)),
-                        _ => arg,
-                    };
+                        outputFields.Add(name);
+                    }
                 }
-                return null;
-            default:
-                return null;
+
+                continue;
+            }
+
+            var fieldName = projection.Alias ?? GetFieldName(projection.Expression);
+            if (!outputFields.Contains(fieldName, StringComparer.OrdinalIgnoreCase))
+            {
+                outputFields.Add(fieldName);
+            }
+        }
+
+        return outputFields.ToArray();
+    }
+
+    private static IReadOnlyList<ColumnBinding> ExpandStarBindings(ReadOnlySpan<string> inputFields)
+    {
+        var bindings = new List<ColumnBinding>();
+        foreach (var column in inputFields)
+        {
+            bindings.Add(new ColumnBinding(new TableSymbol(string.Empty, Array.Empty<ColumnSymbol>()), new ColumnSymbol(column, string.Empty)));
+        }
+
+        return bindings;
+    }
+
+    private bool ContainsAggregateProjection()
+        => _projections.Any(x => ContainsAggregateFunction(x.Expression));
+
+    private List<FunctionCallExpression> GetAggregateFunctionCalls()
+    {
+        var aggregateFunctions = new List<FunctionCallExpression>();
+        foreach (var projection in _projections)
+        {
+            CollectAggregateFunctions(projection.Expression, aggregateFunctions);
+        }
+
+        return aggregateFunctions;
+    }
+
+    private static void CollectAggregateFunctions(Expression expression, List<FunctionCallExpression> aggregateFunctions)
+    {
+        if (expression is FunctionCallExpression functionCall && functionCall.Binding?.State is AggregateFunction)
+        {
+            aggregateFunctions.Add(functionCall);
+        }
+
+        foreach (var child in expression.GetChildren())
+        {
+            if (child is Expression childExpression)
+            {
+                CollectAggregateFunctions(childExpression, aggregateFunctions);
+            }
         }
     }
+
+    private static bool ContainsAggregateFunction(Expression expression)
+    {
+        if (expression is FunctionCallExpression functionCall && functionCall.Binding?.State is AggregateFunction)
+        {
+            return true;
+        }
+
+        foreach (var child in expression.GetChildren())
+        {
+            if (child is Expression childExpression && ContainsAggregateFunction(childExpression))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static object? EvaluateExpression(Expression expression, RowAccessor    row, IReadOnlyDictionary<FunctionCallExpression, object?>? aggregateValues)
+        => EvaluationHelpers.EvaluateExpression(expression, row, aggregateValues);
 
     private static string GetFieldName(Expression expression)
         => expression switch
@@ -147,60 +313,7 @@ public sealed class ProjectionExecutionPlanNode : ExecutionPlanNode
             _ => expression.GetType().Name,
         };
 
-    private static object? GetValue(IReadOnlyDictionary<string, object?> row, string? tableName, string columnName)
-    {
-        if (tableName is not null)
-        {
-            var composite = $"{tableName}.{columnName}";
-            if (row.TryGetValue(composite, out var compositeValue))
-            {
-                return NormalizeValue(compositeValue);
-            }
+    private static object? GetValue(RowAccessor row, string? tableName, string columnName)
+        => EvaluationHelpers.NormalizeValue(EvaluationHelpers.GetValue(row, tableName, columnName));
 
-            var suffixedMatches = row
-                .Where(pair => pair.Key.EndsWith($".{columnName}", StringComparison.OrdinalIgnoreCase) && !pair.Key.Equals(columnName, StringComparison.OrdinalIgnoreCase))
-                .Select(pair => pair.Value)
-                .ToList();
-
-            if (suffixedMatches.Count == 1)
-            {
-                return NormalizeValue(suffixedMatches[0]);
-            }
-        }
-
-        if (row.TryGetValue(columnName, out var direct))
-        {
-            return NormalizeValue(direct);
-        }
-
-        foreach (var pair in row)
-        {
-            if (pair.Key.EndsWith($".{columnName}", StringComparison.OrdinalIgnoreCase))
-            {
-                return NormalizeValue(pair.Value);
-            }
-        }
-
-        return null;
-    }
-
-    private static object? NormalizeValue(object? value)
-    {
-        if (value is double doubleValue)
-        {
-            return Convert.ToInt32(doubleValue);
-        }
-
-        if (value is decimal decimalValue)
-        {
-            return Convert.ToInt32(decimalValue);
-        }
-
-        if (value is float floatValue)
-        {
-            return Convert.ToInt32(floatValue);
-        }
-
-        return value;
-    }
 }

@@ -1,10 +1,12 @@
 ﻿using System.Text.RegularExpressions;
 using Tabliq.Execution;
 using Tabliq.Execution.ExecutionReader;
+using Tabliq.Execution.Functions;
 using Tabliq.Execution.Providers;
 using Tabliq.Sql.Ast;
 using Tabliq.Sql.Binding;
 using Tabliq.Sql.Printer;
+using static Tabliq.Execution.Functions.SqlFunction;
 
 namespace Tabliq.Tests.Execution;
 
@@ -33,7 +35,7 @@ public class SqlServerExecutionTests
             new ColumnSymbol("Value", "double"),
             new ColumnSymbol("Value2", "double"),
         ]));
-        _engine = new ExecutionEngine([_provider]);
+        _engine = new ExecutionEngine([_provider], [new CustomValueFunction()]);
     }
 
     [Fact]
@@ -92,6 +94,45 @@ public class SqlServerExecutionTests
     }
 
     [Fact]
+    public async Task CountAggregatePassesThroughToSqlProvider()
+    {
+        var results = await _engine.ExecuteToDictionaryList("SELECT COUNT(*) AS c FROM Data", Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
+
+        Assert.Equal("""
+            SELECT COUNT(*) AS c
+            FROM Data
+            """,
+            _provider.LastSqlExecuted);
+    }
+
+    [Fact]
+    public async Task CountAggregatePassesThroughToSqlProviderWithGroupBy()
+    {
+        var results = await _engine.ExecuteToDictionaryList("SELECT COUNT(*) AS c FROM Data Group By NameTest", Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
+
+        Assert.Equal("""
+            SELECT COUNT(*) AS c
+            FROM Data
+            GROUP BY NameTest
+            """,
+            _provider.LastSqlExecuted);
+    }
+
+
+    [Fact]
+    public async Task UnrecognisedCustomValueTriggersAFilterdTableScan()
+    {
+        var results = await _engine.ExecuteToDictionaryList("SELECT CUST_VALUE(NameTest) AS c FROM Data WHERE NameTest = 'Test'", Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
+
+        Assert.Equal("""
+            SELECT Data.NameTest
+            FROM Data AS Data
+            WHERE NameTest = 'Test'
+            """,
+            _provider.LastSqlExecuted);
+    }
+
+    [Fact]
     public async Task MultiTable()
     {
         var results = await _engine.ExecuteToDictionaryList("""
@@ -109,6 +150,20 @@ public class SqlServerExecutionTests
             _provider.LastSqlExecuted);
     }
 
+    private class CustomValueFunction : ValueFunction
+    {
+        public static object TestValue { get; } = new object();
+
+        public CustomValueFunction()
+            : base("CUST_VALUE", [new FunctionArgument("value")])
+        {
+        }
+
+        public override object? Execute(FunctionCallExpression expression, RowAccessor accessor)
+        {
+            return TestValue;
+        }
+    }
 }
 
 

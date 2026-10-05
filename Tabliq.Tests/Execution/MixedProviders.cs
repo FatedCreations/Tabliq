@@ -78,4 +78,25 @@ public class MixedProviderExecutionTests
 
         // should this be optimised by adding in a select `id in ({in memory records})`
     }
+
+    [Fact]
+    public async Task CountAggregateOnSqlProviderPassesThrough()
+    {
+        var results = await _engine.ExecuteToDictionaryList("SELECT COUNT(*) AS c FROM Data", Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
+
+        Assert.Equal("""
+            SELECT COUNT(*) AS c
+            FROM Data
+            """,
+            _sqlProvider.LastSqlExecuted);
+    }
+
+    [Fact]
+    public async Task CountAggregateOnObjectProviderFallsBackToInMemory()
+    {
+        var results = await _engine.ExecuteToDictionaryList("SELECT COUNT(*) AS c FROM Other", Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
+
+        var row = Assert.Single(results);
+        Assert.Equal(20, (int)row["c"]!);
+    }
 }

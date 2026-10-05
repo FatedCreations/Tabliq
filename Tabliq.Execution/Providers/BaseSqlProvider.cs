@@ -4,8 +4,10 @@ using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using System.Text.RegularExpressions;
 using Tabliq.Execution.ExecutionReader;
+using Tabliq.Execution.Functions;
 using Tabliq.Sql.Ast;
 using Tabliq.Sql.Binding;
+using Tabliq.Sql.Core;
 using Tabliq.Sql.Printer;
 
 namespace Tabliq.Execution.Providers;
@@ -86,7 +88,40 @@ public abstract class RemoteSqlProviderBase : IExecutionProvider
             return null;
         }
 
+        if (ContainsUnsupportedFunction(projection.SourceSelect))
+        {
+            return null;
+        }
+
         return new RemoteSqProviderSqlExecutionPlanNode(this, projection.SourceSelect);
+    }
+
+    private bool ContainsUnsupportedFunction(SyntaxNode node)
+    {
+        if (node is FunctionCallExpression functionCall && functionCall.Binding is not null && !SupportsFunction(functionCall.Binding))
+        {
+            return true;
+        }
+
+        foreach (var child in node.GetChildren())
+        {
+            if (ContainsUnsupportedFunction(child))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    protected virtual bool SupportsFunction(FunctionSymbol function)
+    {
+        if (function.State is not SqlFunction sqlFunction)
+        {
+            return true;
+        }
+
+        return sqlFunction.Name.Equals("COUNT", StringComparison.OrdinalIgnoreCase);
     }
 
     private ExecutionPlanNode? RewriteJoinsBothSideSql(ExecutionPlanNode node)

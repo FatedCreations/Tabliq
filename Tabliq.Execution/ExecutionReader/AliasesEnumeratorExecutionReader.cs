@@ -47,6 +47,9 @@ public class AliasedExecutionReader : IExecutionReader
     public ReadOnlySpan<object?> GetValues()
         => _executionReader.GetValues();
 
+    public RowAccessor GetRowAccessor()
+        => new RowAccessor(GetFields(), GetValues());
+
     public Task<bool> ReadAsync(CancellationToken cancellationToken)
         => _executionReader.ReadAsync(cancellationToken);
 }
