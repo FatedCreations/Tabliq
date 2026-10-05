@@ -46,7 +46,7 @@ public class AssertSql
 
         public bool RunBinder { get; private set; } = true;
 
-        public Asserter(ISchemaProvider? schema = null, IEnumerable<SqlRewiter> rewriters = null)
+        public Asserter(ISchemaProvider? schema = null, IEnumerable<SqlRewiter>? rewriters = null)
         {
             _rewriters = rewriters ?? [];
             _databaseSchema = schema ?? TestSchema.DatabaseSchema;

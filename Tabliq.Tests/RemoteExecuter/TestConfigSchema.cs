@@ -60,7 +60,7 @@ public class TestConfigSchema
 
         public VirtualTable AsVirtualTable()
         {
-            return new VirtualTable(Name, RemoteTableSql)
+            return new VirtualTable(Name, string.Empty, RemoteTableSql)
             {
                 Columns = Columns.Select(c => c.AsVirtualColumn()).ToList()
             };

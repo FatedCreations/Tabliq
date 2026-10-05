@@ -68,10 +68,7 @@ namespace Tabliq.Sql.Rewriter
 
                                 // TODO: fetch addtional metadata about the column to see if we should include it in the projection list
                                 var newProjection = new SelectProjection(
-                                    new IdentifierExpression(tableSymbol.Name, columnSymbol.Name)
-                                    {
-                                        Binding = b,
-                                    }.WithLocation(starIdentifier.Span),
+                                    Create(tableSymbol, columnSymbol, b).WithLocation(starIdentifier.Span),
                                     columnSymbol.Name,
                                     true
                                 ).WithLocation(starIdentifier.Span);
@@ -105,6 +102,25 @@ namespace Tabliq.Sql.Rewriter
 
             // walk the remaining to process subqueries etc
             return base.Rewrite(node);
+        }
+
+        private IdentifierExpression Create(TableSymbol tableSymbol, ColumnSymbol columnSymbol, ColumnBinding? columnBinding = null)
+        {
+            columnBinding ??= new ColumnBinding(tableSymbol, columnSymbol);
+            if (string.IsNullOrEmpty(tableSymbol.SchemaName))
+            {
+                return new IdentifierExpression(tableSymbol.TableName, columnSymbol.Name)
+                {
+                    Binding = columnBinding
+                };
+            }
+            else
+            {
+                return new IdentifierExpression(tableSymbol.SchemaName, tableSymbol.TableName, columnSymbol.Name)
+                {
+                    Binding = columnBinding
+                };
+            }
         }
     }
 }

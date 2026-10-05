@@ -564,7 +564,7 @@ public class TestSchema : ISchemaProvider
         return new ParameterSymbol(pName, string.Empty, false);
     }
 
-    public TableSymbol? GetTable(string name)
+    public TableSymbol? GetTable(string name, string? schemaName = null)
     {
         return Tables?.FirstOrDefault(x => x.TableName.Equals(name, StringComparison.OrdinalIgnoreCase))?.AsSymbol();
     }
@@ -582,21 +582,24 @@ public class CombineSchema : ISchemaProvider
     }
     public ParameterSymbol? GetParameter(string name)
         => _inner1.GetParameter(name) ?? _inner2.GetParameter(name);
-    public TableSymbol? GetTable(string name) => _inner1.GetTable(name) ?? _inner2.GetTable(name);
+    public TableSymbol? GetTable(string name, string? schemaName = null) => _inner1.GetTable(name, schemaName) ?? _inner2.GetTable(name, schemaName);
     public FunctionSymbol? GetFunction(string name) => _inner1.GetFunction(name) ?? _inner2.GetFunction(name);
 }
 
 public class Table
 {
-    public Table(string tableName)
+    public Table(string tableName, string? schemaName = null)
     {
         TableName = tableName;
+        SchemaName = schemaName ?? string.Empty;
     }
 
     public TableSymbol AsSymbol()
         => new TableSymbol(TableName, Columns.Select(x => x.AsSymbol()).ToList());
 
     public string TableName { get; }
+
+    public string SchemaName { get; }
 
     public List<Column> Columns { get; set; } = [];
 }

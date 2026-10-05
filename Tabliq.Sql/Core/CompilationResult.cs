@@ -21,7 +21,7 @@ public sealed class CompilationResult
         Tokens = tokens;
     }
 
-    internal CompilationResult(SqlScript root, IReadOnlyList<Diagnostic> diagnostics)
+    public CompilationResult(SqlScript root, IReadOnlyList<Diagnostic> diagnostics)
     {
         _text = null;
         Script = root;

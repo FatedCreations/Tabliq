@@ -29,7 +29,7 @@ public sealed class SampleCatalog : ISchemaProvider
 
     public ParameterSymbol? GetParameter(string name) => _parameters.FirstOrDefault(p => p.Name.Equals(name, System.StringComparison.OrdinalIgnoreCase));
 
-    public TableSymbol? GetTable(string name) => _tables.FirstOrDefault(t => t.Name.Equals(name, System.StringComparison.OrdinalIgnoreCase));
+    public TableSymbol? GetTable(string name, string? schemaName = null) => _tables.FirstOrDefault(t => t.TableName.Equals(name, System.StringComparison.OrdinalIgnoreCase) && t.SchemaName.Equals(schemaName ?? string.Empty, System.StringComparison.OrdinalIgnoreCase));
 
     public FunctionSymbol? GetFunction(string name) => _functions.FirstOrDefault(f => f.Name.Equals(name, System.StringComparison.OrdinalIgnoreCase));
 }

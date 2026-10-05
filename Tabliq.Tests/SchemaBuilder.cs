@@ -8,12 +8,12 @@ public class SchemaBuilder
     public List<TableBuilder> Tables { get; } = new List<TableBuilder>();
     public List<ParameterSymbol> Parameters { get; } = new List<ParameterSymbol>();
 
-    public TableBuilder AddTable(string name)
+    public TableBuilder AddTable(string name, string? schemaName = null)
     {
-        var tbl = Tables.FirstOrDefault(x => x.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+        var tbl = Tables.FirstOrDefault(x => x.TableName.Equals(name, StringComparison.OrdinalIgnoreCase) && x.SchemaName.Equals(schemaName ?? string.Empty, StringComparison.OrdinalIgnoreCase));
         if (tbl is null)
         {
-            tbl = new TableBuilder(name, this);
+            tbl = new TableBuilder(name, schemaName, this);
             Tables.Add(tbl);
 
         }
@@ -22,7 +22,7 @@ public class SchemaBuilder
 
     public TableBuilder AddTable(TableSymbol symbol)
     {
-        var b = this.AddTable(symbol.Name);
+        var b = this.AddTable(symbol.TableName, symbol.SchemaName);
         foreach(var col in symbol.Columns)
         {
             b.Columns.Add(col);
@@ -99,8 +99,8 @@ public class SchemaBuilder
         public ParameterSymbol? GetParameter(string name)
             => _parameters.FirstOrDefault(x => x.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
 
-        public TableSymbol? GetTable(string name)
-            => _tables.FirstOrDefault(x => x.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+        public TableSymbol? GetTable(string name, string? schemaName = null)
+            => _tables.FirstOrDefault(x => x.TableName.Equals(name, StringComparison.OrdinalIgnoreCase) && x.SchemaName.Equals(schemaName ?? string.Empty, StringComparison.OrdinalIgnoreCase));
     }
 }
 
@@ -167,12 +167,14 @@ public class TableBuilder : BuilderBase
 {
     public List<ColumnSymbol> Columns { get; } = new List<ColumnSymbol>();
 
-    public string Name { get; }
+    public string TableName { get; }
+    public string SchemaName { get; }
 
-    public TableBuilder(string name, SchemaBuilder schemaBuilder)
+    public TableBuilder(string name, string? schemaName, SchemaBuilder schemaBuilder)
         : base(schemaBuilder)
     {
-        Name = name;
+        TableName = name;
+        SchemaName = schemaName ?? string.Empty;
     }
 
     public TableBuilder AddColumn(string name, string type)
@@ -185,9 +187,9 @@ public class TableBuilder : BuilderBase
     {
         if (Columns.Any())
         {
-            return new TableSymbol(Name, [.. Columns]);
+            return new TableSymbol(TableName, SchemaName, [.. Columns]);
         }
 
-        return new TableSymbol(Name, [new ColumnSymbol(Guid.NewGuid().ToString("N"), string.Empty)]);
+        return new TableSymbol(TableName, SchemaName, [new ColumnSymbol(Guid.NewGuid().ToString("N"), string.Empty)]);
     }
 }

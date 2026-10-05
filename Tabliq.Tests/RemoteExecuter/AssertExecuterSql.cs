@@ -29,7 +29,7 @@ public class AssertExecuterSql
         private readonly VirtualSchema _databaseSchema;
         private IEnumerable<ExecuterParameter> _parameters;
 
-        public Asserter(VirtualSchema? schema = null, IEnumerable<ExecuterParameter> parameters = null)
+        public Asserter(VirtualSchema? schema = null, IEnumerable<ExecuterParameter>? parameters = null)
         {
             _parameters = parameters ?? [];
             _databaseSchema = schema ?? TestConfigSchema.SchemaFriendlyNamesSchema;
@@ -94,8 +94,9 @@ public class AssertExecuterSql
 
         private class FakeDataExecuter : IDatabaseExecuter
         {
-            public List<(SqlScript Sql, IDictionary<string, object> Parameters, CancellationToken cancellationToken)> ExecutedCommands { get; } = new();
-            public Task<ExecutionResult> ExecuteAsync(SqlScript sql, IDictionary<string, object> paramaters, CancellationToken cancellationToken)
+            public List<(SqlScript Sql, IDictionary<string, object?>? Parameters, CancellationToken cancellationToken)> ExecutedCommands { get; } = new();
+
+            public Task<ExecutionResult> ExecuteAsync(SqlScript sql, IDictionary<string, object?>? paramaters, CancellationToken cancellationToken)
             {
                 var rewitten = Tabliq.RemoteExecuter.MsSql.RewriteForMsSqlServer.Instance.Execute(sql);
                 rewitten.ThrowIfInvalid();

@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Tabliq.Sql.Ast;
 using Tabliq.Sql.Core;
 using Tabliq.Sql.Diagnostics;
@@ -18,11 +19,13 @@ public class Binder
     private readonly ISchemaProvider _catalog;
 
     public DiagnosticBag Diagnostics => _diagnostics;
+
     public Binder(ISchemaProvider catalog)
     {
         _catalog = catalog;
     }
-    private BindingScope Current { get; set; }
+
+    private BindingScope Current { get; set; } = null!; // will be initialized in Bind
 
     private FunctionSymbol? LookupFunction(string name)
     {
@@ -250,7 +253,7 @@ public class Binder
                     if (exp.Binding is not null)
                     {
                         Diagnostics.Report("InvalidColumnInOrderBy",
-                            $"Expression '{exp.Binding.TableSymbol.Name}.{exp.Binding.ColumnSymbol.Name}' in ORDER BY must be either an aggregate or a grouped column.",
+                            $"Expression '{exp.Binding.TableSymbol}.{exp.Binding.ColumnSymbol.Name}' in ORDER BY must be either an aggregate or a grouped column.",
                             e.Expression);
                     }
                     else
@@ -264,10 +267,9 @@ public class Binder
         }
     }
 
-    private bool ExpressionValidForOrderBy(SyntaxNode node, out IdentifierExpression? invalidExpressionResult)
+    private bool ExpressionValidForOrderBy(SyntaxNode node, [NotNullWhen(false)] out IdentifierExpression? invalidExpressionResult)
     {
         IdentifierExpression? invalidExpression = null;
-        bool foundAggregate = false;
 
         // DFS that validates columns are grouped and detects aggregates
         bool Validate(SyntaxNode n)
@@ -295,7 +297,6 @@ public class Binder
 
                 if (fn.Binding?.IsAggregate == true)
                 {
-                    foundAggregate = true;
                     return true;
                 }
                 else
@@ -356,7 +357,7 @@ public class Binder
         var ok = Validate(node);
         if (!ok)
         {
-            invalidExpressionResult = invalidExpression;
+            invalidExpressionResult = invalidExpression!;
             return false;
         }
 
@@ -455,7 +456,7 @@ public class Binder
                     }
                     else
                     {
-                        Diagnostics.Report("ColumnNotFound", $"Column '{columName}' not found in table '{table.Name}'", p.Span);
+                        Diagnostics.Report("ColumnNotFound", $"Column '{columName}' not found in table '{table}'", p.Span);
                     }
                     p.Binding = ColumnBinding.Missing;
                     return;
@@ -610,17 +611,13 @@ public class Binder
 
     private void Bind(NamedTableReference tbl)
     {
-        // we lookup the table in the current scope, and if found
-        if (tbl.Identifer.IdentifierParts.Count > 1)
-        {
-            Diagnostics.Report("UnsupportedTableReference", "Only simple table references are supported for now", tbl.Identifer.Span);
-        }
+        var (tableName, schemaName) = tbl.Identifer.GetTableParts();
 
-        var table = Current.LookupTablesInScope(tbl.Identifer.IdentifierParts[0]);
+        var table = Current.LookupTablesInScope(tableName, schemaName);
 
         if (table is null)
         {
-            Diagnostics.Report("UnsupportedTableReference", $"Table '{tbl.Identifer.IdentifierParts[0]}' not found in the current scope", tbl.Identifer.Span);
+            Diagnostics.Report("UnsupportedTableReference", $"Table '{tableName}' not found in the current scope", tbl.Identifer.Span);
             return;
         }
 
@@ -702,7 +699,7 @@ public class BindingScope
 
     public TableSymbol? Build()
     {
-        return new TableSymbol(_tableName ?? string.Empty, _columns.Values.Select(x => new ColumnSymbol(x.column.Name, x.column.Type, x.column.IsLocal)).ToList(), true);
+        return new TableSymbol(_tableName ?? string.Empty, _columns.Values.Select(x => new ColumnSymbol(x.column.Name, x.column.Type)).ToList());
     }
 
     private List<Expression> groupBys = new List<Expression>();
@@ -717,23 +714,23 @@ public class BindingScope
 
     public void AddColumn(string columnName, Expression? expression = null)
     {
-        _columns[columnName] = (new ColumnSymbol(columnName, string.Empty, true), expression);
+        _columns[columnName] = (new ColumnSymbol(columnName, string.Empty), expression);
     }
 
     public void AddTableToCatalog(TableSymbol table)
     {
-        _tablesInCatalog[table.Name] = table;
+        _tablesInCatalog[table.ToString()] = table;
     }
 
     public void AddTableReference(TableSymbol table, string? alias = null)
     {
         if (!string.IsNullOrEmpty(alias))
         {
-            table = new TableSymbol(alias, table.Columns, table.IsLocal);
+            table = new TableSymbol(alias, table.Columns);
             _tables[alias] = table;
         }
 
-        _tables[table.Name] = table;
+        _tables[table.ToString()] = table;
 
         _referencedTables.Add(table);
     }
@@ -750,22 +747,32 @@ public class BindingScope
         return null;
     }
 
-    public TableSymbol? LookupTablesInScope(string name)
+    public TableSymbol? LookupTablesInScope(string name, string? schemaName = null)
     {
-        // for handling recursive ctes!
-        if (name.Equals(_tableName, StringComparison.OrdinalIgnoreCase))
-            return Build();
-        if (_tablesInCatalog.TryGetValue(name, out var table))
+        var fullName = name;
+
+        if (schemaName is null)
+        {
+            // for handling recursive ctes!
+            if (fullName.Equals(_tableName, StringComparison.OrdinalIgnoreCase))
+                return Build();
+        }
+        else if(schemaName.Length > 0)
+        {
+            fullName = $"{schemaName}.{name}";
+        }
+
+        if (_tablesInCatalog.TryGetValue(fullName, out var table))
         {
             return table;
         }
 
-        var t = _parent?.LookupTablesInScope(name);
+        var t = _parent?.LookupTablesInScope(name, schemaName);
         if (t is not null)
         {
             return t;
         }
-        return _catalog?.GetTable(name);
+        return _catalog?.GetTable(name, schemaName);
     }
 
     public ParameterSymbol? LookupParameter(string name)
@@ -814,7 +821,7 @@ public class BindingScope
         return null;
     }
 
-    internal IEnumerable<(TableSymbol? table, ColumnSymbol? col)> FindColumnsInScope(string colName)
+    internal IEnumerable<(TableSymbol table, ColumnSymbol col)> FindColumnsInScope(string colName)
     {
         // we can look for the column in all referenced tables, and if found, return it
         foreach (var table in _referencedTables)
@@ -840,7 +847,7 @@ public class ParameterBinding
 
 public class ColumnBinding
 {
-    public static ColumnBinding Missing = new ColumnBinding(new TableSymbol("", new List<ColumnSymbol>(), true), new ColumnSymbol("", string.Empty, true));
+    public static ColumnBinding Missing = new ColumnBinding(new TableSymbol("", new List<ColumnSymbol>()), new ColumnSymbol("", string.Empty));
 
     public ColumnBinding(TableSymbol tableSymbol, ColumnSymbol column, Expression? expression = null)
     {

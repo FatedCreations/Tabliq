@@ -16,6 +16,43 @@ public class IdentifierExpression : Expression
 
     public IReadOnlyList<string> IdentifierParts { get; }
 
+    public (string? TableName, string? SchemaName, string ColumnName) GetColumnParts()
+    {
+        if (IdentifierParts.Count == 1)
+        {
+            return (null, null, IdentifierParts[0]);
+        }
+        else if (IdentifierParts.Count == 2)
+        {
+            return (IdentifierParts[0], null, IdentifierParts[1]); 
+        }
+        else if (IdentifierParts.Count == 3)
+        {
+            return (IdentifierParts[1], IdentifierParts[0], IdentifierParts[2]);
+        }
+        else
+        {
+            throw new InvalidOperationException($"Invalid identifier parts: {string.Join(".", IdentifierParts)}");
+        }
+    }
+
+
+    public (string TableName, string? SchemaName) GetTableParts()
+    {
+        if (IdentifierParts.Count == 1)
+        {
+            return (IdentifierParts[0], null);
+        }
+        else if (IdentifierParts.Count == 2)
+        {
+            return (IdentifierParts[1], IdentifierParts[0]);
+        }
+        else
+        {
+            throw new InvalidOperationException($"Invalid identifier parts: {string.Join(".", IdentifierParts)}");
+        }
+    }
+
     public string Column => IdentifierParts.Last();
 
     public ColumnBinding? Binding { get; internal set; }

@@ -7,10 +7,11 @@ namespace Tabliq.RemoteExecuter;
 
 public class VirtualTable
 {
-    public VirtualTable(string tableName, string? remoteSql = null)
+    public VirtualTable(string tableName, string? schemaName = null, string? remoteSql = null)
     {
         // use the correct sql writer??
         TableName = tableName;
+        SchemaName = schemaName ?? string.Empty;
 
         // TODO move this block to some db specific sql generator
         remoteSql ??= new SqlWriter().ToSql(new IdentifierExpression(tableName));
@@ -43,16 +44,18 @@ public class VirtualTable
         }
     }
 
-    public VirtualTable(string tableName, SelectExpression selectExpression)
+    public VirtualTable(string tableName, SelectExpression selectExpression, string? schemaName = null)
     {
         TableName = tableName;
         RemoteSql = selectExpression;
+        SchemaName = schemaName ?? string.Empty;
     }
 
-    public VirtualTable(string tableName, IdentifierExpression remoteSqlTableName)
+    public VirtualTable(string tableName, IdentifierExpression remoteSqlTableName, string? schemaName = null)
     {
         TableName = tableName;
         RemoteSqlTableName = remoteSqlTableName;
+        SchemaName = schemaName ?? string.Empty;
     }
 
     public IdentifierExpression? RemoteSqlTableName { get; }
@@ -60,6 +63,8 @@ public class VirtualTable
     public SelectExpression? RemoteSql { get; }
 
     public string TableName { get; set; }
+
+    public string SchemaName { get; set; }
 
     public List<VirtualColumn> Columns { get; set; } = [];
 
