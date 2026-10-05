@@ -125,9 +125,23 @@ public class SqlServerExecutionTests
         var results = await _engine.ExecuteToDictionaryList("SELECT CUST_VALUE(NameTest) AS c FROM Data WHERE NameTest = 'Test'", Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
 
         Assert.Equal("""
-            SELECT Data.NameTest
-            FROM Data AS Data
+            SELECT NameTest
+            FROM Data
             WHERE NameTest = 'Test'
+            """,
+            _provider.LastSqlExecuted);
+    }
+
+    [Fact]
+    public async Task UnrecognisedCustomValueTriggersAFilterdTableScanGroupByFirst()
+    {
+        var results = await _engine.ExecuteToDictionaryList("SELECT CUST_VALUE(NameTest) AS c FROM Data WHERE NameTest = 'Test' GROUP BY NameTest", Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
+
+        Assert.Equal("""
+            SELECT NameTest
+            FROM Data
+            WHERE NameTest = 'Test'
+            GROUP BY NameTest
             """,
             _provider.LastSqlExecuted);
     }

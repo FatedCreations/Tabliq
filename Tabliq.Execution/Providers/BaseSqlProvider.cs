@@ -1,14 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
-using System.Text;
-using System.Text.RegularExpressions;
-using Tabliq.Execution.ExecutionReader;
+﻿using System.Diagnostics.CodeAnalysis;
 using Tabliq.Execution.Functions;
 using Tabliq.Sql.Ast;
 using Tabliq.Sql.Binding;
 using Tabliq.Sql.Core;
-using Tabliq.Sql.Printer;
 
 namespace Tabliq.Execution.Providers;
 
@@ -45,9 +39,10 @@ public abstract class RemoteSqlProviderBase : IExecutionProvider
 
     public ExecutionPlanNode TryRewrite(ExecutionPlanNode node)
         => RewriteJoinsBothSideSql(node) ??
-           RewriteProjection(node) ??
-           RewriteTableScan(node)
-           ?? node;
+            RewriteFilter(node) ??
+            RewriteProjection(node) ??
+            RewriteTableScan(node)
+            ?? node;
 
     private ExecutionPlanNode? RewriteTableScan(ExecutionPlanNode node)
     {
@@ -81,6 +76,37 @@ public abstract class RemoteSqlProviderBase : IExecutionProvider
 
         return new RemoteSqProviderSqlExecutionPlanNode(this, sql);
     }
+    private ExecutionPlanNode? RewriteFilter(ExecutionPlanNode node)
+    {
+        if (node is not FilterExecutionPlanNode filter || !TryGetParentQuery(filter.Input, out var parentQuery))
+        {
+            return null;
+        }
+
+        if (ContainsUnsupportedFunction(filter.Condition))
+        {
+            return null;
+        }
+
+        var where = parentQuery.Sql.Where is null
+            ? new WhereClause(filter.Condition)
+            : new WhereClause(new LogicalCondition(parentQuery.Sql.Where.Condition, LogicalOperator.And, filter.Condition));
+
+        var sql = new SelectExpression(
+            parentQuery.Sql.IsBracketed,
+            parentQuery.Sql.Top,
+            parentQuery.Sql.Distinctness,
+            parentQuery.Sql.Projections,
+            parentQuery.Sql.From,
+            where,
+            parentQuery.Sql.GroupBy,
+            parentQuery.Sql.Having,
+            parentQuery.Sql.OrderBy,
+            parentQuery.Sql.UnionStatements);
+
+        return new RemoteSqProviderSqlExecutionPlanNode(this, sql);
+    }
+
     private ExecutionPlanNode? RewriteProjection(ExecutionPlanNode node)
     {
         if (node is not ProjectionExecutionPlanNode projection || projection.SourceSelect is null || projection.Input.Provider != this)
@@ -90,10 +116,99 @@ public abstract class RemoteSqlProviderBase : IExecutionProvider
 
         if (ContainsUnsupportedFunction(projection.SourceSelect))
         {
+            var pushedDownSelect = TryCreatePushdownSelect(projection.SourceSelect);
+            if (pushedDownSelect is not null)
+            {
+                return new RemoteSqProviderSqlExecutionPlanNode(this, pushedDownSelect);
+            }
+
             return null;
         }
 
         return new RemoteSqProviderSqlExecutionPlanNode(this, projection.SourceSelect);
+    }
+
+    private SelectExpression? TryCreatePushdownSelect(SelectExpression source)
+    {
+        var projections = new List<SelectProjection>();
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var projection in source.Projections)
+        {
+            if (ContainsUnsupportedFunction(projection.Expression))
+            {
+                foreach (var dependent in CollectPushdownDependencies(projection.Expression))
+                {
+                    var key = dependent.Expression.ToString();
+                    if (seen.Add(key))
+                    {
+                        projections.Add(dependent);
+                    }
+                }
+
+                continue;
+            }
+
+            var key2 = projection.Expression.ToString();
+            if (seen.Add(key2))
+            {
+                projections.Add(projection);
+            }
+        }
+
+        if (projections.Count == 0)
+        {
+            return null;
+        }
+
+        var where = source.Where;
+        var groupBy = source.GroupBy;
+        var having = source.Having;
+        var orderBy = source.OrderBy;
+
+        return new SelectExpression(
+            source.IsBracketed,
+            source.Top,
+            source.Distinctness,
+            projections,
+            source.From,
+            where,
+            groupBy,
+            having,
+            orderBy,
+            source.UnionStatements);
+    }
+
+    private IEnumerable<SelectProjection> CollectPushdownDependencies(Expression expression)
+    {
+        if (expression is FunctionCallExpression functionCall && functionCall.Binding is not null && !SupportsFunction(functionCall.Binding))
+        {
+            foreach (var argument in functionCall.Arguments)
+            {
+                foreach (var dependency in CollectPushdownDependencies(argument))
+                {
+                    yield return dependency;
+                }
+            }
+
+            yield break;
+        }
+
+        foreach (var child in expression.GetChildren())
+        {
+            if (child is Expression childExpression)
+            {
+                foreach (var dependency in CollectPushdownDependencies(childExpression))
+                {
+                    yield return dependency;
+                }
+            }
+        }
+
+        if (expression is IdentifierExpression or LiteralExpression or ParameterIdentifier or ValueFromExpression)
+        {
+            yield return new SelectProjection(expression);
+        }
     }
 
     private bool ContainsUnsupportedFunction(SyntaxNode node)
