@@ -37,7 +37,11 @@ public sealed class TableSymbol
             : $"{SchemaName}.{TableName}";
     }
 
-
+    public bool IsMatch(string tableName, string? schemaName)
+    {
+        return TableName.Equals(tableName, StringComparison.OrdinalIgnoreCase)
+            && SchemaName.Equals(schemaName ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+    }
 }
 
 public sealed record ColumnSymbol(
