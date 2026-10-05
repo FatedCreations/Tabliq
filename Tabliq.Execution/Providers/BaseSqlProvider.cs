@@ -61,11 +61,15 @@ public abstract class RemoteSqlProviderBase : IExecutionProvider
             return null;
         }
 
+        IEnumerable<ColumnSymbol> columns = tableScan.ReferencedColumns is { Count: > 0 }
+            ? tableScan.ReferencedColumns
+            : table.Columns;
+
         var sql = new SelectExpression(
             false,
             null,
             Distinctness.Unspecified,
-            table!.Columns.Select(x => new SelectProjection(new IdentifierExpression(tableScan.Alias, x.Name))),
+            columns.Select(x => new SelectProjection(new IdentifierExpression(tableScan.Alias, x.Name))),
             new FromClause([new NamedTableReference(IdentifierExpression.FromTableSymbol(table), tableScan.Alias)], []),
             null,
             null,

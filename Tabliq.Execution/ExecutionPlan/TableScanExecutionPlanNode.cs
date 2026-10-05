@@ -1,4 +1,3 @@
-using System.Reflection;
 using Tabliq.Execution.ExecutionReader;
 using Tabliq.Sql.Binding;
 
@@ -10,11 +9,12 @@ public sealed class TableScanExecutionPlanNode : ExecutionPlanNode
     private readonly IExecutionProvider? _provider;
     private readonly string _alias;
 
-    public TableScanExecutionPlanNode(TableSymbol table, string alias, IExecutionProvider? provider)
+    public TableScanExecutionPlanNode(TableSymbol table, string alias, IExecutionProvider? provider, IReadOnlyList<ColumnSymbol>? referencedColumns = null)
     {
         _table = table;
         _provider = provider;
         _alias = alias;
+        ReferencedColumns = referencedColumns;
     }
 
     public string TableName => _table.TableName;
@@ -22,6 +22,9 @@ public sealed class TableScanExecutionPlanNode : ExecutionPlanNode
     public string? SchemaName => _table.SchemaName;
 
     public string Alias => _alias;
+
+    /// <summary>The set of columns referenced from this table in the query. Null means all columns are needed.</summary>
+    public IReadOnlyList<ColumnSymbol>? ReferencedColumns { get; }
 
     public override IExecutionProvider? Provider => _provider;
 

@@ -1,7 +1,7 @@
-using System.Reflection;
 using Tabliq.Execution.ExecutionReader;
 using Tabliq.Sql.Ast;
 using Tabliq.Sql.Binding;
+using Tabliq.Sql.Core;
 using Tabliq.Sql.Parsing;
 using Binder = Tabliq.Sql.Binding.Binder;
 
@@ -39,7 +39,8 @@ public class ExecutionEngine
 
     private static ExecutionPlanNode BuildPlan(SelectExpression select)
     {
-        var source = select.From is null ? new EmptyExecutionPlanNode() : BuildFrom(select.From);
+        var referencedColumns = CollectReferencedColumnsByAlias(select);
+        var source = select.From is null ? new EmptyExecutionPlanNode() : BuildFrom(select.From, referencedColumns);
 
         if (select.Where is not null)
         {
@@ -49,31 +50,72 @@ public class ExecutionEngine
         return new ProjectionExecutionPlanNode(source, select.Projections, select);
     }
 
-    private static ExecutionPlanNode BuildFrom(FromClause fromClause)
+    private static Dictionary<string, HashSet<string>> CollectReferencedColumnsByAlias(SyntaxNode node)
+    {
+        var result = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
+        WalkForColumnReferences(node, result);
+        return result;
+    }
+
+    private static void WalkForColumnReferences(SyntaxNode node, Dictionary<string, HashSet<string>> result)
+    {
+        if (node is IdentifierExpression identifier && identifier.Binding is { } binding)
+        {
+            var tableName = binding.TableSymbol.TableName;
+            var colName = binding.ColumnSymbol.Name;
+            if (!string.IsNullOrEmpty(tableName) && !string.IsNullOrEmpty(colName))
+            {
+                if (!result.TryGetValue(tableName, out var cols))
+                    result[tableName] = cols = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                cols.Add(colName);
+            }
+        }
+        else if (node is StarIdentifierExpression star)
+        {
+            foreach (var starBinding in star.Bindings)
+            {
+                var tableName = starBinding.TableSymbol.TableName;
+                var colName = starBinding.ColumnSymbol.Name;
+                if (!string.IsNullOrEmpty(tableName) && !string.IsNullOrEmpty(colName))
+                {
+                    if (!result.TryGetValue(tableName, out var cols))
+                        result[tableName] = cols = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                    cols.Add(colName);
+                }
+            }
+        }
+
+        foreach (var child in node.GetChildren())
+            WalkForColumnReferences(child, result);
+    }
+
+    private static ExecutionPlanNode BuildFrom(FromClause fromClause, Dictionary<string, HashSet<string>> referencedColumns)
     {
         ExecutionPlanNode? current = null;
 
         foreach (var tableReference in fromClause.TableReferences)
         {
-            var next = BuildTableReference(tableReference);
+            var next = BuildTableReference(tableReference, referencedColumns);
             current = current is null ? next : new JoinExecutionPlanNode(current, next, JoinType.Cross, null, JoinSide.Unspecified);
         }
 
         foreach (var join in fromClause.Joins)
         {
-            var next = BuildTableReference(join.TableReference);
+            var next = BuildTableReference(join.TableReference, referencedColumns);
             current = current is null ? next : new JoinExecutionPlanNode(current, next, join.JoinType, join.OnCondition, join.JoinSide);
         }
 
         return current ?? new EmptyExecutionPlanNode();
     }
 
-    private static ExecutionPlanNode BuildTableReference(TableReference tableReference)
+    private static ExecutionPlanNode BuildTableReference(TableReference tableReference, Dictionary<string, HashSet<string>> referencedColumns)
     {
         if (tableReference is NamedTableReference namedTableReference)
         {
             var table = namedTableReference.Binding ?? throw new InvalidOperationException($"Table '{namedTableReference.Identifer}' was not bound.");
-            return CreateTableScan(table, namedTableReference.Alias ?? table.TableName);
+            var alias = namedTableReference.Alias ?? table.TableName;
+            referencedColumns.TryGetValue(alias, out var cols);
+            return CreateTableScan(table, alias, cols);
         }
 
         if (tableReference is SelectTableReference subSelect)
@@ -84,10 +126,12 @@ public class ExecutionEngine
         throw new NotSupportedException($"Unsupported table reference type: {tableReference.GetType().Name}");
     }
 
-    private static ExecutionPlanNode CreateTableScan(TableSymbol table, string alias)
+    private static ExecutionPlanNode CreateTableScan(TableSymbol table, string alias, IReadOnlySet<string>? referencedColumns = null)
     {
         var provider = ResolveProvider(table);
-        return new TableScanExecutionPlanNode(table, alias, provider);
+
+        var cols = table.Columns.Where(x=> referencedColumns?.Contains(x.Name, StringComparer.OrdinalIgnoreCase) ?? false).ToList();
+        return new TableScanExecutionPlanNode(table, alias, provider, cols);
     }
 
     private static IExecutionProvider? ResolveProvider(TableSymbol table)
