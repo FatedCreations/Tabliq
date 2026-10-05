@@ -71,6 +71,16 @@ public class InMemoryExecutionTests
         Assert.All(results, r => Assert.Equal((int)r["Value"] + 1, (int)r["Calculated"]));
     }
 
+
+    [Fact]
+    public async Task CountAggregrate()
+    {
+        var results = await _engine.ExecuteToDictionaryList("SELECT count(*) as c FROM Data", Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
+
+        var row = Assert.Single(results);
+        Assert.Equal(20, (int)row["c"]!);
+    }
+
     [Fact]
     public async Task Join()
     {
@@ -84,6 +94,7 @@ public class InMemoryExecutionTests
         Assert.Equal("Test0", first["n"]);
         Assert.Equal("Other0", first["oName"]);
     }
+
     [Fact]
     public async Task MultiTable()
     {
