@@ -8,6 +8,9 @@ public sealed class FilterExecutionPlanNode : ExecutionPlanNode
     private readonly ExecutionPlanNode _input;
     private readonly Condition _condition;
 
+    public ExecutionPlanNode Input => _input;
+    public Condition Condition => _condition;
+
     public FilterExecutionPlanNode(ExecutionPlanNode input, Condition condition)
     {
         _input = input;
