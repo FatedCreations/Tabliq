@@ -5,6 +5,15 @@ namespace Tabliq.Sql.Ast;
 
 public class IdentifierExpression : Expression
 {
+    public static IdentifierExpression FromTableSymbol(TableSymbol tableSymbol)
+    {
+        if (string.IsNullOrEmpty(tableSymbol.SchemaName))
+        {
+            return new IdentifierExpression(tableSymbol.TableName);
+        }
+        return new IdentifierExpression(tableSymbol.SchemaName, tableSymbol.TableName);
+    }
+
     public IdentifierExpression(IEnumerable<string> identifierParts)
     {
         IdentifierParts = identifierParts.ToList();

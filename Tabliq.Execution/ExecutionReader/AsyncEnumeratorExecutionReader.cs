@@ -1,16 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿namespace Tabliq.Execution.ExecutionReader;
 
-namespace Tabliq.Execution.ExecutionReader;
-
-public class EnumeratorExecutionReader : IExecutionReader
+public class AsyncEnumeratorExecutionReader : IExecutionReader
 {
     private readonly IAsyncDisposable[] _disposables;
     private readonly string[] _fields;
-    private readonly IEnumerator<object?[]?> _enumerator;
+    private readonly IAsyncEnumerator<object?[]?> _enumerator;
 
-    public EnumeratorExecutionReader(string[] fields, IEnumerator<object?[]?> enumerator, IEnumerable<IAsyncDisposable> disposables)
+    public AsyncEnumeratorExecutionReader(string[] fields, IAsyncEnumerator<object?[]?> enumerator, IEnumerable<IAsyncDisposable> disposables)
     {
         _fields = fields;
         _enumerator = enumerator;
@@ -35,9 +31,9 @@ public class EnumeratorExecutionReader : IExecutionReader
         return _enumerator.Current;
     }
 
-    public Task<bool> ReadAsync(CancellationToken cancellationToken)
+    public async Task<bool> ReadAsync(CancellationToken cancellationToken)
     {
-        var result = _enumerator.MoveNext();
-        return Task.FromResult(result);
+        var result = await _enumerator.MoveNextAsync();
+        return result;
     }
 }
