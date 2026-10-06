@@ -1,12 +1,10 @@
-﻿using System.Text.RegularExpressions;
-using Tabliq.Execution;
+﻿using Tabliq.Execution;
 using Tabliq.Execution.ExecutionReader;
 using Tabliq.Execution.Functions;
 using Tabliq.Execution.Providers;
 using Tabliq.Sql.Ast;
 using Tabliq.Sql.Binding;
-using Tabliq.Sql.Printer;
-using static Tabliq.Execution.Functions.SqlFunction;
+using static Tabliq.Execution.Providers.RemoteSqlProviderBase;
 
 namespace Tabliq.Tests.Execution;
 
@@ -135,7 +133,7 @@ public class SqlServerExecutionTests
     [Fact]
     public async Task UnrecognisedCustomValueTriggersAFilterdTableScanGroupByFirst()
     {
-        var results = await _engine.ExecuteToDictionaryList("SELECT CUST_VALUE(NameTest) AS c FROM Data WHERE NameTest = 'Test' GROUP BY NameTest", Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
+        var results = await _engine.BuildPlanAndExecuteToDictionaryList("SELECT CUST_VALUE(NameTest) AS c FROM Data WHERE NameTest = 'Test' GROUP BY NameTest", Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
 
         Assert.Equal("""
             SELECT NameTest
@@ -144,7 +142,11 @@ public class SqlServerExecutionTests
             GROUP BY NameTest
             """,
             _provider.LastSqlExecuted);
+
+        // should not be executing the sql directly, it should be wrapped in a ProjectionExecutionPlanNode that reprocesses the scan in memory
+        Assert.IsNotType<RemoteSqProviderSqlExecutionPlanNode>(results.Plan);
     }
+
 
     [Fact]
     public async Task MultiTable()
@@ -183,13 +185,24 @@ public class SqlServerExecutionTests
 
 public class SimpleSqlServerProvider : RemoteSqlProviderBase
 {
-    public List<string> SqlExecuted { get; private set; } = new List<string>();
+    private List<TableSymbol> _tables = new List<TableSymbol>();
 
-    public string? LastSqlExecuted => SqlExecuted.LastOrDefault();
-
-    public override Task<IExecutionReader> ExecuteAsync(SelectExpression sqlScript, CancellationToken cancellationToken)
+    public void AddTable(TableSymbol tableSymbol)
     {
-        SqlExecuted.Add(sqlScript.ToString());
+        _tables.Add(new TableSymbol(tableSymbol.TableName, tableSymbol.SchemaName, tableSymbol.Columns));
+    }
+
+    public override IEnumerable<TableSymbol> GetTables() => _tables;
+
+    public List<(SelectStatement Sql, IEnumerable<ExecuterParameter>? Parameters)> SqlExecuted { get; private set; } = [];
+
+    public string LastSqlExecuted => SqlExecuted.LastOrDefault().Sql.ToString();
+    public SelectStatement LastSqlStatementExecuted => SqlExecuted.LastOrDefault().Sql;
+    public IEnumerable<ExecuterParameter>? LastParametersExecuted => SqlExecuted.LastOrDefault().Parameters;
+
+    public override Task<IExecutionReader> ExecuteAsync(SelectStatement sqlScript, IEnumerable<ExecuterParameter>? parameters = null, CancellationToken cancellationToken = default)
+    {
+        SqlExecuted.Add((sqlScript, parameters));
         return Task.FromResult<IExecutionReader>(new EnumeratorExecutionReader(Array.Empty<string>(), Enumerable.Empty<object?[]>().GetEnumerator(), Array.Empty<IAsyncDisposable>()));
     }
 }

@@ -33,9 +33,9 @@ public sealed class FilterExecutionPlanNode : ExecutionPlanNode
         return currentNode;
     }
 
-    public override async Task<IExecutionReader> ExecuteAsync(CancellationToken cancellationToken)
+    public override async Task<IExecutionReader> ExecuteAsync(IEnumerable<ExecuterParameter>? parameters = null, CancellationToken cancellationToken = default)
     {
-        await using var reader = await _input.ExecuteAsync(cancellationToken);
+        await using var reader = await _input.ExecuteAsync(parameters, cancellationToken);
 
         async IAsyncEnumerable<object?[]> Filter()
         {

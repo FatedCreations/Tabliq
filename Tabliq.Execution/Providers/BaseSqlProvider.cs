@@ -8,22 +8,10 @@ namespace Tabliq.Execution.Providers;
 
 public abstract class RemoteSqlProviderBase : IExecutionProvider
 {
-    private List<TableSymbol> _tables = new List<TableSymbol>();
+    public virtual TableSymbol? GetTable(string tableName, string? schemaName = null)
+        => GetTables().FirstOrDefault(x => x.IsMatch(tableName, schemaName));
 
-    public void AddTable(TableSymbol tableSymbol)
-    {
-        _tables.Add(new TableSymbol(tableSymbol.TableName, tableSymbol.SchemaName, tableSymbol.Columns)
-        {
-            State = new TableSymbolWrapper(tableSymbol, this)
-        });
-    }
-
-    public FunctionSymbol? GetFunction(string functionName) => null;
-
-    public TableSymbol? GetTable(string tableName, string? schemaName = null)
-        => _tables.FirstOrDefault(x => x.IsMatch(tableName, schemaName));
-
-    public IEnumerable<TableSymbol> GetTables() => _tables;
+    public abstract IEnumerable<TableSymbol> GetTables();
 
     private bool TryGetParentQuery(ExecutionPlanNode node, [NotNullWhen(true)] out RemoteSqProviderSqlExecutionPlanNode? res)
     {
@@ -50,8 +38,9 @@ public abstract class RemoteSqlProviderBase : IExecutionProvider
         {
             return null;
         }
-        var table = _tables.FirstOrDefault(x => x.TableName == tableScan.TableName && x.SchemaName == tableScan.SchemaName)
-            ?? _tables.FirstOrDefault(x => x.TableName == tableScan.TableName);
+        var tables = GetTables();
+        var table = tables.FirstOrDefault(x => x.TableName == tableScan.TableName && x.SchemaName == tableScan.SchemaName)
+            ?? tables.FirstOrDefault(x => x.TableName == tableScan.TableName);
 
         if (table is null)
         {
@@ -74,7 +63,7 @@ public abstract class RemoteSqlProviderBase : IExecutionProvider
             null,
             []);
 
-        return new RemoteSqProviderSqlExecutionPlanNode(this, sql);
+        return new RemoteSqProviderSqlExecutionPlanNode(this, new SelectStatement([], sql));
     }
     private ExecutionPlanNode? RewriteFilter(ExecutionPlanNode node)
     {
@@ -88,23 +77,24 @@ public abstract class RemoteSqlProviderBase : IExecutionProvider
             return null;
         }
 
-        var where = parentQuery.Sql.Where is null
+        var where = parentQuery.Sql.SelectQuery.Where is null
             ? new WhereClause(filter.Condition)
-            : new WhereClause(new LogicalCondition(parentQuery.Sql.Where.Condition, LogicalOperator.And, filter.Condition));
+            : new WhereClause(new LogicalCondition(parentQuery.Sql.SelectQuery.Where.Condition, LogicalOperator.And, filter.Condition));
 
         var sql = new SelectExpression(
-            parentQuery.Sql.IsBracketed,
-            parentQuery.Sql.Top,
-            parentQuery.Sql.Distinctness,
-            parentQuery.Sql.Projections,
-            parentQuery.Sql.From,
+            parentQuery.Sql.SelectQuery.IsBracketed,
+            parentQuery.Sql.SelectQuery.Top,
+            parentQuery.Sql.SelectQuery.Distinctness,
+            parentQuery.Sql.SelectQuery.Projections,
+            parentQuery.Sql.SelectQuery.From,
             where,
-            parentQuery.Sql.GroupBy,
-            parentQuery.Sql.Having,
-            parentQuery.Sql.OrderBy,
-            parentQuery.Sql.UnionStatements);
+            parentQuery.Sql.SelectQuery.GroupBy,
+            parentQuery.Sql.SelectQuery.Having,
+            parentQuery.Sql.SelectQuery.OrderBy,
+            parentQuery.Sql.SelectQuery.UnionStatements);
 
-        return new RemoteSqProviderSqlExecutionPlanNode(this, sql);
+        var select = new SelectStatement(parentQuery.Sql.CommonTableExpressions, sql);
+        return new RemoteSqProviderSqlExecutionPlanNode(this, select);
     }
 
     private ExecutionPlanNode? RewriteProjection(ExecutionPlanNode node)
@@ -119,13 +109,13 @@ public abstract class RemoteSqlProviderBase : IExecutionProvider
             var pushedDownSelect = TryCreatePushdownSelect(projection.SourceSelect);
             if (pushedDownSelect is not null)
             {
-                return new RemoteSqProviderSqlExecutionPlanNode(this, pushedDownSelect);
+                return new RemoteSqProviderSqlExecutionPlanNode(this, new SelectStatement([], pushedDownSelect));
             }
 
             return null;
         }
 
-        return new RemoteSqProviderSqlExecutionPlanNode(this, projection.SourceSelect);
+        return new RemoteSqProviderSqlExecutionPlanNode(this, new SelectStatement([], projection.SourceSelect));
     }
 
     private SelectExpression? TryCreatePushdownSelect(SelectExpression source)
@@ -166,7 +156,7 @@ public abstract class RemoteSqlProviderBase : IExecutionProvider
         var having = source.Having;
         var orderBy = source.OrderBy;
 
-        return new SelectExpression(
+       return new SelectExpression(
             source.IsBracketed,
             source.Top,
             source.Distinctness,
@@ -231,7 +221,7 @@ public abstract class RemoteSqlProviderBase : IExecutionProvider
 
     protected virtual bool SupportsFunction(FunctionSymbol function)
     {
-        if (function.State is not SqlFunction sqlFunction)
+        if (function.GetState<SqlFunction>() is not SqlFunction sqlFunction)
         {
             return true;
         }
@@ -248,14 +238,14 @@ public abstract class RemoteSqlProviderBase : IExecutionProvider
         }
 
         // merge the results for the 2 sql results! they already shoudl be aliased!
-        var trefs = left.Sql.From!.TableReferences;
-        var joins = left.Sql.From.Joins.Append(new JoinClause(join.JoinSide, join.JoinType, right.Sql.From!.TableReferences.Single(), join.Condition));
+        var trefs = left.Sql.SelectQuery.From!.TableReferences;
+        var joins = left.Sql.SelectQuery.From.Joins.Append(new JoinClause(join.JoinSide, join.JoinType, right.Sql.SelectQuery.From!.TableReferences.Single(), join.Condition));
 
         var sql = new SelectExpression(
            false,
            null,
            Distinctness.Unspecified,
-           left.Sql.Projections.Concat(right.Sql.Projections),
+           left.Sql.SelectQuery.Projections.Concat(right.Sql.SelectQuery.Projections),
            new FromClause(trefs, joins),
            null,
            null,
@@ -263,12 +253,13 @@ public abstract class RemoteSqlProviderBase : IExecutionProvider
            null,
            []);
 
-        return new RemoteSqProviderSqlExecutionPlanNode(this, sql);
+        IEnumerable<CommonTableExpression> allCtes = [.. left.Sql.CommonTableExpressions, .. right.Sql.CommonTableExpressions];
+        var select = new SelectStatement(allCtes.Distinct(), sql);
+
+        return new RemoteSqProviderSqlExecutionPlanNode(this, select);
     }
 
-
-    // todo need to rebind the select expression to ensure that it is valid for the remote provider
-    public abstract Task<IExecutionReader> ExecuteAsync(SelectExpression sqlScript, CancellationToken cancellationToken);
+    public abstract Task<IExecutionReader> ExecuteAsync(SelectStatement sqlScript, IEnumerable<ExecuterParameter>? parameters = null, CancellationToken cancellationToken = default);
 
     public class TableSymbolWrapper
     {
@@ -284,9 +275,9 @@ public abstract class RemoteSqlProviderBase : IExecutionProvider
     public class RemoteSqProviderSqlExecutionPlanNode : ExecutionPlanNode
     {
         private readonly RemoteSqlProviderBase _provider;
-        public SelectExpression Sql { get; }
+        public SelectStatement Sql { get; }
 
-        public RemoteSqProviderSqlExecutionPlanNode(RemoteSqlProviderBase provider, SelectExpression sql)
+        public RemoteSqProviderSqlExecutionPlanNode(RemoteSqlProviderBase provider, SelectStatement sql)
         {
             _provider = provider;
             Sql = sql;
@@ -294,9 +285,9 @@ public abstract class RemoteSqlProviderBase : IExecutionProvider
 
         public override IExecutionProvider? Provider => _provider;
 
-        public override Task<IExecutionReader> ExecuteAsync(CancellationToken cancellationToken)
+        public override Task<IExecutionReader> ExecuteAsync(IEnumerable<ExecuterParameter>? parameters = null, CancellationToken cancellationToken = default)
         {
-            return _provider.ExecuteAsync(Sql, cancellationToken);
+            return _provider.ExecuteAsync(Sql, parameters, cancellationToken);
         }
 
         public override ExecutionPlanNode? TryRewrite() => null;

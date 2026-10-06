@@ -30,6 +30,6 @@ public sealed class SubqueryExecutionPlanNode : ExecutionPlanNode
         return currentNode;
     }
 
-    public override async Task<IExecutionReader> ExecuteAsync(CancellationToken cancellationToken)
-        => new AliasedExecutionReader(_alias, await _inner.ExecuteAsync(cancellationToken));
+    public override async Task<IExecutionReader> ExecuteAsync(IEnumerable<ExecuterParameter>? parameters = null, CancellationToken cancellationToken = default)
+        => new AliasedExecutionReader(_alias, await _inner.ExecuteAsync(parameters, cancellationToken));
 }

@@ -70,7 +70,7 @@ public static class EvaluationHelpers
                 {
                     return aggregateValue;
                 }
-                if (functionCall.Binding?.State is ValueFunction valueFunction)
+                if (functionCall.Binding?.GetState<SqlFunction>() is ValueFunction valueFunction)
                 {
                     return valueFunction.Execute(functionCall, row); // are agg values needed?
                 }
