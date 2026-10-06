@@ -33,7 +33,7 @@ public sealed class ProjectionExecutionPlanNode : ExecutionPlanNode
             currentNode = new ProjectionExecutionPlanNode(newInput, _projections, SourceSelect);
         }
 
-        currentNode = newInput?.Provider?.TryRewrite(currentNode, context) ?? currentNode;
+        currentNode = newInput.Provider?.TryRewrite(currentNode, context) ?? currentNode;
 
         return currentNode;
     }
@@ -42,10 +42,18 @@ public sealed class ProjectionExecutionPlanNode : ExecutionPlanNode
     {
         var hasGroupBy = SourceSelect?.GroupBy is not null;
 
-        if (_input is EmptyExecutionPlanNode)
+        if (_input is EmptyExecutionPlanNode || _input is FilterExecutionPlanNode { Input: EmptyExecutionPlanNode })
         {
-            var singleRowOutputFields = GetProjectedFields(Array.Empty<string>());
             var emptyRow = new RowAccessor(Array.Empty<string>(), Array.Empty<object?>());
+            if (_input is FilterExecutionPlanNode filter && filter.Input is EmptyExecutionPlanNode)
+            {
+                if (!EvaluationHelpers.EvaluateCondition(filter.Condition, emptyRow))
+                {
+                    return new EnumeratorExecutionReader(GetProjectedFields(Array.Empty<string>()), new List<object?[]?>().GetEnumerator(), Array.Empty<IAsyncDisposable>());
+                }
+            }
+
+            var singleRowOutputFields = GetProjectedFields(Array.Empty<string>());
 
             if (ContainsAggregateProjection())
             {
@@ -353,7 +361,7 @@ public sealed class ProjectionExecutionPlanNode : ExecutionPlanNode
         {
             IdentifierExpression identifier => identifier.Column,
             FunctionCallExpression functionCall => functionCall.FunctionName,
-            LiteralExpression => "Literal",
+            LiteralExpression literal => literal.Value?.ToString() ?? "Literal",
             _ => expression.GetType().Name,
         };
 

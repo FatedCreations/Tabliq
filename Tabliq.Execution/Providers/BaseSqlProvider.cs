@@ -21,8 +21,24 @@ public abstract class RemoteSqlProviderBase : IExecutionProvider
             return true;
         }
 
-        if (node is SubqueryExecutionPlanNode subquery && TryGetParentQuery(subquery.Inner, out res))
+        if (node is SubqueryExecutionPlanNode subquery)
         {
+            if (TryGetParentQuery(subquery.Inner, out res))
+            {
+                return true;
+            }
+
+            if (subquery.Inner is ProjectionExecutionPlanNode projection && projection.SourceSelect is not null)
+            {
+                res = new RemoteSqProviderSqlExecutionPlanNode(this, new SelectStatement([], projection.SourceSelect));
+                return true;
+            }
+        }
+
+        if (node is ProjectionExecutionPlanNode projectionNode && projectionNode.SourceSelect is not null
+            && (projectionNode.Input is EmptyExecutionPlanNode || projectionNode.Input is FilterExecutionPlanNode { Input: EmptyExecutionPlanNode }))
+        {
+            res = new RemoteSqProviderSqlExecutionPlanNode(this, new SelectStatement([], projectionNode.SourceSelect));
             return true;
         }
 
@@ -79,7 +95,7 @@ public abstract class RemoteSqlProviderBase : IExecutionProvider
 
         if (ContainsUnsupportedFunction(filter.Condition))
         {
-            context?.Report("SqlPushdownSkipped", "Filter could not be pushed to SQL because it contains an unsupported function.", nameof(FilterExecutionPlanNode), filter.Condition.ToString());
+            context?.Report("SqlPushdownSkipped", "Filter could not be pushed to SQL because it contains an unsupported function.", ExecutionRewriteDiagnosticLevel.Warning, nameof(FilterExecutionPlanNode), filter.Condition.ToString());
             return null;
         }
 
@@ -118,6 +134,7 @@ public abstract class RemoteSqlProviderBase : IExecutionProvider
                 context?.Report(
                     unsupportedFunction.Binding is not null ? $"SqlPushdownUnsupportedFunction:{unsupportedFunction.FunctionName}" : "SqlPushdownUnsupportedFunction",
                     $"Projection depends on unsupported function '{unsupportedFunction.FunctionName}' and cannot be fully pushed to SQL.",
+                    ExecutionRewriteDiagnosticLevel.Warning,
                     nameof(ProjectionExecutionPlanNode),
                     unsupportedFunction.ToString());
             }
@@ -128,6 +145,7 @@ public abstract class RemoteSqlProviderBase : IExecutionProvider
                 context?.Report(
                     "SqlPushdownPartial",
                     $"Projection partially pushed to SQL; unsupported function(s) will be evaluated in memory.",
+                    ExecutionRewriteDiagnosticLevel.Info,
                     nameof(ProjectionExecutionPlanNode),
                     projection.SourceSelect.ToString());
                 var pushedDownInput = new RemoteSqProviderSqlExecutionPlanNode(this, new SelectStatement([], pushedDownSelect));
@@ -137,12 +155,13 @@ public abstract class RemoteSqlProviderBase : IExecutionProvider
             context?.Report(
                 "SqlPushdownSkipped",
                 "Projection could not be pushed to SQL because it depends on unsupported function(s).",
+                ExecutionRewriteDiagnosticLevel.Warning,
                 nameof(ProjectionExecutionPlanNode),
                 projection.SourceSelect.ToString());
             return null;
         }
 
-        context?.Report("SqlPushdownApplied", "Projection was pushed to SQL provider.", nameof(ProjectionExecutionPlanNode), projection.SourceSelect.ToString());
+        context?.Report("SqlPushdownApplied", "Projection was pushed to SQL provider.", ExecutionRewriteDiagnosticLevel.Debug, nameof(ProjectionExecutionPlanNode), projection.SourceSelect.ToString());
         return new RemoteSqProviderSqlExecutionPlanNode(this, new SelectStatement([], projection.SourceSelect));
     }
 
@@ -279,25 +298,28 @@ public abstract class RemoteSqlProviderBase : IExecutionProvider
         }
 
         // merge the results for the 2 sql results! they already shoudl be aliased!
-        var trefs = left.Sql.SelectQuery.From!.TableReferences;
-        var joins = left.Sql.SelectQuery.From.Joins.Append(new JoinClause(join.JoinSide, join.JoinType, right.Sql.SelectQuery.From!.TableReferences.Single(), join.Condition));
+        var leftFrom = left.Sql.SelectQuery.From ?? new FromClause([new SelectTableReference(left.Sql.SelectQuery, "left_subquery")], []);
+        var rightFrom = right.Sql.SelectQuery.From ?? new FromClause([new SelectTableReference(right.Sql.SelectQuery, "right_subquery")], []);
+        var trefs = leftFrom.TableReferences;
+        var rightTableReference = rightFrom.TableReferences.SingleOrDefault() ?? new SelectTableReference(right.Sql.SelectQuery, "right_subquery");
+        var joins = leftFrom.Joins.Append(new JoinClause(join.JoinSide, join.JoinType, rightTableReference, join.Condition));
 
         var sql = new SelectExpression(
-           false,
-           null,
-           Distinctness.Unspecified,
-           left.Sql.SelectQuery.Projections.Concat(right.Sql.SelectQuery.Projections),
-           new FromClause(trefs, joins),
-           null,
-           null,
-           null,
-           null,
-           []);
+            false,
+            null,
+            Distinctness.Unspecified,
+            left.Sql.SelectQuery.Projections.Concat(right.Sql.SelectQuery.Projections),
+            new FromClause(trefs, joins),
+            null,
+            null,
+            null,
+            null,
+            []);
 
         IEnumerable<CommonTableExpression> allCtes = [.. left.Sql.CommonTableExpressions, .. right.Sql.CommonTableExpressions];
         var select = new SelectStatement(allCtes.Distinct(), sql);
 
-        context?.Report("SqlPushdownApplied", "Join inputs were merged into a single SQL query.", nameof(JoinExecutionPlanNode), join.ToString());
+        context?.Report("SqlPushdownApplied", "Join inputs were merged into a single SQL query.", ExecutionRewriteDiagnosticLevel.Debug, nameof(JoinExecutionPlanNode), join.ToString());
         return new RemoteSqProviderSqlExecutionPlanNode(this, select);
     }
 

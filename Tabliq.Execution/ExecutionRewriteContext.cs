@@ -1,10 +1,23 @@
 namespace Tabliq.Execution;
 
-public sealed record ExecutionRewriteDiagnostic(string Id, string Message, string? Source = null, string? Details = null)
+public enum ExecutionRewriteDiagnosticLevel
+{
+    Debug,
+    Info,
+    Warning,
+    Error,
+}
+
+public sealed record ExecutionRewriteDiagnostic(
+    string Id,
+    string Message,
+    ExecutionRewriteDiagnosticLevel Level = ExecutionRewriteDiagnosticLevel.Info,
+    string? Source = null,
+    string? Details = null)
 {
     public override string ToString() => string.IsNullOrWhiteSpace(Source)
-        ? $"{Id}: {Message}"
-        : $"{Id}: {Message} ({Source})";
+        ? $"[{Level}] {Id}: {Message}"
+        : $"[{Level}] {Id}: {Message} ({Source})";
 }
 
 public sealed class ExecutionRewriteContext
@@ -14,5 +27,8 @@ public sealed class ExecutionRewriteContext
     public IReadOnlyList<ExecutionRewriteDiagnostic> Diagnostics => _diagnostics;
 
     public void Report(string id, string message, string? source = null, string? details = null)
-        => _diagnostics.Add(new ExecutionRewriteDiagnostic(id, message, source, details));
+        => Report(id, message, ExecutionRewriteDiagnosticLevel.Info, source, details);
+
+    public void Report(string id, string message, ExecutionRewriteDiagnosticLevel level, string? source = null, string? details = null)
+        => _diagnostics.Add(new ExecutionRewriteDiagnostic(id, message, level, source, details));
 }

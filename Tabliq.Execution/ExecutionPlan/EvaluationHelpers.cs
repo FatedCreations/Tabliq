@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.RegularExpressions;
 using Tabliq.Execution.ExecutionReader;
 using Tabliq.Execution.Functions;
@@ -162,7 +163,27 @@ public static class EvaluationHelpers
             return Convert.ToInt32(floatValue);
         }
 
+        if (value is string stringValue && double.TryParse(stringValue, NumberStyles.Float, CultureInfo.InvariantCulture, out var parsedDouble))
+        {
+            return Convert.ToInt32(parsedDouble);
+        }
+
         return value;
+    }
+
+    private static bool Equals(object? left, object? right)
+    {
+        if (left is null || right is null)
+        {
+            return left is null && right is null;
+        }
+
+        if (IsNumeric(left) && IsNumeric(right))
+        {
+            return Convert.ToDecimal(left, CultureInfo.InvariantCulture) == Convert.ToDecimal(right, CultureInfo.InvariantCulture);
+        }
+
+        return left.Equals(right);
     }
 
     private static int Compare(object? left, object? right)
@@ -170,6 +191,17 @@ public static class EvaluationHelpers
         if (left is null && right is null) return 0;
         if (left is null) return -1;
         if (right is null) return 1;
+
+        if (IsNumeric(left) && IsNumeric(right))
+        {
+            var leftDecimal = Convert.ToDecimal(left, CultureInfo.InvariantCulture);
+            var rightDecimal = Convert.ToDecimal(right, CultureInfo.InvariantCulture);
+            return leftDecimal.CompareTo(rightDecimal);
+        }
+
         return Comparer<object?>.Default.Compare(left, right);
     }
+
+    private static bool IsNumeric(object value)
+        => value is sbyte or byte or short or ushort or int or uint or long or ulong or float or double or decimal;
 }

@@ -95,7 +95,7 @@ public class Binder
             Current.InsideAggregate = prev;
         }
     }
-    void WithNewTable(string name, Action action)
+    void WithNewTable(string name, Action action, Func<TableSymbol, TableSymbol>? finalizeTable = null)
     {
         var previous = Current;
         Current = new BindingScope(name, previous);
@@ -108,7 +108,8 @@ public class Binder
             var boundTable = Current.Build();
             if (boundTable is not null)
             {
-                previous.AddTableToCatalog(boundTable);
+                var finalTable = finalizeTable is null ? boundTable : finalizeTable(boundTable);
+                previous.AddTableToCatalog(finalTable);
             }
             Current = previous;
         }
@@ -632,7 +633,7 @@ public class Binder
             // we are adding the cte into the current parent scope
             // bind the common table expression
             BindChildren(cte);
-        });
+        }, table => table.WithState(new CteTableMetadata(cte.Alias, cte.Body)));
 
     private void Bind(UnionStatement unionStatement)
         => InsideUnion(string.Empty, () =>

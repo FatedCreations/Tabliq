@@ -158,7 +158,76 @@ public class InMemoryExecutionTests
         var row = Assert.Single(results);
         Assert.Equal(1, row["month"]);
     }
-      
+    [Fact]
+    public async Task Issue4_Empty()
+    {
+        var results = await _engine.ExecuteToDictionaryList(
+            """
+                SELECT '1' where 1 + 1 > 2
+            """, Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
+
+        Assert.Empty(results);
+    }
+
+    [Fact]
+    public async Task Issue4()
+    {
+        var results = await _engine.ExecuteToDictionaryList(
+            """
+                SELECT '1' where 1 + 1 = 2
+            """, Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
+
+        var row = Assert.Single(results);
+        Assert.Equal(1, row["1"]);
+    }
+
+    [Fact]
+    public async Task Issue5_Empty()
+    {
+        var results = await _engine.ExecuteToDictionaryList(
+            """
+            SELECT '1' where 1 + 1 > 2 + 2
+            """, Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
+
+        Assert.Empty(results);
+    }
+
+    [Fact]
+    public async Task Issue5()
+    {
+        var results = await _engine.ExecuteToDictionaryList(
+            """
+            SELECT '1' where 1 + 1 <> 2 + 2
+            """, Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
+
+        var row = Assert.Single(results);
+        Assert.Equal(1, row["1"]);
+    }
+
+
+    [Fact]
+    public async Task Issue6_Empty()
+    {
+        var results = await _engine.ExecuteToDictionaryList(
+            """
+            SELECT '1' where 1 > 2
+            """, Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
+
+        Assert.Empty(results);
+    }
+
+    [Fact]
+    public async Task Issue6()
+    {
+        var results = await _engine.ExecuteToDictionaryList(
+            """
+            SELECT '1' where 1 < 2
+            """, Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
+
+        var row = Assert.Single(results);
+        Assert.Equal(1, row["1"]);
+    }
+
 
     private class CustomAggregateFunction : AggregateFunction
     {
