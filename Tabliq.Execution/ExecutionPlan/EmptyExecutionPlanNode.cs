@@ -9,6 +9,6 @@ public sealed class EmptyExecutionPlanNode : ExecutionPlanNode
 
     public override IExecutionProvider? Provider => null;
 
-    public override ExecutionPlanNode? TryRewrite()
+    public override ExecutionPlanNode? TryRewrite(ExecutionRewriteContext? context = null)
         => null;
 }

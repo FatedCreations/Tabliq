@@ -8,5 +8,5 @@ public interface IExecutionProvider
     IEnumerable<TableSymbol> GetTables();
 
     TableSymbol? GetTable(string tableName, string? schemaName = null);
-    ExecutionPlanNode TryRewrite(ExecutionPlanNode node);
+    ExecutionPlanNode TryRewrite(ExecutionPlanNode node, ExecutionRewriteContext? context = null);
 }

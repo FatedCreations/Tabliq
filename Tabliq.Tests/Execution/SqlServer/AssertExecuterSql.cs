@@ -116,7 +116,19 @@ public class AssertExecuterSql
 
                     var plan = ex.BuildPlan(underTest.Replace("\r\n", "\n"), _parameters);
 
-                    var sqlPlan = Assert.IsType<RemoteSqProviderSqlExecutionPlanNode>(plan);
+
+                    Console.WriteLine("--- ASSERTSQL DIAGNOSTIC START ---");
+                    if (plan.Diagnostics.Any())
+                    {
+                        Console.WriteLine("Rewrite Diagnostics (raw):");
+                        foreach (var diag in plan.Diagnostics)
+                        {
+                            Console.WriteLine($"- {diag.Id}: {diag.Message}");
+                        }
+                        Console.WriteLine("-----");
+                    }
+
+                    var sqlPlan = Assert.IsType<RemoteSqProviderSqlExecutionPlanNode>(plan.RootNode);
 
                     _ = sqlPlan.ExecuteAsync(_parameters, default).GetAwaiter().GetResult();
 
@@ -127,7 +139,6 @@ public class AssertExecuterSql
                     expected = expected.Replace("\r\n", "\n").Trim();
 
                     // Do not parse the expected SQL -- tests assert the raw expected formatting
-                    Console.WriteLine("--- ASSERTSQL DIAGNOSTIC START ---");
                     Console.WriteLine("EXPECTED (raw):");
                     Console.WriteLine(string.Empty);
                     Console.WriteLine(expected);

@@ -147,6 +147,19 @@ public class InMemoryExecutionTests
         Assert.Equal(20 * 20, results.Count);
     }
 
+    [Fact]
+    public async Task PositionIn()
+    {
+        var results = await _engine.ExecuteToDictionaryList(
+            """
+                SELECT position('foo' in 'foobar') AS month
+            """, Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
+
+        var row = Assert.Single(results);
+        Assert.Equal(1, row["month"]);
+    }
+      
+
     private class CustomAggregateFunction : AggregateFunction
     {
         public static object TestValue { get; } = new object();

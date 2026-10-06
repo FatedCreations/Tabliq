@@ -33,6 +33,6 @@ public sealed class TableScanExecutionPlanNode : ExecutionPlanNode
         throw new NotImplementedException("Must be handled/overritten by the execution provider");
     }
 
-    public override ExecutionPlanNode? TryRewrite()
-        => _provider?.TryRewrite(this);
+    public override ExecutionPlanNode? TryRewrite(ExecutionRewriteContext? context = null)
+        => _provider?.TryRewrite(this, context);
 }

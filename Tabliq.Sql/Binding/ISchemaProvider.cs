@@ -64,6 +64,8 @@ public sealed record ColumnSymbol(
     string Name,
     string Type)
 {
+    public bool ExcludeFromStarExpansion { get; init; } = false;
+
     private Dictionary<Type, object?>? _state = null;
 
     public T? GetState<T>()

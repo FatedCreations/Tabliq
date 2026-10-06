@@ -30,14 +30,14 @@ public abstract class RemoteSqlProviderBase : IExecutionProvider
         return false;
     }
 
-    public ExecutionPlanNode TryRewrite(ExecutionPlanNode node)
-        => RewriteJoinsBothSideSql(node) ??
-            RewriteFilter(node) ??
-            RewriteProjection(node) ??
-            RewriteTableScan(node)
+    public ExecutionPlanNode TryRewrite(ExecutionPlanNode node, ExecutionRewriteContext? context = null)
+        => RewriteJoinsBothSideSql(node, context) ??
+            RewriteFilter(node, context) ??
+            RewriteProjection(node, context) ??
+            RewriteTableScan(node, context)
             ?? node;
 
-    private ExecutionPlanNode? RewriteTableScan(ExecutionPlanNode node)
+    private ExecutionPlanNode? RewriteTableScan(ExecutionPlanNode node, ExecutionRewriteContext? context)
     {
         if (node is not TableScanExecutionPlanNode tableScan)
         {
@@ -70,7 +70,7 @@ public abstract class RemoteSqlProviderBase : IExecutionProvider
 
         return new RemoteSqProviderSqlExecutionPlanNode(this, new SelectStatement([], sql));
     }
-    private ExecutionPlanNode? RewriteFilter(ExecutionPlanNode node)
+    private ExecutionPlanNode? RewriteFilter(ExecutionPlanNode node, ExecutionRewriteContext? context)
     {
         if (node is not FilterExecutionPlanNode filter || !TryGetParentQuery(filter.Input, out var parentQuery))
         {
@@ -79,6 +79,7 @@ public abstract class RemoteSqlProviderBase : IExecutionProvider
 
         if (ContainsUnsupportedFunction(filter.Condition))
         {
+            context?.Report("SqlPushdownSkipped", "Filter could not be pushed to SQL because it contains an unsupported function.", nameof(FilterExecutionPlanNode), filter.Condition.ToString());
             return null;
         }
 
@@ -102,25 +103,46 @@ public abstract class RemoteSqlProviderBase : IExecutionProvider
         return new RemoteSqProviderSqlExecutionPlanNode(this, select);
     }
 
-    private ExecutionPlanNode? RewriteProjection(ExecutionPlanNode node)
+    private ExecutionPlanNode? RewriteProjection(ExecutionPlanNode node, ExecutionRewriteContext? context)
     {
         if (node is not ProjectionExecutionPlanNode projection || projection.SourceSelect is null || projection.Input.Provider != this)
         {
             return null;
         }
 
-        if (ContainsUnsupportedFunction(projection.SourceSelect))
+        var unsupportedFunctions = GetUnsupportedFunctionCalls(projection.SourceSelect).ToList();
+        if (unsupportedFunctions.Count > 0)
         {
+            foreach (var unsupportedFunction in unsupportedFunctions)
+            {
+                context?.Report(
+                    unsupportedFunction.Binding is not null ? $"SqlPushdownUnsupportedFunction:{unsupportedFunction.FunctionName}" : "SqlPushdownUnsupportedFunction",
+                    $"Projection depends on unsupported function '{unsupportedFunction.FunctionName}' and cannot be fully pushed to SQL.",
+                    nameof(ProjectionExecutionPlanNode),
+                    unsupportedFunction.ToString());
+            }
+
             var pushedDownSelect = TryCreatePushdownSelect(projection.SourceSelect);
             if (pushedDownSelect is not null)
             {
+                context?.Report(
+                    "SqlPushdownPartial",
+                    $"Projection partially pushed to SQL; unsupported function(s) will be evaluated in memory.",
+                    nameof(ProjectionExecutionPlanNode),
+                    projection.SourceSelect.ToString());
                 var pushedDownInput = new RemoteSqProviderSqlExecutionPlanNode(this, new SelectStatement([], pushedDownSelect));
                 return new ProjectionExecutionPlanNode(pushedDownInput, projection.Projections, pushedDownSelect);
             }
 
+            context?.Report(
+                "SqlPushdownSkipped",
+                "Projection could not be pushed to SQL because it depends on unsupported function(s).",
+                nameof(ProjectionExecutionPlanNode),
+                projection.SourceSelect.ToString());
             return null;
         }
 
+        context?.Report("SqlPushdownApplied", "Projection was pushed to SQL provider.", nameof(ProjectionExecutionPlanNode), projection.SourceSelect.ToString());
         return new RemoteSqProviderSqlExecutionPlanNode(this, new SelectStatement([], projection.SourceSelect));
     }
 
@@ -177,7 +199,7 @@ public abstract class RemoteSqlProviderBase : IExecutionProvider
 
     private IEnumerable<SelectProjection> CollectPushdownDependencies(Expression expression)
     {
-        if (expression is FunctionCallExpression functionCall && functionCall.Binding is not null && !SupportsFunction(functionCall.Binding))
+        if (expression is FunctionCallExpression functionCall && functionCall.Binding is not null && !IsFunctionSupportedForPushdown(functionCall))
         {
             foreach (var argument in functionCall.Arguments)
             {
@@ -208,21 +230,34 @@ public abstract class RemoteSqlProviderBase : IExecutionProvider
     }
 
     private bool ContainsUnsupportedFunction(SyntaxNode node)
+        => GetUnsupportedFunctionCalls(node).Any();
+
+    protected virtual FunctionCallExpression RewriteFunctionCallForPushdown(FunctionCallExpression functionCall)
+        => functionCall;
+
+    protected bool IsFunctionSupportedForPushdown(FunctionCallExpression functionCall)
     {
-        if (node is FunctionCallExpression functionCall && functionCall.Binding is not null && !SupportsFunction(functionCall.Binding))
+        var rewrittenCall = RewriteFunctionCallForPushdown(functionCall);
+        var function = rewrittenCall.Binding is not null && rewrittenCall.Binding.Name.Equals(rewrittenCall.FunctionName, StringComparison.OrdinalIgnoreCase)
+            ? rewrittenCall.Binding
+            : new FunctionSymbol(rewrittenCall.FunctionName, rewrittenCall.Binding?.IsAggregate ?? false, rewrittenCall.Binding?.Arguments ?? Array.Empty<FunctionArgumentSymbol>(), rewrittenCall.Binding?.ParamsArgument);
+        return SupportsFunction(function);
+    }
+
+    private IEnumerable<FunctionCallExpression> GetUnsupportedFunctionCalls(SyntaxNode node)
+    {
+        if (node is FunctionCallExpression functionCall && functionCall.Binding is not null && !IsFunctionSupportedForPushdown(functionCall))
         {
-            return true;
+            yield return functionCall;
         }
 
         foreach (var child in node.GetChildren())
         {
-            if (ContainsUnsupportedFunction(child))
+            foreach (var unsupported in GetUnsupportedFunctionCalls(child))
             {
-                return true;
+                yield return unsupported;
             }
         }
-
-        return false;
     }
 
     protected virtual bool SupportsFunction(FunctionSymbol function)
@@ -235,7 +270,7 @@ public abstract class RemoteSqlProviderBase : IExecutionProvider
         return sqlFunction.Name.Equals("COUNT", StringComparison.OrdinalIgnoreCase);
     }
 
-    private ExecutionPlanNode? RewriteJoinsBothSideSql(ExecutionPlanNode node)
+    private ExecutionPlanNode? RewriteJoinsBothSideSql(ExecutionPlanNode node, ExecutionRewriteContext? context)
     {
         // we might be able to special case we one side is not sql and convert it to the `select foo in () pattern`
         if (node is not JoinExecutionPlanNode join || !TryGetParentQuery(join.Left, out var left) || !TryGetParentQuery(join.Right, out var right))
@@ -262,6 +297,7 @@ public abstract class RemoteSqlProviderBase : IExecutionProvider
         IEnumerable<CommonTableExpression> allCtes = [.. left.Sql.CommonTableExpressions, .. right.Sql.CommonTableExpressions];
         var select = new SelectStatement(allCtes.Distinct(), sql);
 
+        context?.Report("SqlPushdownApplied", "Join inputs were merged into a single SQL query.", nameof(JoinExecutionPlanNode), join.ToString());
         return new RemoteSqProviderSqlExecutionPlanNode(this, select);
     }
 
@@ -296,6 +332,6 @@ public abstract class RemoteSqlProviderBase : IExecutionProvider
             return _provider.ExecuteAsync(Sql, parameters, cancellationToken);
         }
 
-        public override ExecutionPlanNode? TryRewrite() => null;
+        public override ExecutionPlanNode? TryRewrite(ExecutionRewriteContext? context = null) => null;
     }
 }

@@ -24,16 +24,16 @@ public sealed class ProjectionExecutionPlanNode : ExecutionPlanNode
     }
     public override IExecutionProvider? Provider => null;
 
-    public override ExecutionPlanNode? TryRewrite()
+    public override ExecutionPlanNode? TryRewrite(ExecutionRewriteContext? context = null)
     {
         ExecutionPlanNode currentNode = this;
-        var newInput = _input.TryRewrite() ?? _input;
+        var newInput = _input.TryRewrite(context) ?? _input;
         if (newInput != _input)
         {
             currentNode = new ProjectionExecutionPlanNode(newInput, _projections, SourceSelect);
         }
 
-        currentNode = newInput?.Provider?.TryRewrite(currentNode) ?? currentNode;
+        currentNode = newInput?.Provider?.TryRewrite(currentNode, context) ?? currentNode;
 
         return currentNode;
     }
@@ -207,6 +207,11 @@ public sealed class ProjectionExecutionPlanNode : ExecutionPlanNode
 
                 foreach (var binding in bindings)
                 {
+                    if (binding.ColumnSymbol.ExcludeFromStarExpansion)
+                    {
+                        continue;
+                    }
+
                     current.Add(GetValue(row, binding.TableSymbol.TableName, binding.ColumnSymbol.Name));
                 }
 

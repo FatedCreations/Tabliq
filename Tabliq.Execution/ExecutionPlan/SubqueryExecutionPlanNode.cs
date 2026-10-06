@@ -19,16 +19,16 @@ public sealed class SubqueryExecutionPlanNode : ExecutionPlanNode
 
     public override IExecutionProvider? Provider => _inner.Provider;
 
-    public override ExecutionPlanNode? TryRewrite()
+    public override ExecutionPlanNode? TryRewrite(ExecutionRewriteContext? context = null)
     {
         ExecutionPlanNode currentNode = this;
-        var newInner = _inner.TryRewrite() ?? _inner;
+        var newInner = _inner.TryRewrite(context) ?? _inner;
         if (newInner != _inner)
         {
             currentNode = new SubqueryExecutionPlanNode(newInner, _alias);
         }
 
-        currentNode = newInner?.Provider?.TryRewrite(currentNode) ?? currentNode;
+        currentNode = newInner?.Provider?.TryRewrite(currentNode, context) ?? currentNode;
 
         return currentNode;
     }

@@ -1,12 +1,11 @@
 ﻿using Tabliq.Sql.Ast;
-using Tabliq.Sql.Binding;
 
 namespace Tabliq.Execution.Functions;
 
-public class MonthFunction : ValueFunction
+public class DayFunction : ValueFunction
 {
-    public MonthFunction()
-        : base("MONTH", new List<FunctionArgument> { new FunctionArgument("expression") })
+    public DayFunction()
+        : base("DAY", new List<FunctionArgument> { new FunctionArgument("expression") })
     {
     }
 
@@ -19,6 +18,6 @@ public class MonthFunction : ValueFunction
             throw new Exception("Input value must be a DateTime.");
         }
 
-        return dt.Month - 1; //sql starts months at 0, but dotnet starts a 1;
+        return dt.Day;
     }
 }
