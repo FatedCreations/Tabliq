@@ -16,6 +16,7 @@ public static class BuiltinFunctions
             new DayFunction(),
             new RightFunction(),
             new LeftFunction(),
+            new PositionFunction(),
             new SumFunction(),
              new PassThroughValueFunction("DATE_BUCKET",
                 SqlFunctionArgs.Arg("datepart", skipBinding: true),

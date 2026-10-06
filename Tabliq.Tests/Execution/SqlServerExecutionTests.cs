@@ -37,6 +37,26 @@ public class SqlServerExecutionTests
     }
 
     [Fact]
+    public async Task Cte()
+    {
+        var results = await _engine.ExecuteToDictionaryList("""
+            with d as (SELECT *
+            FROM Data)
+            SELECT * FROM d
+            """, Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
+
+        Assert.Equal("""
+            with d as (
+                SELECT *
+                FROM Data
+            )
+            SELECT *
+            FROM d
+            """,
+            _provider.LastSqlExecuted);
+    }
+
+    [Fact]
     public async Task SelectStarFromSingleTable()
     {
         var results = await _engine.ExecuteToDictionaryList("SELECT * FROM Data", Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
