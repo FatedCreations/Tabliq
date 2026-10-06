@@ -46,7 +46,7 @@ public class SqlServerExecutionTests
             """, Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
 
         Assert.Equal("""
-            with d as (
+            WITH d AS (
                 SELECT *
                 FROM Data
             )

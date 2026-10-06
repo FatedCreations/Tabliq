@@ -28,7 +28,7 @@ public sealed class SubqueryExecutionPlanNode : ExecutionPlanNode
             currentNode = new SubqueryExecutionPlanNode(newInner, _alias);
         }
 
-        currentNode = newInner?.Provider?.TryRewrite(currentNode, context) ?? currentNode;
+        currentNode = newInner.Provider?.TryRewrite(currentNode, context) ?? currentNode;
 
         return currentNode;
     }

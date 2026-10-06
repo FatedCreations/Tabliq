@@ -38,8 +38,8 @@ public sealed class JoinExecutionPlanNode : ExecutionPlanNode
             currentNode = new JoinExecutionPlanNode(newLeft, newRight, _joinType, _onCondition, _joinSide);
         }
 
-        currentNode = newLeft?.Provider?.TryRewrite(currentNode, context) ?? currentNode;
-        currentNode = newRight?.Provider?.TryRewrite(currentNode, context) ?? currentNode;
+        var provider = newLeft.Provider ?? newRight.Provider;
+        currentNode = provider?.TryRewrite(currentNode, context) ?? currentNode;
 
         return currentNode;
     }

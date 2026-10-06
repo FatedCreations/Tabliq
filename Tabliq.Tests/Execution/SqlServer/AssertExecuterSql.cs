@@ -118,14 +118,19 @@ public class AssertExecuterSql
 
 
                     Console.WriteLine("--- ASSERTSQL DIAGNOSTIC START ---");
-                    if (plan.Diagnostics.Any())
+                    if (plan.Diagnostics.Any(x=>x.Level > ExecutionRewriteDiagnosticLevel.Info))
                     {
                         Console.WriteLine("Rewrite Diagnostics (raw):");
-                        foreach (var diag in plan.Diagnostics)
+                        foreach (var diag in plan.Diagnostics.Where(x => x.Level > ExecutionRewriteDiagnosticLevel.Info))
                         {
                             Console.WriteLine($"- {diag.Id}: {diag.Message}");
                         }
                         Console.WriteLine("-----");
+                    }
+
+                    if(plan.RootNode is not RemoteSqProviderSqlExecutionPlanNode)
+                    {
+                        Assert.NotEmpty(plan.Diagnostics.Where(x => x.Level > ExecutionRewriteDiagnosticLevel.Info));
                     }
 
                     var sqlPlan = Assert.IsType<RemoteSqProviderSqlExecutionPlanNode>(plan.RootNode);

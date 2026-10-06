@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using Tabliq.Execution.Functions;
-using Tabliq.Execution.Providers;
+﻿using Tabliq.Execution.Providers;
 using Tabliq.Execution.SqlServer.Internal;
 using Tabliq.Sql.Ast;
 using Tabliq.Sql.Binding;
@@ -139,7 +135,13 @@ public class SqlServerProvider : RemoteSqlProviderBase
         "AVG",
         "SUM",
         "ROLLUP",
-        "CUBE"
+        "CUBE",
+        "MAX",
+        "MIN",
+        "UPPER",
+        "LOWER",
+        "NULLIF",
+        "COALESCE",
     };
 
     protected override FunctionCallExpression RewriteFunctionCallForPushdown(FunctionCallExpression functionCall)
@@ -158,16 +160,10 @@ public class SqlServerProvider : RemoteSqlProviderBase
                 []))
         ]);
 
-        var rewritten = RewriteForMsSqlServer.Instance.Execute(script);
+        var rewritten = RewriteForMsSqlServer.Instance.Execute(functionCall);
         rewritten.ThrowIfInvalid();
 
-        var projection = rewritten.Script.Statements
-            .OfType<SelectStatement>()
-            .SingleOrDefault()?
-            .SelectQuery.Projections
-            .SingleOrDefault();
-
-        return projection?.Expression as FunctionCallExpression ?? functionCall;
+        return rewritten.Script as FunctionCallExpression ?? functionCall;
     }
 
     protected override bool SupportsFunction(FunctionSymbol function)

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Tabliq.Sql.Ast;
 
 namespace Tabliq.Sql.Binding;
 
@@ -10,6 +11,7 @@ public interface ISchemaProvider
     ParameterSymbol? GetParameter(string name);
     FunctionSymbol? GetFunction(string name);
 }
+
 
 public sealed class TableSymbol
 {
@@ -37,7 +39,12 @@ public sealed class TableSymbol
             return default;
         }
 
-        return (T)(object)_state[typeof(T)]!;
+        if (_state.TryGetValue(typeof(T), out var state))
+        {
+            return (T)state!;
+        }
+
+        return default;
     }
     public TableSymbol WithState<T>(T state)
     {
@@ -75,7 +82,12 @@ public sealed record ColumnSymbol(
             return default;
         }
 
-        return (T)(object)_state[typeof(T)]!;
+        if (_state.TryGetValue(typeof(T), out var state))
+        {
+            return (T)state!;
+        }
+
+        return default;
     }
     public ColumnSymbol WithState<T>(T state)
     {
@@ -105,7 +117,12 @@ public sealed record FunctionSymbol(
             return default;
         }
 
-        return (T)(object)_state[typeof(T)]!;
+        if (_state.TryGetValue(typeof(T), out var state))
+        {
+            return (T)state!;
+        }
+
+        return default;
     }
     public FunctionSymbol WithState<T>(T state)
     {
@@ -126,7 +143,12 @@ public sealed record FunctionArgumentSymbol(string Name, Type? RequiredType = nu
             return default;
         }
 
-        return (T)(object)_state[typeof(T)]!;
+        if (_state.TryGetValue(typeof(T), out var state))
+        {
+            return (T)state!;
+        }
+
+        return default;
     }
     public FunctionArgumentSymbol WithState<T>(T state)
     {
@@ -141,3 +163,5 @@ public enum BinderHandling
     Bind = 0,
     Skip = 1,
 }
+
+public sealed record CteTableMetadata(string Alias, SelectExpression Body);

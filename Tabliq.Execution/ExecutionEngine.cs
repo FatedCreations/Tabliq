@@ -1,5 +1,6 @@
 using Tabliq.Execution.ExecutionReader;
 using Tabliq.Execution.Functions;
+using Tabliq.Execution.Providers;
 using Tabliq.Sql.Ast;
 using Tabliq.Sql.Binding;
 using Tabliq.Sql.Core;
@@ -47,6 +48,11 @@ public class ExecutionEngine
 
         var rewriteContext = new ExecutionRewriteContext();
         var plan = BuildPlan(statement.SelectQuery);
+        if (statement.CommonTableExpressions.Any())
+        {
+            plan = new CteExecutionPlanNode(plan, statement.CommonTableExpressions);
+        }
+
         plan = plan.TryRewrite(rewriteContext) ?? plan;
 
         return new ExecutionPlan(plan, rewriteContext.Diagnostics);
@@ -129,9 +135,15 @@ public class ExecutionEngine
         if (tableReference is NamedTableReference namedTableReference)
         {
             var table = namedTableReference.Binding ?? throw new InvalidOperationException($"Table '{namedTableReference.Identifer}' was not bound.");
-            var alias = namedTableReference.Alias ?? table.TableName;
-            referencedColumns.TryGetValue(alias, out var cols);
-            return CreateTableScan(table, alias, cols);
+            if (table.GetState<CteTableMetadata>() is CteTableMetadata cte)
+            {
+                var cteAlias = namedTableReference.Alias ?? cte.Alias;
+                return new SubqueryExecutionPlanNode(BuildPlan(cte.Body), cteAlias);
+            }
+
+            var tableAlias = namedTableReference.Alias ?? table.TableName;
+            referencedColumns.TryGetValue(tableAlias, out var cols);
+            return CreateTableScan(table, tableAlias, cols);
         }
 
         if (tableReference is SelectTableReference subSelect)
@@ -158,5 +170,33 @@ public class ExecutionEngine
         }
 
         return null;
+    }
+
+    private sealed class CteExecutionPlanNode : ExecutionPlanNode
+    {
+        private readonly ExecutionPlanNode _inner;
+        private readonly IReadOnlyList<CommonTableExpression> _commonTableExpressions;
+
+        public CteExecutionPlanNode(ExecutionPlanNode inner, IEnumerable<CommonTableExpression> commonTableExpressions)
+        {
+            _inner = inner;
+            _commonTableExpressions = commonTableExpressions.ToList();
+        }
+
+        public override IExecutionProvider? Provider => _inner.Provider;
+
+        public override ExecutionPlanNode? TryRewrite(ExecutionRewriteContext? context = null)
+        {
+            var rewritten = _inner.TryRewrite(context) ?? _inner;
+            if (rewritten is RemoteSqlProviderBase.RemoteSqProviderSqlExecutionPlanNode remote && remote.Provider is RemoteSqlProviderBase provider)
+            {
+                return new RemoteSqlProviderBase.RemoteSqProviderSqlExecutionPlanNode(provider, new SelectStatement(_commonTableExpressions, remote.Sql.SelectQuery));
+            }
+
+            return rewritten;
+        }
+
+        public override Task<IExecutionReader> ExecuteAsync(IEnumerable<ExecuterParameter>? parameters = null, CancellationToken cancellationToken = default)
+            => _inner.ExecuteAsync(parameters, cancellationToken);
     }
 }

@@ -28,7 +28,7 @@ public sealed class FilterExecutionPlanNode : ExecutionPlanNode
             currentNode = new FilterExecutionPlanNode(newInput, _condition);
         }
 
-        currentNode = newInput?.Provider?.TryRewrite(currentNode, context) ?? currentNode;
+        currentNode = newInput.Provider?.TryRewrite(currentNode, context) ?? currentNode;
 
         return currentNode;
     }
@@ -39,6 +39,16 @@ public sealed class FilterExecutionPlanNode : ExecutionPlanNode
 
         async IAsyncEnumerable<object?[]> Filter()
         {
+            if (_input is EmptyExecutionPlanNode)
+            {
+                if (EvaluationHelpers.EvaluateCondition(_condition, new RowAccessor(Array.Empty<string>(), Array.Empty<object?>())))
+                {
+                    yield return Array.Empty<object?>();
+                }
+
+                yield break;
+            }
+
             var row = new object?[reader.GetFields().Length];
 
             while (await reader.ReadAsync(cancellationToken))

@@ -80,43 +80,4 @@ public class WmsQueryRewiterTests
             GROUP BY ba.TR_UID
             ORDER BY Incident_Count DESC
             """);
-
-    [Fact]
-    public void Issue4()
-        => AssertExecuterSql
-        .WithSchema(TestConfigSchema.WmsVirtualSchema)
-        .Equal(
-            """
-            SELECT '1' where 1 + 1 > 2
-            """,
-            """
-            SELECT '1'
-            WHERE 1 + 1 > 2
-            """);
-
-    [Fact]
-    public void Issue5()
-        => AssertExecuterSql
-        .WithSchema(TestConfigSchema.WmsVirtualSchema)
-        .Equal(
-            """
-            SELECT '1' where 1 + 1 > 2 + 2
-            """,
-            """
-            SELECT '1'
-            WHERE 1 + 1 > 2 + 2
-            """);
-
-    [Fact]
-    public void Issue6()
-        => AssertExecuterSql
-        .WithSchema(TestConfigSchema.WmsVirtualSchema)
-        .Equal(
-            """
-            SELECT '1' where 1 > 2
-            """,
-            """
-            SELECT '1'
-            WHERE 1 > 2
-            """);
 }

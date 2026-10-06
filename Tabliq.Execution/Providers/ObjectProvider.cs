@@ -80,7 +80,7 @@ public class ObjectProvider<T> : IExecutionProvider
         {
             if (_table.IsMatch(tableScan.TableName, tableScan.SchemaName))
             {
-                context?.Report("ObjectTableScanRewritten", "Table scan was rewritten to an in-memory object provider path.", nameof(TableScanExecutionPlanNode), tableScan.TableName);
+                context?.Report("ObjectTableScanRewritten", "Table scan was rewritten to an in-memory object provider path.", ExecutionRewriteDiagnosticLevel.Debug, nameof(TableScanExecutionPlanNode), tableScan.TableName);
                 return new ObjectProviderTableScanNode(this, tableScan.TableName, tableScan.SchemaName, tableScan.Alias);
             }
         }
