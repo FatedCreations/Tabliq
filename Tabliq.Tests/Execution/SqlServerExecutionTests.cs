@@ -133,6 +133,13 @@ public class SqlServerExecutionTests
     [Fact]
     public async Task UnrecognisedCustomValueTriggersAFilterdTableScanGroupByFirst()
     {
+        _provider.Returns(s =>
+            new[]{
+                new
+                {
+                    NameTest = "Test"
+                }
+            });
         var results = await _engine.BuildPlanAndExecuteToDictionaryList("SELECT CUST_VALUE(NameTest) AS c FROM Data WHERE NameTest = 'Test' GROUP BY NameTest", Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
 
         Assert.Equal("""
@@ -145,6 +152,69 @@ public class SqlServerExecutionTests
 
         // should not be executing the sql directly, it should be wrapped in a ProjectionExecutionPlanNode that reprocesses the scan in memory
         Assert.IsNotType<RemoteSqProviderSqlExecutionPlanNode>(results.Plan);
+
+        var row = Assert.Single(results.Rows);
+        Assert.Equal("Test#CUST_VALUE", row["c"]);
+    }
+
+
+    [Fact]
+    public async Task SubSelect()
+    {
+        _provider.Returns(s =>
+            new[]{
+                new
+                {
+                    NameTest = "Test"
+                }
+            });
+        var results = await _engine.BuildPlanAndExecuteToDictionaryList("SELECT Left(d.NameTest, 10) AS c FROM (SELECT NameTest FROM Data) as d WHERE NameTest = 'Test' GROUP BY NameTest", Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
+
+        Assert.IsType<RemoteSqProviderSqlExecutionPlanNode>(results.Plan);
+
+        Assert.Equal("""
+            SELECT LEFT(d.NameTest, 10) AS c
+            FROM (
+                SELECT NameTest
+                FROM Data
+            ) AS d
+            WHERE NameTest = 'Test'
+            GROUP BY NameTest
+            """,
+            _provider.LastSqlExecuted);
+
+        //var row = Assert.Single(results.Rows);
+        //Assert.Equal("Test#CUST_VALUE", row["c"]);
+    }
+
+    [Fact]
+    public async Task SubSelectWithCustomAgg()
+    {
+        _provider.Returns(s =>
+            new[]{
+                new
+                {
+                    NameTest = "Test"
+                }
+            });
+        var results = await _engine.BuildPlanAndExecuteToDictionaryList("SELECT CUST_VALUE(d.NameTest) AS c FROM (SELECT NameTest FROM Data) as d WHERE NameTest = 'Test' GROUP BY NameTest", Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
+
+        Assert.Equal("""
+            SELECT d.NameTest
+            FROM (
+                SELECT NameTest
+                FROM Data
+            ) AS d
+            WHERE NameTest = 'Test'
+            GROUP BY NameTest
+            """,
+            _provider.LastSqlExecuted);
+
+        // should not be executing the sql directly, it should be wrapped in a ProjectionExecutionPlanNode that reprocesses the scan in memory
+        Assert.IsNotType<RemoteSqProviderSqlExecutionPlanNode>(results.Plan);
+
+        var row = Assert.Single(results.Rows);
+        Assert.Equal("Test#CUST_VALUE", row["c"]);
     }
 
 
@@ -177,7 +247,8 @@ public class SqlServerExecutionTests
 
         public override object? Execute(FunctionCallExpression expression, RowAccessor accessor)
         {
-            return TestValue;
+            var val = EvaluationHelpers.EvaluateExpression(expression.Arguments[0], accessor);
+            return $"{val}#CUST_VALUE";
         }
     }
 }
@@ -186,12 +257,57 @@ public class SqlServerExecutionTests
 public class SimpleSqlServerProvider : RemoteSqlProviderBase
 {
     private List<TableSymbol> _tables = new List<TableSymbol>();
+    private List<Func<SelectStatement, IExecutionReader?>> _dataProviders = new();
 
     public void AddTable(TableSymbol tableSymbol)
     {
         _tables.Add(new TableSymbol(tableSymbol.TableName, tableSymbol.SchemaName, tableSymbol.Columns));
+
+    }
+    public void Returns<T>(Func<SelectStatement, IEnumerable<T>?> dataProvider)
+    {
+        _dataProviders.Add((s) =>
+        {
+            var data = dataProvider(s);
+
+            if (data is null)
+            {
+                return null;
+            }
+
+            IEnumerable<object?[]> Rows()
+            {
+                var fields = typeof(T).GetProperties();
+                object?[] row = new object?[fields.Length];
+
+                foreach (var r in data)
+                {
+                    for (var i = 0; i < fields.Length; i++)
+                    {
+                        row[i] = fields[i].GetValue(r);
+                    }
+
+                    yield return row;
+                }
+            }
+
+            var cols = s.SelectQuery.Projections.Select(x => x.Alias ?? x.Expression.ToString()).ToArray();
+
+            return new EnumeratorExecutionReader(cols, Rows().GetEnumerator(), Array.Empty<IAsyncDisposable>());
+        });
     }
 
+    private ReadOnlySpan<string> SupportedFunctions => new string[] {
+        "COUNT",
+        "RIGHT",
+        "LEFT",
+        "YEAR",
+        "MONTH",
+        "DAY"
+    };
+
+    protected override bool SupportsFunction(FunctionSymbol function)
+        => SupportedFunctions.Contains(function.Name, StringComparer.OrdinalIgnoreCase);
     public override IEnumerable<TableSymbol> GetTables() => _tables;
 
     public List<(SelectStatement Sql, IEnumerable<ExecuterParameter>? Parameters)> SqlExecuted { get; private set; } = [];
@@ -203,6 +319,16 @@ public class SimpleSqlServerProvider : RemoteSqlProviderBase
     public override Task<IExecutionReader> ExecuteAsync(SelectStatement sqlScript, IEnumerable<ExecuterParameter>? parameters = null, CancellationToken cancellationToken = default)
     {
         SqlExecuted.Add((sqlScript, parameters));
-        return Task.FromResult<IExecutionReader>(new EnumeratorExecutionReader(Array.Empty<string>(), Enumerable.Empty<object?[]>().GetEnumerator(), Array.Empty<IAsyncDisposable>()));
+
+        var reader = _dataProviders.Select(x => x.Invoke(sqlScript)).FirstOrDefault(x => x is not null);
+
+        if (reader is null)
+        {
+
+            var cols = sqlScript.SelectQuery.Projections.Select(x => x.Alias ?? x.Expression.ToString()).ToArray();
+            reader = new EmptyExecutionReader(cols);
+        }
+
+        return Task.FromResult<IExecutionReader>(reader);
     }
 }

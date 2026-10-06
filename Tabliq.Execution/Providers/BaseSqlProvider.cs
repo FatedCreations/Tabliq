@@ -21,6 +21,11 @@ public abstract class RemoteSqlProviderBase : IExecutionProvider
             return true;
         }
 
+        if (node is SubqueryExecutionPlanNode subquery && TryGetParentQuery(subquery.Inner, out res))
+        {
+            return true;
+        }
+
         res = null;
         return false;
     }
@@ -109,7 +114,8 @@ public abstract class RemoteSqlProviderBase : IExecutionProvider
             var pushedDownSelect = TryCreatePushdownSelect(projection.SourceSelect);
             if (pushedDownSelect is not null)
             {
-                return new RemoteSqProviderSqlExecutionPlanNode(this, new SelectStatement([], pushedDownSelect));
+                var pushedDownInput = new RemoteSqProviderSqlExecutionPlanNode(this, new SelectStatement([], pushedDownSelect));
+                return new ProjectionExecutionPlanNode(pushedDownInput, projection.Projections, pushedDownSelect);
             }
 
             return null;

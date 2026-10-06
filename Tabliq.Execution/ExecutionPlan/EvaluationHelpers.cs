@@ -7,7 +7,7 @@ namespace Tabliq.Execution;
 
 public static class EvaluationHelpers
 {
-    internal static bool EvaluateCondition(Condition condition, RowAccessor row)
+    public static bool EvaluateCondition(Condition condition, RowAccessor row)
     {
         switch (condition)
         {
@@ -42,7 +42,7 @@ public static class EvaluationHelpers
         }
     }
 
-    internal static object? EvaluateExpression(Expression expression, RowAccessor row, IReadOnlyDictionary<FunctionCallExpression, object?>? aggregateValues = null)
+    public static object? EvaluateExpression(Expression expression, RowAccessor row, IReadOnlyDictionary<FunctionCallExpression, object?>? aggregateValues = null)
     {
         switch (expression)
         {
