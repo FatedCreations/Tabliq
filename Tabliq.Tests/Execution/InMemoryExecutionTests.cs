@@ -157,8 +157,11 @@ public class InMemoryExecutionTests
         }
 
         // we be called multiple times once for each row, but we just return the same value for testing purposes
-        public override AggregateFunctionState ProcessRow(FunctionCallExpression expression, RowAccessor accessor, AggregateFunctionState? state)
-            => state ?? AggregateFunctionState.FromResult(TestValue);
+        public override AggregateFunctionState ProcessRow(FunctionCallExpression expression, RowAccessor accessor, AggregateFunctionState state)
+            => AggregateFunctionState.FromResult(TestValue);
+
+        public override AggregateFunctionState InitState()
+            => AggregateFunctionState.NullState;
     }
 
     private class CustomValueFunction : ValueFunction

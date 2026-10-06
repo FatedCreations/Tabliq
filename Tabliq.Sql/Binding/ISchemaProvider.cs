@@ -28,7 +28,23 @@ public sealed class TableSymbol
     public string SchemaName { get; }
     public string TableName { get; }
     public IReadOnlyList<ColumnSymbol> Columns { get; }
-    public object? State { get; init; }
+    private Dictionary<Type, object?>? _state = null;
+
+    public T? GetState<T>()
+    {
+        if (_state is null)
+        {
+            return default;
+        }
+
+        return (T)(object)_state[typeof(T)]!;
+    }
+    public TableSymbol WithState<T>(T state)
+    {
+        _state ??= new Dictionary<Type, object?>();
+        _state[typeof(T)] = state;
+        return this;
+    }
 
     public override string ToString()
     {
@@ -48,7 +64,23 @@ public sealed record ColumnSymbol(
     string Name,
     string Type)
 {
-    public object? State { get; init; }
+    private Dictionary<Type, object?>? _state = null;
+
+    public T? GetState<T>()
+    {
+        if (_state is null)
+        {
+            return default;
+        }
+
+        return (T)(object)_state[typeof(T)]!;
+    }
+    public ColumnSymbol WithState<T>(T state)
+    {
+        _state ??= new Dictionary<Type, object?>();
+        _state[typeof(T)] = state;
+        return this;
+    }
 }
 
 public sealed record ParameterSymbol(string Name, string Type, bool IsLocal = false)
@@ -62,12 +94,44 @@ public sealed record FunctionSymbol(
     IReadOnlyList<FunctionArgumentSymbol> Arguments,
     FunctionArgumentSymbol? ParamsArgument = null) // for additional params, like in a variadic function (i.e. Concat))
 {
-    public object? State { get; init; }
+    private Dictionary<Type, object?>? _state = null;
+
+    public T? GetState<T>()
+    {
+        if (_state is null)
+        {
+            return default;
+        }
+
+        return (T)(object)_state[typeof(T)]!;
+    }
+    public FunctionSymbol WithState<T>(T state)
+    {
+        _state ??= new Dictionary<Type, object?>();
+        _state[typeof(T)] = state;
+        return this;
+    }
 }
 
 public sealed record FunctionArgumentSymbol(string Name, Type? RequiredType = null, BinderHandling BinderHandling = BinderHandling.Bind, bool Optional = false)
 {
-    public object? State { get; init; }
+    private Dictionary<Type, object?>? _state = null;
+
+    public T? GetState<T>()
+    {
+        if (_state is null)
+        {
+            return default;
+        }
+
+        return (T)(object)_state[typeof(T)]!;
+    }
+    public FunctionArgumentSymbol WithState<T>(T state)
+    {
+        _state ??= new Dictionary<Type, object?>();
+        _state[typeof(T)] = state;
+        return this;
+    }
 }
 
 public enum BinderHandling

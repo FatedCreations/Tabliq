@@ -23,7 +23,15 @@ public class ExecutionEngine
         }
     }
 
-    public async Task<IExecutionReader> ExecuteAsync(string sql, IEnumerable<ExecuterParameter> parameters, CancellationToken cancellationToken)
+    public async Task<IExecutionReader> ExecuteAsync(string sql, IEnumerable<ExecuterParameter>? parameters = null, CancellationToken cancellationToken = default)
+    {
+        var plan = BuildPlan(sql, parameters);
+
+        return await plan.ExecuteAsync(parameters, cancellationToken);
+    }
+
+
+    public ExecutionPlanNode BuildPlan(string sql, IEnumerable<ExecuterParameter>? parameters = null)
     {
         parameters ??= Enumerable.Empty<ExecuterParameter>();
 
@@ -40,7 +48,7 @@ public class ExecutionEngine
         var plan = BuildPlan(statement.SelectQuery);
         plan = plan.TryRewrite() ?? plan;
 
-        return await plan.ExecuteAsync(cancellationToken);
+        return plan;
     }
 
 
@@ -143,7 +151,7 @@ public class ExecutionEngine
 
     private static IExecutionProvider? ResolveProvider(TableSymbol table)
     {
-        if (table.State is ExecutionProviderTableMetadata metadata)
+        if (table.GetState<ExecutionProviderTableMetadata>() is ExecutionProviderTableMetadata metadata)
         {
             return metadata.ExecutionProvider;
         }

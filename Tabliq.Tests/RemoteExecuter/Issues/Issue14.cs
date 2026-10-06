@@ -1,5 +1,4 @@
-﻿
-namespace Tabliq.Tests.RemoteExecuter;
+﻿namespace Tabliq.Tests.RemoteExecuter;
 
 /// <summary>
 /// https://github.com/FatedCreations/Tabliq/issues/14

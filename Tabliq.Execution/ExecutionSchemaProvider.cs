@@ -60,10 +60,7 @@ internal sealed class ExecutionSchemaProvider : ISchemaProvider
 
         if (match.Table is not null)
         {
-            return new TableSymbol(match.Table.TableName, match.Table.SchemaName, match.Table.Columns)
-            {
-                State = new ExecutionProviderTableMetadata(match.Table, match.Provider)
-            };
+            return match.Table.WithState(new ExecutionProviderTableMetadata(match.Table, match.Provider));
         }
 
         return null;
@@ -71,4 +68,3 @@ internal sealed class ExecutionSchemaProvider : ISchemaProvider
 }
 
 internal sealed record ExecutionProviderTableMetadata(TableSymbol TableSymbol, IExecutionProvider ExecutionProvider);
-internal sealed record ExecutionProviderFunctionMetadata(IDictionary<IExecutionProvider, FunctionSymbol> Functions);

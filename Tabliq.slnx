@@ -1,4 +1,5 @@
 <Solution>
+  <Project Path="Tabliq.Execution.SqlServer/Tabliq.Execution.SqlServer.csproj" Id="10e130cf-7d63-47e7-8fd6-c376510ee8a9" />
   <Project Path="Tabliq.Execution/Tabliq.Execution.csproj" Id="b52c116e-41f4-478d-990f-788e2b6727e5" />
   <Project Path="Tabliq.RemoteExecuter/Tabliq.RemoteExecuter.csproj" Id="57c92b18-9bd8-4b11-8f58-303333e39de5" />
   <Project Path="Tabliq.Sql/Tabliq.Sql.csproj" />

@@ -28,7 +28,7 @@ public sealed class TableScanExecutionPlanNode : ExecutionPlanNode
 
     public override IExecutionProvider? Provider => _provider;
 
-    public override async Task<IExecutionReader> ExecuteAsync(CancellationToken cancellationToken)
+    public override async Task<IExecutionReader> ExecuteAsync(IEnumerable<ExecuterParameter>? parameters = null, CancellationToken cancellationToken = default)
     {
         throw new NotImplementedException("Must be handled/overritten by the execution provider");
     }

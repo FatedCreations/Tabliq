@@ -1,5 +1,4 @@
-﻿
-namespace Tabliq.Tests.RemoteExecuter;
+﻿namespace Tabliq.Tests.RemoteExecuter;
 
 public static class Resources
 {

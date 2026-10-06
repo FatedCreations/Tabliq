@@ -36,12 +36,12 @@ public sealed class ProjectionExecutionPlanNode : ExecutionPlanNode
         return currentNode;
     }
 
-    public override async Task<IExecutionReader> ExecuteAsync(CancellationToken cancellationToken)
+    public override async Task<IExecutionReader> ExecuteAsync(IEnumerable<ExecuterParameter>? parameters = null, CancellationToken cancellationToken = default)
     {
         var hasGroupBy = SourceSelect?.GroupBy is not null;
         if (ContainsAggregateProjection())
         {
-            await using var aggregateReader = await _input.ExecuteAsync(cancellationToken);
+            await using var aggregateReader = await _input.ExecuteAsync(parameters, cancellationToken);
             var aggregateOutputFields = GetProjectedFields(aggregateReader.GetFields());
 
             if (hasGroupBy)
@@ -54,7 +54,7 @@ public sealed class ProjectionExecutionPlanNode : ExecutionPlanNode
             return new EnumeratorExecutionReader(aggregateOutputFields, Enumerable.Repeat(outputRow, 1).GetEnumerator(), Array.Empty<IAsyncDisposable>());
         }
 
-        var streamReader = await _input.ExecuteAsync(cancellationToken);
+        var streamReader = await _input.ExecuteAsync(parameters, cancellationToken);
         var outputFields = GetProjectedFields(streamReader.GetFields());
 
         async IAsyncEnumerable<object?[]> ReadRowsAsync()
@@ -89,12 +89,16 @@ public sealed class ProjectionExecutionPlanNode : ExecutionPlanNode
 
             foreach (var aggregateCall in aggregateCalls)
             {
-                if (aggregateCall.Binding?.State is not AggregateFunction aggregateFunction)
+                if (aggregateCall.Binding?.GetState<SqlFunction>() is not AggregateFunction aggregateFunction)
                 {
                     continue;
                 }
 
-                state.AggregateStates.TryGetValue(aggregateCall, out var priorState);
+                if (!state.AggregateStates.TryGetValue(aggregateCall, out var priorState))
+                {
+                    priorState = aggregateFunction.InitState();
+                    state.AggregateStates[aggregateCall] = priorState;
+                }
                 state.AggregateStates[aggregateCall] = aggregateFunction.ProcessRow(aggregateCall, accessor, priorState);
             }
         }
@@ -129,7 +133,7 @@ public sealed class ProjectionExecutionPlanNode : ExecutionPlanNode
     private async Task<object?[]> ExecuteAggregateProjection(IExecutionReader executionReader, string[] outputFields, CancellationToken cancellationToken)
     {
         var aggregateCalls = GetAggregateFunctionCalls();
-        var aggregateStates = new Dictionary<FunctionCallExpression, AggregateFunctionState?>();
+        var aggregateStates = new Dictionary<FunctionCallExpression, AggregateFunctionState>();
 
         object?[]? firstRow = null;
         while (await executionReader.ReadAsync(cancellationToken))
@@ -144,12 +148,16 @@ public sealed class ProjectionExecutionPlanNode : ExecutionPlanNode
 
             foreach (var aggregateCall in aggregateCalls)
             {
-                if (aggregateCall.Binding?.State is not AggregateFunction aggregateFunction)
+                if (aggregateCall.Binding?.GetState<SqlFunction>() is not AggregateFunction aggregateFunction)
                 {
                     continue;
                 }
 
-                aggregateStates.TryGetValue(aggregateCall, out var state);
+                if (!aggregateStates.TryGetValue(aggregateCall, out var state))
+                {
+                    state = aggregateFunction.InitState();
+                    aggregateStates[aggregateCall] = state;
+                }
                 aggregateStates[aggregateCall] = aggregateFunction.ProcessRow(aggregateCall, accessor, state);
             }
         }
@@ -176,10 +184,10 @@ public sealed class ProjectionExecutionPlanNode : ExecutionPlanNode
                 _row[i] = accessor[accessor.Columns[i]];
             }
 
-            AggregateStates = new Dictionary<FunctionCallExpression, AggregateFunctionState?>();
+            AggregateStates = new Dictionary<FunctionCallExpression, AggregateFunctionState>();
         }
 
-        public IDictionary<FunctionCallExpression, AggregateFunctionState?> AggregateStates { get; }
+        public IDictionary<FunctionCallExpression, AggregateFunctionState> AggregateStates { get; }
 
         public RowAccessor RepresentativeRow => new RowAccessor(_columns, _row);
     }
@@ -269,7 +277,7 @@ public sealed class ProjectionExecutionPlanNode : ExecutionPlanNode
 
     private static void CollectAggregateFunctions(Expression expression, List<FunctionCallExpression> aggregateFunctions)
     {
-        if (expression is FunctionCallExpression functionCall && functionCall.Binding?.State is AggregateFunction)
+        if (expression is FunctionCallExpression functionCall && functionCall.Binding?.GetState<SqlFunction>() is AggregateFunction)
         {
             aggregateFunctions.Add(functionCall);
         }
@@ -285,7 +293,7 @@ public sealed class ProjectionExecutionPlanNode : ExecutionPlanNode
 
     private static bool ContainsAggregateFunction(Expression expression)
     {
-        if (expression is FunctionCallExpression functionCall && functionCall.Binding?.State is AggregateFunction)
+        if (expression is FunctionCallExpression functionCall && functionCall.Binding?.GetState<SqlFunction>() is AggregateFunction)
         {
             return true;
         }
@@ -301,7 +309,7 @@ public sealed class ProjectionExecutionPlanNode : ExecutionPlanNode
         return false;
     }
 
-    private static object? EvaluateExpression(Expression expression, RowAccessor    row, IReadOnlyDictionary<FunctionCallExpression, object?>? aggregateValues)
+    private static object? EvaluateExpression(Expression expression, RowAccessor row, IReadOnlyDictionary<FunctionCallExpression, object?>? aggregateValues)
         => EvaluationHelpers.EvaluateExpression(expression, row, aggregateValues);
 
     private static string GetFieldName(Expression expression)

@@ -44,10 +44,10 @@ public sealed class JoinExecutionPlanNode : ExecutionPlanNode
         return currentNode;
     }
 
-    public override async Task<IExecutionReader> ExecuteAsync(CancellationToken cancellationToken)
+    public override async Task<IExecutionReader> ExecuteAsync(IEnumerable<ExecuterParameter>? parameters = null, CancellationToken cancellationToken = default)
     {
-        var right = await _right.ExecuteAsync(cancellationToken).ConfigureAwait(false);
-        var left = await _left.ExecuteAsync(cancellationToken).ConfigureAwait(false);
+        var right = await _right.ExecuteAsync(parameters, cancellationToken).ConfigureAwait(false);
+        var left = await _left.ExecuteAsync(parameters, cancellationToken).ConfigureAwait(false);
 
         var leftFields = left.GetFields();
         var rightFields = right.GetFields();

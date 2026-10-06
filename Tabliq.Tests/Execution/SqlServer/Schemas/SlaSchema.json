@@ -1,0 +1,863 @@
+[
+    {
+        "Name": "Customer Contracts",
+        "Description": "",
+        "RemoteTableSql": "landscapeQuery_strategy_A.LZ",
+        "Columns": [
+            {
+                "RemoteColumnSql": "LZId",
+                "Name": "_id",
+                "DataType": "bigint",
+                "IsNullable": false,
+                "ExcludeFromExpansion": true
+            },
+            {
+                "RemoteColumnSql": "LZ_ACC",
+                "Name": "Contract Status",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "LZ_CCO",
+                "Name": "Account Name",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "LZ_ONT",
+                "Name": "Contract Name",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "LZ_UID",
+                "Name": "Contract ID",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            }
+        ]
+    },
+    {
+        "Name": "Jobs",
+        "Description": "",
+        "RemoteTableSql": "landscapeQuery_strategy_A.RT",
+        "Columns": [
+            {
+                "RemoteColumnSql": "RTId",
+                "Name": "_id",
+                "DataType": "bigint",
+                "IsNullable": false,
+                "ExcludeFromExpansion": true
+            },
+            {
+                "RemoteColumnSql": "RT_AKE",
+                "Name": "Time Taken Delta - SLA 1",
+                "DataType": "float",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_AME",
+                "Name": "SLA Met - SLA 4",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_ARG",
+                "Name": "Stop the Clock - SLA 2",
+                "DataType": "float",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_ASI",
+                "Name": "SLAs In Play",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_ATI",
+                "Name": "Clock Client - SLA 1",
+                "DataType": "float",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_ATU",
+                "Name": "Status - SLA 3",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_CAM",
+                "Name": "CAM",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_CES",
+                "Name": "Process Variant Median Delta (hrs)",
+                "DataType": "float",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_CKL",
+                "Name": "Clock Latus - SLA 4",
+                "DataType": "float",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_CKP",
+                "Name": "Clock Planned Wait - SLA 3",
+                "DataType": "float",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_CKR",
+                "Name": "Clock 3rd Party - SLA 3",
+                "DataType": "float",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_CLO",
+                "Name": "Clock Latus - SLA 2",
+                "DataType": "float",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_CUR",
+                "Name": "Current Clock Owner - SLA 2",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_DEL",
+                "Name": "Time Taken Delta - SLA 5",
+                "DataType": "float",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_END",
+                "Name": "Time Taken Delta - SLA 3",
+                "DataType": "float",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_ENT",
+                "Name": "Current Clock Owner - SLA 3",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_ERA",
+                "Name": "In Progress? - SLA 1 YN",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_ESS",
+                "Name": "In Progress? - SLA 5",
+                "DataType": "bit",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_ETA",
+                "Name": "Time Taken - SLA 4",
+                "DataType": "float",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_ETH",
+                "Name": "Time to Target (hrs) - SLA 2",
+                "DataType": "float",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_ETO",
+                "Name": "Time to Target - SLA 1",
+                "DataType": "float",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_ETS",
+                "Name": "Stop the Clock - SLA 5",
+                "DataType": "float",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_GET",
+                "Name": "Stop the Clock - SLA 4",
+                "DataType": "float",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_GNI",
+                "Name": "Significant Events - SLA 3",
+                "DataType": "float",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_GRE",
+                "Name": "In Progress? - SLA 3",
+                "DataType": "bit",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_HRS",
+                "Name": "Time to Target (hrs) - SLA 4",
+                "DataType": "float",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_IFI",
+                "Name": "Significant Events - SLA 5",
+                "DataType": "float",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_IGN",
+                "Name": "Significant Events - SLA 2",
+                "DataType": "float",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_IME",
+                "Name": "Time Taken - SLA 2",
+                "DataType": "float",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_INP",
+                "Name": "In Progress? - SLA 4 YN",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_ION",
+                "Name": "SLA Met - SLA 1",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_ITE",
+                "Name": "Iterations - SLA 1",
+                "DataType": "float",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_JOB",
+                "Name": "Job Progress Status",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_KEN",
+                "Name": "Time Taken Delta - SLA 2",
+                "DataType": "float",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_KLA",
+                "Name": "Clock Latus - SLA 5",
+                "DataType": "float",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_KRD",
+                "Name": "Clock 3rd Party - SLA 4",
+                "DataType": "float",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_LAM",
+                "Name": "SLA Met - SLA 3",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_LAR",
+                "Name": "SLA Risk",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_LAS",
+                "Name": "First Assigned to CAM",
+                "DataType": "datetime2(7)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_LOC",
+                "Name": "Clock Latus - SLA 3",
+                "DataType": "float",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_MET",
+                "Name": "Time Taken - SLA 3",
+                "DataType": "float",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_NDE",
+                "Name": "Time Taken Delta - SLA 4",
+                "DataType": "float",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_NIF",
+                "Name": "Significant Events - SLA 4",
+                "DataType": "float",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_NIN",
+                "Name": "In Progress? - SLA 3 YN",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_NPR",
+                "Name": "In Progress? - SLA 5 YN",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_NSL",
+                "Name": "SLA Met - SLA 2",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_NTC",
+                "Name": "Current Clock Owner - SLA 4",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_OBA",
+                "Name": "Job Active Duration (hrs)",
+                "DataType": "float",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_OBD",
+                "Name": "Job Duration (hrs)",
+                "DataType": "float",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_OCE",
+                "Name": "Process Variant Median (hrs)",
+                "DataType": "float",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_OCK",
+                "Name": "Clock Client - SLA 3",
+                "DataType": "float",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_OGR",
+                "Name": "In Progress? - SLA 2",
+                "DataType": "bit",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_ONB",
+                "Name": "Prior Iteration Breaches - SLA 2",
+                "DataType": "float",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_ONH",
+                "Name": "On Hold?",
+                "DataType": "float",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_ONI",
+                "Name": "In Progress? - SLA 2 YN",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_ONS",
+                "Name": "Iterations - SLA 2",
+                "DataType": "float",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_OTA",
+                "Name": "Time to Target (%) - SLA 1",
+                "DataType": "float",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_PRO",
+                "Name": "Process Variant",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_RAT",
+                "Name": "Clock Latus - SLA 1",
+                "DataType": "float",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_RDP",
+                "Name": "Clock 3rd Party - SLA 1",
+                "DataType": "float",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_REN",
+                "Name": "Current Clock Owner - SLA 1",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_RES",
+                "Name": "In Progress? - SLA 4",
+                "DataType": "bit",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_RGE",
+                "Name": "Stop the Clock - SLA 3",
+                "DataType": "float",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_ROC",
+                "Name": "Process Variant Path",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_ROG",
+                "Name": "In Progress? - SLA 1",
+                "DataType": "bit",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_RRE",
+                "Name": "Current Team",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_RSS",
+                "Name": "Time to Target (hrs) - SLA 5",
+                "DataType": "float",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_SIG",
+                "Name": "Significant Events - SLA 1",
+                "DataType": "float",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_SLA",
+                "Name": "SLA Type",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_STA",
+                "Name": "Status - SLA 1",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_TAK",
+                "Name": "Time Taken - SLA 5",
+                "DataType": "float",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_TAR",
+                "Name": "Stop the Clock - SLA 1",
+                "DataType": "float",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_TAT",
+                "Name": "Status - SLA 2",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_TCL",
+                "Name": "Current Clock Owner - SLA 5",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_TER",
+                "Name": "Prior Iteration Breaches - SLA 1",
+                "DataType": "float",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_THR",
+                "Name": "Time to Target (hrs) - SLA 3",
+                "DataType": "float",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_TIA",
+                "Name": "Time to Target (%) - SLA 2",
+                "DataType": "float",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_TIB",
+                "Name": "Time to Target (%) - SLA 3",
+                "DataType": "float",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_TIC",
+                "Name": "Time to Target (%) - SLA 4",
+                "DataType": "float",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_TID",
+                "Name": "Time to Target (%) - SLA 5",
+                "DataType": "float",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_TIM",
+                "Name": "Time Taken - SLA 1",
+                "DataType": "float",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_TIO",
+                "Name": "Clock 3rd Party - SLA 1 Text",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_TOT",
+                "Name": "Time to Target (hrs) - SLA 1",
+                "DataType": "float",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_TSL",
+                "Name": "SLA Met - SLA 5",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_TUS",
+                "Name": "Status - SLA 4",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_UID",
+                "Name": "Job Agreement ID",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_URR",
+                "Name": "Current State",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RT_USS",
+                "Name": "Status - SLA 5",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            }
+        ]
+    },
+    {
+        "Name": "Customers",
+        "Description": "",
+        "RemoteTableSql": "landscapeQuery_strategy_A.VF",
+        "Columns": [
+            {
+                "RemoteColumnSql": "VFId",
+                "Name": "_id",
+                "DataType": "bigint",
+                "IsNullable": false,
+                "ExcludeFromExpansion": true
+            },
+            {
+                "RemoteColumnSql": "VF_OMP",
+                "Name": "Company Name",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "VF_UID",
+                "Name": "Company ID",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            }
+        ]
+    },
+    {
+        "Name": "Job Lifecyle",
+        "Description": "",
+        "RemoteTableSql": "landscapeQuery_strategy_A.VH",
+        "Columns": [
+            {
+                "RemoteColumnSql": "VHId",
+                "Name": "_id",
+                "DataType": "bigint",
+                "IsNullable": false,
+                "ExcludeFromExpansion": true
+            },
+            {
+                "RemoteColumnSql": "VH_CAM",
+                "Name": "CAM",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "VH_CLO",
+                "Name": "Clock Owner",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "VH_CRE",
+                "Name": "Created",
+                "DataType": "datetime2(7)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "VH_END",
+                "Name": "Ended",
+                "DataType": "datetime2(7)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "VH_NEW",
+                "Name": "Workflow State",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "VH_PRE",
+                "Name": "Previous State",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "VH_SLA",
+                "Name": "SLA Type",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "VH_STA",
+                "Name": "State Activity",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "VH_TEA",
+                "Name": "Team",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "VH_TOT",
+                "Name": "Total Duration (hrs)",
+                "DataType": "float",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "VH_UID",
+                "Name": "Workflow State ID",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "VH_WOR",
+                "Name": "Workflow State No",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            }
+        ]
+    },
+    {
+        "Name": "LZ_RT",
+        "Description": "Many to many relationship table joining [Customer Contracts] and [Jobs]",
+        "RemoteTableSql": "landscapeQuery_strategy_A.LZ_RT",
+        "Columns": [
+            {
+                "RemoteColumnSql": "LZId",
+                "Name": "LZ_id",
+                "DataType": "bigint",
+                "IsNullable": false,
+                "ExcludeFromExpansion": true
+            },
+            {
+                "RemoteColumnSql": "RTId",
+                "Name": "RT_id",
+                "DataType": "bigint",
+                "IsNullable": false,
+                "ExcludeFromExpansion": true
+            }
+        ]
+    },
+    {
+        "Name": "LZ_VF",
+        "Description": "Many to many relationship table joining [Customer Contracts] and [Customers]",
+        "RemoteTableSql": "landscapeQuery_strategy_A.LZ_VF",
+        "Columns": [
+            {
+                "RemoteColumnSql": "LZId",
+                "Name": "LZ_id",
+                "DataType": "bigint",
+                "IsNullable": false,
+                "ExcludeFromExpansion": true
+            },
+            {
+                "RemoteColumnSql": "VFId",
+                "Name": "VF_id",
+                "DataType": "bigint",
+                "IsNullable": false,
+                "ExcludeFromExpansion": true
+            }
+        ]
+    },
+    {
+        "Name": "RT_VH",
+        "Description": "Many to many relationship table joining [Jobs] and [Job Lifecyle]",
+        "RemoteTableSql": "landscapeQuery_strategy_A.RT_VH",
+        "Columns": [
+            {
+                "RemoteColumnSql": "RTId",
+                "Name": "RT_id",
+                "DataType": "bigint",
+                "IsNullable": false,
+                "ExcludeFromExpansion": true
+            },
+            {
+                "RemoteColumnSql": "VHId",
+                "Name": "VH_id",
+                "DataType": "bigint",
+                "IsNullable": false,
+                "ExcludeFromExpansion": true
+            }
+        ]
+    }
+]

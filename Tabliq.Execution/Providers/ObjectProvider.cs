@@ -21,9 +21,7 @@ public class ObjectProvider<T> : IExecutionProvider
         _columns = typeof(T).GetProperties().Select(f => f.Name).ToArray();
 
         _table = new TableSymbol(tableName, schemaName, _columns.Select(c => new ColumnSymbol(c, string.Empty)).ToArray())
-        {
-            State = this
-        };
+            .WithState(this);
     }
     public ObjectProvider(string tableName, IEnumerable<T> rows)
         : this(tableName, null, rows)
@@ -106,7 +104,7 @@ public class ObjectProvider<T> : IExecutionProvider
 
         public override IExecutionProvider? Provider => _provider;
 
-        public override Task<IExecutionReader> ExecuteAsync(CancellationToken cancellationToken = default)
+        public override Task<IExecutionReader> ExecuteAsync(IEnumerable<ExecuterParameter>? parameters = null, CancellationToken cancellationToken = default)
         {
             return _provider.ReadTableAsync(_tableName, _schemaName, _alias, cancellationToken);
         }

@@ -70,7 +70,5 @@ public class VirtualTable
 
     public TableSymbol AsSymbol()
         => new TableSymbol(TableName, Columns.Select(x => x.AsSymbol()).ToList())
-        {
-            State = this
-        };
+            .WithState(this);
 }

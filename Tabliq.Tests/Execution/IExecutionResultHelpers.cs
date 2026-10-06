@@ -33,4 +33,21 @@ public static class IExecutionResultHelpers
         await using var results = await engine.ExecuteAsync(sql, parameters, cancellationToken);
         return await results.ToListAsync();
     }
+    public static async Task<Results> BuildPlanAndExecuteToDictionaryList(this ExecutionEngine engine, string sql, IEnumerable<ExecuterParameter> parameters, CancellationToken cancellationToken = default)
+    {
+        var plan = engine.BuildPlan(sql, parameters);
+        await using var results = await plan.ExecuteAsync(parameters, cancellationToken);
+        return new Results
+        {
+            Rows = await results.ToListAsync(),
+            Plan = plan
+        };
+    }
+
+    public class Results
+    {
+        public required List<Dictionary<string, object?>> Rows { get; init; }
+
+        public required ExecutionPlanNode Plan { get; init; }
+    }
 }
