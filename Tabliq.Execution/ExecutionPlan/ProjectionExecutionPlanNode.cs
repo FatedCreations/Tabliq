@@ -41,6 +41,35 @@ public sealed class ProjectionExecutionPlanNode : ExecutionPlanNode
     public override async Task<IExecutionReader> ExecuteAsync(IEnumerable<ExecuterParameter>? parameters = null, CancellationToken cancellationToken = default)
     {
         var hasGroupBy = SourceSelect?.GroupBy is not null;
+
+        if (_input is EmptyExecutionPlanNode)
+        {
+            var singleRowOutputFields = GetProjectedFields(Array.Empty<string>());
+            var emptyRow = new RowAccessor(Array.Empty<string>(), Array.Empty<object?>());
+
+            if (ContainsAggregateProjection())
+            {
+                var aggregateCalls = GetAggregateFunctionCalls();
+                var aggregateStates = new Dictionary<FunctionCallExpression, AggregateFunctionState>();
+                foreach (var aggregateCall in aggregateCalls)
+                {
+                    if (aggregateCall.Binding?.GetState<SqlFunction>() is not AggregateFunction aggregateFunction)
+                    {
+                        continue;
+                    }
+
+                    aggregateStates[aggregateCall] = aggregateFunction.InitState();
+                }
+
+                var aggregateValues = aggregateStates.ToDictionary(x => x.Key, x => x.Value.GetAggregateValue(cancellationToken));
+                var aggregateRow = ProjectRow(emptyRow, aggregateValues);
+                return new EnumeratorExecutionReader(singleRowOutputFields, new List<object?[]?> { aggregateRow }.GetEnumerator(), Array.Empty<IAsyncDisposable>());
+            }
+
+            var constantRow = ProjectRow(emptyRow, null);
+            return new EnumeratorExecutionReader(singleRowOutputFields, new List<object?[]?> { constantRow }.GetEnumerator(), Array.Empty<IAsyncDisposable>());
+        }
+
         if (ContainsAggregateProjection())
         {
             await using var aggregateReader = await _input.ExecuteAsync(parameters, cancellationToken);

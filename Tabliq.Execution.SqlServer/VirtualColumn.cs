@@ -16,7 +16,10 @@ public class VirtualColumn
     }
 
     public ColumnSymbol AsSymbol()
-        => new ColumnSymbol(ColumnName, DataType).WithState(this);
+        => new ColumnSymbol(ColumnName, DataType)
+        {
+            ExcludeFromStarExpansion = ExcludeFromExpansion
+        }.WithState(this);
 
 
     public string RemoteColumnName { get; }
