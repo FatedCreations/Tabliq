@@ -31,7 +31,7 @@ public class ExecutionEngine
     }
 
 
-    public ExecutionPlanNode BuildPlan(string sql, IEnumerable<ExecuterParameter>? parameters = null)
+    public ExecutionPlan BuildPlan(string sql, IEnumerable<ExecuterParameter>? parameters = null)
     {
         parameters ??= Enumerable.Empty<ExecuterParameter>();
 
@@ -45,10 +45,11 @@ public class ExecutionEngine
         var statement = bound.Script.Statements.FirstOrDefault() as SelectStatement
             ?? throw new NotSupportedException("Execution engine currently supports SELECT statements only.");
 
+        var rewriteContext = new ExecutionRewriteContext();
         var plan = BuildPlan(statement.SelectQuery);
-        plan = plan.TryRewrite() ?? plan;
+        plan = plan.TryRewrite(rewriteContext) ?? plan;
 
-        return plan;
+        return new ExecutionPlan(plan, rewriteContext.Diagnostics);
     }
 
 

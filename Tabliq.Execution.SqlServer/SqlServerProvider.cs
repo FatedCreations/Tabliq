@@ -43,13 +43,132 @@ public class SqlServerProvider : RemoteSqlProviderBase
     }
 
     private ReadOnlySpan<string> SupportedFunctions => new string[] {
-        "COUNT",
-        "RIGHT",
-        "LEFT",
-        "YEAR",
+        "DATE_BUCKET",
+        "DATEADD",
+        "DATEDIFF",
+        "DATEDIFF_BIG",
+        "DATEFROMPARTS",
+        "DATENAME",
+        "DATEPART",
+        "DATETIME2FROMPARTS",
+        "DATETIMEFROMPARTS",
+        "DATETIMEOFFSETFROMPARTS",
+        "SMALLDATETIMEFROMPARTS",
+        "SWITCHOFFSET",
+        "TIMEFROMPARTS",
+        "TODATETIMEOFFSET",
+        "DATETRUNC",
+        "DAY",
+        "EOMONTH",
+        "GETDATE",
+        "GETUTCDATE",
+        "ISDATE",
         "MONTH",
-        "DAY"
+        "SYSDATETIME",
+        "SYSDATETIMEOFFSET",
+        "SYSUTCDATETIME",
+        "YEAR",
+        "COUNT",
+        "COUNT_BIG",
+        "PRODUCT",
+        "STDEV",
+        "STDEVP",
+        "VAR",
+        "VARP",
+        "CUME_DIST",
+        "FIRST_VALUE",
+        "LAG",
+        "LAST_VALUE",
+        "LEAD",
+        "PERCENTILE_CONT",
+        "PERCENTILE_DISC",
+        "PERCENT_RANK",
+        "ABS",
+        "ACOS",
+        "ASIN",
+        "ATAN",
+        "ATN2",
+        "COS",
+        "COT",
+        "DEGREES",
+        "EXP",
+        "FLOOR",
+        "CEILING",
+        "LOG",
+        "LOG10",
+        "PI",
+        "POWER",
+        "RADIANS",
+        "RAND",
+        "ROUND",
+        "SIGN",
+        "SIN",
+        "SQRT",
+        "SQUARE",
+        "TAN",
+        "GREATEST",
+        "LEAST",
+        "IIF",
+        "DENSE_RANK",
+        "NTILE",
+        "RANK",
+        "ROW_NUMBER",
+        "ASCII",
+        "CHAR",
+        "CHARINDEX",
+        "CONCAT",
+        "CONCAT_WS",
+        "DIFFERENCE",
+        "FORMAT",
+        "LEFT",
+        "LEN",
+        "LOWER",
+        "LTRIM",
+        "NCHAR",
+        "PATINDEX",
+        "RIGHT",
+        "RTRIM",
+        "TRIM",
+        "SUBSTRING",
+        "CONVERT",
+        "CAST",
+        "PARSE",
+        "TRY_CAST",
+        "TRY_PARSE",
+        "TRY_CONVERT",
+        "AVG",
+        "SUM",
+        "ROLLUP",
+        "CUBE"
     };
+
+    protected override FunctionCallExpression RewriteFunctionCallForPushdown(FunctionCallExpression functionCall)
+    {
+        var script = new SqlScript([
+            new SelectStatement([], new SelectExpression(
+                false,
+                null,
+                Distinctness.Unspecified,
+                [new SelectProjection(functionCall)],
+                null,
+                null,
+                null,
+                null,
+                null,
+                []))
+        ]);
+
+        var rewritten = RewriteForMsSqlServer.Instance.Execute(script);
+        rewritten.ThrowIfInvalid();
+
+        var projection = rewritten.Script.Statements
+            .OfType<SelectStatement>()
+            .SingleOrDefault()?
+            .SelectQuery.Projections
+            .SingleOrDefault();
+
+        return projection?.Expression as FunctionCallExpression ?? functionCall;
+    }
 
     protected override bool SupportsFunction(FunctionSymbol function)
         => SupportedFunctions.Contains(function.Name, StringComparer.OrdinalIgnoreCase);

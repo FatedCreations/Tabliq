@@ -40,7 +40,8 @@ public static class IExecutionResultHelpers
         return new Results
         {
             Rows = await results.ToListAsync(),
-            Plan = plan
+            Plan = plan.RootNode,
+            Diagnostics = plan.Diagnostics,
         };
     }
 
@@ -49,5 +50,7 @@ public static class IExecutionResultHelpers
         public required List<Dictionary<string, object?>> Rows { get; init; }
 
         public required ExecutionPlanNode Plan { get; init; }
+
+        public required IReadOnlyList<ExecutionRewriteDiagnostic> Diagnostics { get; init; }
     }
 }

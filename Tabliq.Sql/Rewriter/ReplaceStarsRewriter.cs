@@ -16,7 +16,7 @@ namespace Tabliq.Sql.Rewriter
         protected virtual bool ShouldExpand(ColumnBinding binding)
         {
             // By default, expand all columns. Override this method to implement custom logic. hidden expansions etc
-            return true;
+            return !binding.ColumnSymbol.ExcludeFromStarExpansion;
         }
         protected virtual bool ShouldExpand(StarIdentifierExpression binding)
         {

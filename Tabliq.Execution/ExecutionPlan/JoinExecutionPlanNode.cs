@@ -28,18 +28,18 @@ public sealed class JoinExecutionPlanNode : ExecutionPlanNode
     public JoinSide JoinSide => _joinSide;
     public override IExecutionProvider? Provider => null;
 
-    public override ExecutionPlanNode? TryRewrite()
+    public override ExecutionPlanNode? TryRewrite(ExecutionRewriteContext? context = null)
     {
         ExecutionPlanNode currentNode = this;
-        var newLeft = _left.TryRewrite() ?? _left;
-        var newRight = _right.TryRewrite() ?? _right;
+        var newLeft = _left.TryRewrite(context) ?? _left;
+        var newRight = _right.TryRewrite(context) ?? _right;
         if (newLeft != _left || newRight != _right)
         {
             currentNode = new JoinExecutionPlanNode(newLeft, newRight, _joinType, _onCondition, _joinSide);
         }
 
-        currentNode = newLeft?.Provider?.TryRewrite(currentNode) ?? currentNode;
-        currentNode = newRight?.Provider?.TryRewrite(currentNode) ?? currentNode;
+        currentNode = newLeft?.Provider?.TryRewrite(currentNode, context) ?? currentNode;
+        currentNode = newRight?.Provider?.TryRewrite(currentNode, context) ?? currentNode;
 
         return currentNode;
     }

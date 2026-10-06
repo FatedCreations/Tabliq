@@ -74,12 +74,13 @@ public class ObjectProvider<T> : IExecutionProvider
         yield return _table;
     }
 
-    public ExecutionPlanNode TryRewrite(ExecutionPlanNode node)
+    public ExecutionPlanNode TryRewrite(ExecutionPlanNode node, ExecutionRewriteContext? context = null)
     {
         if (node is TableScanExecutionPlanNode tableScan)
         {
             if (_table.IsMatch(tableScan.TableName, tableScan.SchemaName))
             {
+                context?.Report("ObjectTableScanRewritten", "Table scan was rewritten to an in-memory object provider path.", nameof(TableScanExecutionPlanNode), tableScan.TableName);
                 return new ObjectProviderTableScanNode(this, tableScan.TableName, tableScan.SchemaName, tableScan.Alias);
             }
         }
@@ -109,6 +110,6 @@ public class ObjectProvider<T> : IExecutionProvider
             return _provider.ReadTableAsync(_tableName, _schemaName, _alias, cancellationToken);
         }
 
-        public override ExecutionPlanNode? TryRewrite() => null;
+        public override ExecutionPlanNode? TryRewrite(ExecutionRewriteContext? context = null) => null;
     }
 }

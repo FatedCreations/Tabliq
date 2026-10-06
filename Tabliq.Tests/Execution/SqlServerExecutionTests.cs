@@ -116,6 +116,14 @@ public class SqlServerExecutionTests
             _provider.LastSqlExecuted);
     }
 
+    [Fact]
+    public void RewrittenSqlServerFunctionsAreAllowedForPushdown()
+    {
+        Assert.True(_provider.IsSupported(new FunctionSymbol("CEIL", false, [new FunctionArgumentSymbol("value")] )));
+        Assert.True(_provider.IsSupported(new FunctionSymbol("CHAR_LENGTH", false, [new FunctionArgumentSymbol("value")] )));
+        Assert.True(_provider.IsSupported(new FunctionSymbol("EXTRACT", false, [new FunctionArgumentSymbol("part", BinderHandling: BinderHandling.Skip), new FunctionArgumentSymbol("value")] )));
+        Assert.True(_provider.IsSupported(new FunctionSymbol("POSITION", false, [new FunctionArgumentSymbol("needle"), new FunctionArgumentSymbol("haystack")] )));
+    }
 
     [Fact]
     public async Task UnrecognisedCustomValueTriggersAFilterdTableScan()
@@ -157,6 +165,24 @@ public class SqlServerExecutionTests
         Assert.Equal("Test#CUST_VALUE", row["c"]);
     }
 
+
+    [Fact]
+    public async Task UnsupportedFunctionReportsPushdownDiagnostics()
+    {
+        _provider.Returns(s =>
+            new[]
+            {
+                new
+                {
+                    NameTest = "Test"
+                }
+            });
+
+        var results = await _engine.BuildPlanAndExecuteToDictionaryList("SELECT CUST_VALUE(NameTest) AS c FROM Data WHERE NameTest = 'Test' GROUP BY NameTest", Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
+
+        Assert.Contains(results.Diagnostics, x => x.Id == "SqlPushdownPartial");
+        Assert.Contains(results.Diagnostics, x => x.Message.Contains("unsupported function", StringComparison.OrdinalIgnoreCase));
+    }
 
     [Fact]
     public async Task SubSelect()
@@ -303,11 +329,56 @@ public class SimpleSqlServerProvider : RemoteSqlProviderBase
         "LEFT",
         "YEAR",
         "MONTH",
-        "DAY"
+        "DAY",
+        "CEILING",
+        "CHARINDEX",
+        "DATEPART",
+        "LEN"
     };
+
+    public bool IsSupported(FunctionSymbol function)
+        => IsFunctionSupportedForPushdown(new FunctionCallExpression(function.Name, [], null)
+        {
+            Binding = function,
+        });
+
+    protected override FunctionCallExpression RewriteFunctionCallForPushdown(FunctionCallExpression functionCall)
+    {
+        var rewrittenName = functionCall.FunctionName;
+        if (rewrittenName.Equals("CEIL", StringComparison.OrdinalIgnoreCase))
+        {
+            rewrittenName = "CEILING";
+        }
+        else if (rewrittenName.Equals("CHAR_LENGTH", StringComparison.OrdinalIgnoreCase)
+            || rewrittenName.Equals("CHARACTER_LENGTH", StringComparison.OrdinalIgnoreCase))
+        {
+            rewrittenName = "LEN";
+        }
+        else if (rewrittenName.Equals("EXTRACT", StringComparison.OrdinalIgnoreCase))
+        {
+            rewrittenName = "DATEPART";
+        }
+        else if (rewrittenName.Equals("POSITION", StringComparison.OrdinalIgnoreCase))
+        {
+            rewrittenName = "CHARINDEX";
+        }
+        else if (rewrittenName.Equals("LN", StringComparison.OrdinalIgnoreCase))
+        {
+            rewrittenName = "LOG";
+        }
+
+        return rewrittenName == functionCall.FunctionName
+            ? functionCall
+            : new FunctionCallExpression(rewrittenName, functionCall.Arguments, functionCall.Window)
+            {
+                Span = functionCall.Span,
+                Binding = functionCall.Binding,
+            };
+    }
 
     protected override bool SupportsFunction(FunctionSymbol function)
         => SupportedFunctions.Contains(function.Name, StringComparer.OrdinalIgnoreCase);
+
     public override IEnumerable<TableSymbol> GetTables() => _tables;
 
     public List<(SelectStatement Sql, IEnumerable<ExecuterParameter>? Parameters)> SqlExecuted { get; private set; } = [];

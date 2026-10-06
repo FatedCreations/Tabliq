@@ -19,16 +19,16 @@ public sealed class FilterExecutionPlanNode : ExecutionPlanNode
 
     public override IExecutionProvider? Provider => null;
 
-    public override ExecutionPlanNode? TryRewrite()
+    public override ExecutionPlanNode? TryRewrite(ExecutionRewriteContext? context = null)
     {
         ExecutionPlanNode currentNode = this;
-        var newInput = _input.TryRewrite() ?? _input;
+        var newInput = _input.TryRewrite(context) ?? _input;
         if (newInput != _input)
         {
             currentNode = new FilterExecutionPlanNode(newInput, _condition);
         }
 
-        currentNode = newInput?.Provider?.TryRewrite(currentNode) ?? currentNode;
+        currentNode = newInput?.Provider?.TryRewrite(currentNode, context) ?? currentNode;
 
         return currentNode;
     }
