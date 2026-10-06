@@ -12,6 +12,8 @@ public sealed class ProjectionExecutionPlanNode : ExecutionPlanNode
 
     public SelectExpression? SourceSelect { get; }
 
+    public IReadOnlyList<SelectProjection> Projections => _projections;
+
     public ExecutionPlanNode Input => _input;
 
     public ProjectionExecutionPlanNode(ExecutionPlanNode input, IReadOnlyList<SelectProjection> projections, SelectExpression? sourceSelect = null)

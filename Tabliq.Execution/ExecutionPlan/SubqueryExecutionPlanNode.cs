@@ -3,6 +3,7 @@ using Tabliq.Sql.Ast;
 
 namespace Tabliq.Execution;
 
+// this is logically a wrapper around another ExecutionPlanNode, all its responsible for is aliasing the columns on the way thru
 public sealed class SubqueryExecutionPlanNode : ExecutionPlanNode
 {
     private readonly ExecutionPlanNode _inner;
@@ -14,7 +15,9 @@ public sealed class SubqueryExecutionPlanNode : ExecutionPlanNode
         _alias = alias;
     }
 
-    public override IExecutionProvider? Provider => null;
+    public ExecutionPlanNode Inner => _inner;
+
+    public override IExecutionProvider? Provider => _inner.Provider;
 
     public override ExecutionPlanNode? TryRewrite()
     {
