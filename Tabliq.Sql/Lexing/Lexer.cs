@@ -15,13 +15,16 @@ public sealed class Lexer
 
     public DiagnosticBag Diagnostics => _diagnostics;
 
-    public Lexer(string text)
+    public Lexer(string text, TabliqSettings? settings = null)
     {
         _text = text ?? string.Empty;
         _position = 0;
+        MaxTokenLimit = settings?.MaxTokenLimit;
     }
 
     private char Current => _position >= _text.Length ? '\0' : _text[_position];
+
+    public int? MaxTokenLimit { get; }
 
     private void Next() => _position++;
 
@@ -29,6 +32,12 @@ public sealed class Lexer
     {
         while (true)
         {
+            if(MaxTokenLimit.HasValue && _tokens.Count >= MaxTokenLimit.Value)
+            {
+                _diagnostics.Report("MaxTokenLimitExceeded", $"Maximum token limit of {MaxTokenLimit.Value} exceeded.", _position, 0);
+                break;
+            }
+
             var start = _position;
 
             if (char.IsWhiteSpace(Current))

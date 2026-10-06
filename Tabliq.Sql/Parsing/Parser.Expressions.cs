@@ -24,142 +24,140 @@ public sealed partial class Parser
     private Condition ParseCondition()
     {
         var conditionLoc = Track();
-        var expression = ParseExpressionOrCondition();
 
-        if (expression is Condition condition)
+        using var conditionDepthGuard = ConditionDepthTracker.Increment(conditionLoc);
+        var left = ParseExpressionOrCondition();
+        return ParseConditionFromLeft(left, conditionLoc);
+    }
+
+    private Condition ParseConditionFromLeft(Expression left, LocationTracker conditionLoc)
+    {
+        Condition leftCondition;
+        if (left is Condition condition)
         {
-            return condition;
+            leftCondition = condition;
+        }
+        else
+        {
+            _diagnostics.Report("ExpectedCondition", "Expected a condition but found just an expression", conditionLoc.Span);
+            leftCondition = new BadCondition(conditionLoc.Span).WithLocation(conditionLoc);
         }
 
-        _diagnostics.Report("ExpectedCondition", "Expected a condition but found just an expression", conditionLoc.Span);
-        // If the expression is not a condition, wrap it in a default condition
-        return new BadCondition(conditionLoc.Span).WithLocation(conditionLoc);
+        while (Current.Kind == SyntaxKind.AndKeyword || Current.Kind == SyntaxKind.OrKeyword)
+        {
+            ConditionDepthTracker.Increment(conditionLoc);
+            var opToken = NextToken();
+            var op = GetLogicalOperator(opToken.Kind);
+            var right = ParseExpressionOrCondition();
+            var rightCondition = right as Condition ?? new BadCondition(conditionLoc.Span).WithLocation(conditionLoc);
+
+            leftCondition = new LogicalCondition(leftCondition, op, rightCondition).WithLocation(conditionLoc);
+        }
+
+        return leftCondition;
     }
 
     private Expression ParseSimpleExpression()
     {
         var loc = Track();
-
-        var left = ParsePrimaryExpression();
-
-        while (IsBinaryOperator(Current.Kind))
+        var expressionDepthGuard = ExpressionDepthTracker.Increment(loc);
+        try
         {
-            var opToken = NextToken();
-            var op = GetBinaryOperator(opToken.Kind);
+            var left = ParsePrimaryExpression();
 
-            var right = ParseSimpleExpression();
-            left = new BinaryOperatorExpression(left, op, right).WithLocation(loc);
+            while (IsBinaryOperator(Current.Kind))
+            {
+                ExpressionDepthTracker.Increment(loc);
+                var opToken = NextToken();
+                var op = GetBinaryOperator(opToken.Kind);
+
+                var right = ParsePrimaryExpression();
+                left = new BinaryOperatorExpression(left, op, right).WithLocation(loc);
+            }
+
+            return left;
         }
-
-        return left;
+        finally
+        {
+            expressionDepthGuard.Dispose();
+        }
     }
 
     private Expression ParseExpressionOrCondition()
     {
         var loc = Track();
-
         var left = ParseSimpleExpression();
 
-        while (IsBinaryOperator(Current.Kind))
+        while (true)
         {
-            var opToken = NextToken();
-            var op = GetBinaryOperator(opToken.Kind);
-            var right = ParseExpressionOrCondition();
-            if (right is BinaryComparisonCondition con)
-            {
-                left = new BinaryOperatorExpression(left, op, con.Left).WithLocation(loc);
-                left = new BinaryComparisonCondition(left, con.Operator, con.Right).WithLocation(loc);
-            }
-            else if (left is BinaryComparisonCondition conLeft)
-            {
-                right = new BinaryOperatorExpression(conLeft.Right, op, right).WithLocation(loc);
-                left = new BinaryComparisonCondition(conLeft.Left, conLeft.Operator, right).WithLocation(loc);
-            }
-            else
-            {
-                left = new BinaryOperatorExpression(left, op, right).WithLocation(loc);
-            }
-        }
-
-        if (IsBinaryComparisonOperator(Current.Kind))
-        {
-            var opToken = NextToken();
-            var op = GetBinaryComparisonOperator(opToken.Kind);
-            var right = ParseExpressionOrCondition();
-            left = new BinaryComparisonCondition(left, op, right).WithLocation(loc);
-        }
-        else if (IsMatch([SyntaxKind.NotKeyword, SyntaxKind.BetweenKeyword]) || IsMatch([SyntaxKind.BetweenKeyword]))
-        {
-            var isNot = TryMatchToken(SyntaxKind.NotKeyword);
-            MatchToken(SyntaxKind.BetweenKeyword);//between
-            var val1 = ParseExpressionOrCondition();
-            MatchToken(SyntaxKind.AndKeyword);
-            var val2 = ParseExpressionOrCondition();
-
-            // is not null
-            left = new BetweenCondition(isNot,
-                left,
-                val1,
-                val2)
-                .WithLocation(loc);
-        }
-        else if (IsMatch(SyntaxKind.NotKeyword, SyntaxKind.InKeyword, SyntaxKind.OpenParenToken) || IsMatch(SyntaxKind.InKeyword, SyntaxKind.OpenParenToken))
-        {
-            var isNot = TryMatchToken(SyntaxKind.NotKeyword);
-            MatchToken(SyntaxKind.InKeyword);//between
-
-            // this is eather a sub select in brackets or a comma seperated list
-
-            if (IsMatch(SyntaxKind.OpenParenToken, SyntaxKind.SelectKeyword))
-            {
-                var selectExpression = ParseSelectExpression();
-                selectExpression = new SelectExpression(true, selectExpression).WithLocation(loc);
-                left = new InSelectCondition(isNot, left, selectExpression).WithLocation(loc);
-            }
-            else
-            {
-                var items = ParseBracketedList();
-                left = new InListCondition(isNot, left, items).WithLocation(loc);
-            }
-        }
-        else if (IsMatch([SyntaxKind.NotKeyword, SyntaxKind.LikeKeyword, SyntaxKind.StringToken]) || IsMatch([SyntaxKind.LikeKeyword, SyntaxKind.StringToken]))
-        {
-            var isNot = TryMatchToken(SyntaxKind.NotKeyword);
-            MatchToken(SyntaxKind.LikeKeyword);//like
-            var exp = ParseSimpleExpression();
-
-            // var stringToken = MatchToken(SyntaxKind.StringToken);//like
-
-            // is not null
-            left = new LikeCondition(isNot,
-                left,
-                exp)
-                .WithLocation(loc);
-        }
-        else if (TryMatchTokens([SyntaxKind.IsKeyword, SyntaxKind.NotKeyword, SyntaxKind.NullKeyword]))
-        {
-            // is not null
-            left = new IsNullCondition(true, left).WithLocation(loc);
-        }
-        else if (TryMatchTokens([SyntaxKind.IsKeyword, SyntaxKind.NullKeyword]))
-        {
-            // is not null
-            left = new IsNullCondition(false, left).WithLocation(loc);
-        }
-
-        if (left is Condition condition)
-        {
-            var leftCondition = condition;
-            while (Current.Kind == SyntaxKind.AndKeyword || Current.Kind == SyntaxKind.OrKeyword)
+            if (IsBinaryComparisonOperator(Current.Kind))
             {
                 var opToken = NextToken();
-                var op = GetLogicalOperator(opToken.Kind);
-                var right = ParseCondition();
-                // todo: correctly handle precedence here to enable future processing order of operations, for now we will just treat it as left associative
-                leftCondition = new LogicalCondition(leftCondition, op, right).WithLocation(loc);
+                var op = GetBinaryComparisonOperator(opToken.Kind);
+                var right = ParseSimpleExpression();
+                left = new BinaryComparisonCondition(left, op, right).WithLocation(loc);
+
+                if (IsBinaryComparisonOperator(Current.Kind))
+                {
+                    break;
+                }
+
+                continue;
             }
 
-            left = leftCondition;
+            if (IsMatch([SyntaxKind.NotKeyword, SyntaxKind.BetweenKeyword]) || IsMatch([SyntaxKind.BetweenKeyword]))
+            {
+                var isNot = TryMatchToken(SyntaxKind.NotKeyword);
+                MatchToken(SyntaxKind.BetweenKeyword);//between
+                var val1 = ParseSimpleExpression();
+                MatchToken(SyntaxKind.AndKeyword);
+                var val2 = ParseSimpleExpression();
+                left = new BetweenCondition(isNot, left, val1, val2).WithLocation(loc);
+                continue;
+            }
+
+            if (IsMatch(SyntaxKind.NotKeyword, SyntaxKind.InKeyword, SyntaxKind.OpenParenToken) || IsMatch(SyntaxKind.InKeyword, SyntaxKind.OpenParenToken))
+            {
+                var isNot = TryMatchToken(SyntaxKind.NotKeyword);
+                MatchToken(SyntaxKind.InKeyword);//between
+
+                if (IsMatch(SyntaxKind.OpenParenToken, SyntaxKind.SelectKeyword))
+                {
+                    var selectExpression = ParseSelectExpression();
+                    selectExpression = new SelectExpression(true, selectExpression).WithLocation(loc);
+                    left = new InSelectCondition(isNot, left, selectExpression).WithLocation(loc);
+                }
+                else
+                {
+                    var items = ParseBracketedList();
+                    left = new InListCondition(isNot, left, items).WithLocation(loc);
+                }
+
+                continue;
+            }
+
+            if (IsMatch([SyntaxKind.NotKeyword, SyntaxKind.LikeKeyword, SyntaxKind.StringToken]) || IsMatch([SyntaxKind.LikeKeyword, SyntaxKind.StringToken]))
+            {
+                var isNot = TryMatchToken(SyntaxKind.NotKeyword);
+                MatchToken(SyntaxKind.LikeKeyword);//like
+                var exp = ParseSimpleExpression();
+                left = new LikeCondition(isNot, left, exp).WithLocation(loc);
+                continue;
+            }
+
+            if (TryMatchTokens([SyntaxKind.IsKeyword, SyntaxKind.NotKeyword, SyntaxKind.NullKeyword]))
+            {
+                left = new IsNullCondition(true, left).WithLocation(loc);
+                continue;
+            }
+
+            if (TryMatchTokens([SyntaxKind.IsKeyword, SyntaxKind.NullKeyword]))
+            {
+                left = new IsNullCondition(false, left).WithLocation(loc);
+                continue;
+            }
+
+            break;
         }
 
         return left;
@@ -401,18 +399,56 @@ public sealed partial class Parser
 
         if (IsUnaryOperator(Current.Kind))
         {
-            var opToken = NextToken();
-            var op = GetUnaryOperator(opToken.Kind);
-            var operand = ParsePrimaryExpression();
-            return new UnaryOperatorExpression(operand, op).WithLocation(loc);
+            var expressionDepthGuard = ExpressionDepthTracker.Increment(loc);
+            try
+            {
+                var ops = new Stack<UnaryOperator>();
+                while (IsUnaryOperator(Current.Kind))
+                {
+                    ExpressionDepthTracker.Increment(loc);
+                    ops.Push(GetUnaryOperator(NextToken().Kind));
+                }
+
+                var operand = ParsePrimaryExpression();
+                var result = operand;
+                while (ops.Count > 0)
+                {
+                    result = new UnaryOperatorExpression(result, ops.Pop()).WithLocation(loc);
+                }
+
+                return result;
+            }
+            finally
+            {
+                expressionDepthGuard.Dispose();
+            }
         }
 
         if (IsUnaryComparisonOperator(Current.Kind))
         {
-            var opToken = NextToken();
-            var op = GetUnaryComparisonOperator(opToken.Kind);
-            var right = ParseCondition();
-            return new UnaryCondition(op, right).WithLocation(loc);
+            var conditionDepthGuard = ConditionDepthTracker.Increment(loc);
+            try
+            {
+                var ops = new Stack<UnaryCompararisonOperator>();
+                while (IsUnaryComparisonOperator(Current.Kind))
+                {
+                    ConditionDepthTracker.Increment(loc);
+                    ops.Push(GetUnaryComparisonOperator(NextToken().Kind));
+                }
+
+                var right = ParseCondition();
+                var result = right;
+                while (ops.Count > 0)
+                {
+                    result = new UnaryCondition(ops.Pop(), result).WithLocation(loc);
+                }
+
+                return result;
+            }
+            finally
+            {
+                conditionDepthGuard.Dispose();
+            }
         }
 
         if (Current.Kind == SyntaxKind.OpenParenToken)
@@ -425,10 +461,18 @@ public sealed partial class Parser
             // bracketed select expression
             NextToken(); // consume '('
             var exp = ParseExpressionOrCondition();
-            MatchToken(SyntaxKind.CloseParenToken);
-            if (exp is Condition condition)
+
+            if (Current.Kind == SyntaxKind.AndKeyword || Current.Kind == SyntaxKind.OrKeyword)
             {
+                var condition = ParseConditionFromLeft(exp, loc);
+                MatchToken(SyntaxKind.CloseParenToken);
                 return new BracketedCondition(condition).WithLocation(loc);
+            }
+
+            MatchToken(SyntaxKind.CloseParenToken);
+            if (exp is Condition conditionExp)
+            {
+                return new BracketedCondition(conditionExp).WithLocation(loc);
             }
             return new BracketedExpression(exp).WithLocation(loc);
         }

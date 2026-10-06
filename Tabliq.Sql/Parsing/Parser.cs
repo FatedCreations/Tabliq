@@ -1,3 +1,7 @@
+using System.Collections;
+using System.Collections.Immutable;
+using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Net.Http.Headers;
 using System.Text;
 using Tabliq.Sql.Ast;
@@ -9,12 +13,29 @@ namespace Tabliq.Sql.Parsing;
 
 public sealed partial class Parser
 {
-    public static CompilationResult Parse(string text)
+    public static CompilationResult Parse(string text, TabliqSettings? settings = null)
     {
-        var lexer = new Lexer(text);
+        settings ??= new TabliqSettings();
+
+        var lexer = new Lexer(text, settings);
         var tokens = lexer.LexAll();
-        var parser = new Parser(tokens, lexer.Diagnostics);
-        var root = parser.ParseCompilationUnit();
+
+        if (lexer.Diagnostics.Diagnostics.Any())
+        {
+            return new CompilationResult(text, null, tokens, lexer.Diagnostics.Diagnostics);
+        }
+
+        var parser = new Parser(tokens, lexer.Diagnostics, settings);
+        SqlScript? root = null;
+        try
+        {
+            root = parser.ParseCompilationUnit();
+        }
+        catch (ParserLimitExcption _)
+        {
+            // noop this is a short circuit to stop parsing when we hit a limit, the diagnostics will be reported in the parser
+        }
+
         var diags = new List<Diagnostic>();
         diags.AddRange(lexer.Diagnostics.Diagnostics);
         diags.AddRange(parser.Diagnostics.Diagnostics);
@@ -27,13 +48,21 @@ public sealed partial class Parser
 
     public DiagnosticBag Diagnostics => _diagnostics;
 
-    public Parser(IReadOnlyList<SyntaxToken> tokens, DiagnosticBag diagnostics)
+    public Parser(IReadOnlyList<SyntaxToken> tokens, DiagnosticBag diagnostics, TabliqSettings? settings = null)
     {
         _tokens = tokens.ToList();
         _position = 0;
         _diagnostics = new DiagnosticBag();
         _diagnostics.AddRange(diagnostics.Diagnostics);
+
+        SubQueryDepthTracker = new LimitTracker(settings?.MaxSubQueryDepth, this, "QueryDepthExceeded", $"Query depth exceeded the maximum allowed depth of {settings?.MaxSubQueryDepth}.");
+        ExpressionDepthTracker = new LimitTracker(settings?.MaxExpressionDepth, this, "ExpressionDepthExceeded", $"Expression depth exceeded the maximum allowed depth of {settings?.MaxExpressionDepth}.");
+        ConditionDepthTracker = new LimitTracker(settings?.MaxConditionDepth, this, "ConditionDepthExceeded", $"Condition depth exceeded the maximum allowed depth of {settings?.MaxConditionDepth}.");
     }
+
+    private LimitTracker SubQueryDepthTracker { get; }
+    private LimitTracker ExpressionDepthTracker { get; }
+    private LimitTracker ConditionDepthTracker { get; }
 
     private string DebugString
     {
@@ -166,25 +195,34 @@ public sealed partial class Parser
     private bool IsMatch(params ReadOnlySpan<SyntaxKind> kinds)
         => IsMatch(0, kinds);
 
-    public SqlScript ParseCompilationUnit()
+    public SqlScript? ParseCompilationUnit()
     {
-        var loc = Track();
-        List<Statement> statements = new List<Statement>();
-        while (Current.Kind != SyntaxKind.EndOfFileToken)
+        try
         {
-            var bad = ConsumeUntil(k => k.Kind == SyntaxKind.SelectKeyword || k.Kind == SyntaxKind.WithKeyword || k.Kind == SyntaxKind.SemicolonToken);
-            if (bad != null)
-                statements.Add(bad);
-            if (Current.Kind != SyntaxKind.EndOfFileToken)
+            var loc = Track();
+            List<Statement> statements = new List<Statement>();
+
+            while (Current.Kind != SyntaxKind.EndOfFileToken)
             {
-                var statment = ParseStatement();
-                if (statment is not null)
+                var bad = ConsumeUntil(k => k.Kind == SyntaxKind.SelectKeyword || k.Kind == SyntaxKind.WithKeyword || k.Kind == SyntaxKind.SemicolonToken);
+                if (bad != null)
+                    statements.Add(bad);
+                if (Current.Kind != SyntaxKind.EndOfFileToken)
                 {
-                    statements.Add(statment);
+                    SubQueryDepthTracker.Increment(loc);
+                    var statment = ParseStatement();
+                    if (statment is not null)
+                    {
+                        statements.Add(statment);
+                    }
                 }
             }
+            return new SqlScript(statements).WithLocation(loc);
         }
-        return new SqlScript(statements).WithLocation(loc);
+        catch (ParserLimitExcption ex)
+        {
+            return null;
+        }
     }
 
     private BadStatement? ConsumeUntil(Func<SyntaxToken, bool> predicate)
@@ -214,7 +252,6 @@ public sealed partial class Parser
             var loc = Track();
             return new EmptyStatement(true).WithLocation(loc);
         }
-
         return null;
     }
 
@@ -254,6 +291,7 @@ public sealed partial class Parser
     private SelectExpression ParseSelectExpression()
     {
         var loc = Track();
+
         if (Current.Kind == SyntaxKind.OpenParenToken)
         {
             // bracketed select expression
@@ -262,6 +300,8 @@ public sealed partial class Parser
             MatchToken(SyntaxKind.CloseParenToken);
             return new SelectExpression(true, selectExpression).WithLocation(loc);
         }
+
+        using var r = SubQueryDepthTracker.Increment(loc);
 
         MatchToken(SyntaxKind.SelectKeyword);
 
@@ -750,4 +790,56 @@ public sealed partial class Parser
             SyntaxKind.NvarcharDataType or
             SyntaxKind.UniqueidentifierDataType or
             SyntaxKind.BigIntDataType;
+
+    internal class LimitTracker
+    {
+        int? _limit;
+        Parser _parser;
+        string _diagnosticId;
+        string _diagnosticMessage;
+
+        int _counter;
+
+        public LimitTracker(int? limit, Parser parser, string diagnosticId, string diagnosticMessage)
+        {
+            _limit = limit;
+            _parser = parser;
+            _diagnosticId = diagnosticId;
+            _diagnosticMessage = diagnosticMessage;
+        }
+
+        public LimitTrackerDisposer Increment(LocationTracker? location = null)
+        {
+            var tracker = Track();
+            _counter++;
+            if (_limit.HasValue && _counter > _limit.Value)
+            {
+                var loc = location ?? _parser.Track();
+                _parser._diagnostics.Report(_diagnosticId, _diagnosticMessage, loc.Span.Start, 0);
+                throw new ParserLimitExcption(_diagnosticMessage);
+            }
+
+            return tracker;
+        }
+        public LimitTrackerDisposer Track()
+            => new LimitTrackerDisposer(_counter, this);
+
+        internal struct LimitTrackerDisposer : IDisposable
+        {
+            private int start;
+            private readonly LimitTracker tracker;
+
+            public LimitTrackerDisposer(int start, LimitTracker tracker)
+            {
+                this.start = start;
+                this.tracker = tracker;
+            }
+
+            public void Dispose()
+            {
+                tracker._counter = start;
+            }
+        }
+    }
 }
+
