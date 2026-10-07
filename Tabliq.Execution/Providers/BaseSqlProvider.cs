@@ -30,7 +30,33 @@ public abstract class RemoteSqlProviderBase : IExecutionProvider
 
             if (subquery.Inner is ProjectionExecutionPlanNode projection && projection.SourceSelect is not null)
             {
-                res = new RemoteSqProviderSqlExecutionPlanNode(this, new SelectStatement([], projection.SourceSelect));
+                var cteSource = ResolveCteSource(subquery, projection.SourceSelect);
+                var ctes = MergeCteDefinitions(
+                    CollectCteDefinitions(cteSource, new HashSet<string>(StringComparer.OrdinalIgnoreCase)),
+                    subquery.IsCte && !string.IsNullOrEmpty(subquery.CteName) && subquery.CteBody is not null
+                        ? [new CommonTableExpression(subquery.CteName, subquery.CteBody)]
+                        : Enumerable.Empty<CommonTableExpression>());
+
+                var cteSql = new SelectStatement(ctes, projection.SourceSelect);
+                res = new RemoteSqProviderSqlExecutionPlanNode(this, cteSql);
+                return true;
+            }
+        }
+
+        if (node is FilterExecutionPlanNode filter && TryGetParentQuery(filter.Input, out res))
+        {
+            return true;
+        }
+
+        if (node is JoinExecutionPlanNode join)
+        {
+            if (TryGetParentQuery(join.Left, out res))
+            {
+                return true;
+            }
+
+            if (TryGetParentQuery(join.Right, out res))
+            {
                 return true;
             }
         }
@@ -46,12 +72,107 @@ public abstract class RemoteSqlProviderBase : IExecutionProvider
         return false;
     }
 
+    private static IReadOnlyList<CommonTableExpression> CollectCteDefinitions(SyntaxNode node, HashSet<string>? seen = null)
+    {
+        seen ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var ctes = new List<CommonTableExpression>();
+
+        void Visit(SyntaxNode current)
+        {
+            if (current is NamedTableReference namedTable && namedTable.Binding is not null)
+            {
+                if (namedTable.Binding.GetState<CteTableMetadata>() is CteTableMetadata cte && seen.Add(cte.Alias))
+                {
+                    Visit(cte.Body);
+                    ctes.Add(new CommonTableExpression(cte.Alias, cte.Body));
+                }
+            }
+
+            foreach (var child in current.GetChildren())
+            {
+                Visit(child);
+            }
+        }
+
+        Visit(node);
+        return ctes;
+    }
+
+    private static IEnumerable<CommonTableExpression> MergeCteDefinitions(params IEnumerable<CommonTableExpression>[] cteSets)
+    {
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var cte in cteSets.SelectMany(set => set))
+        {
+            if (seen.Add(cte.Alias))
+            {
+                yield return cte;
+            }
+        }
+    }
+
+    private static SyntaxNode ResolveCteSource(SubqueryExecutionPlanNode subquery, SyntaxNode fallback)
+        => subquery.CteBody ?? fallback;
+
     public ExecutionPlanNode TryRewrite(ExecutionPlanNode node, ExecutionRewriteContext? context = null)
-        => RewriteJoinsBothSideSql(node, context) ??
+        => RewriteUnion(node, context) ??
+            RewriteJoinsBothSideSql(node, context) ??
             RewriteFilter(node, context) ??
             RewriteProjection(node, context) ??
             RewriteTableScan(node, context)
             ?? node;
+
+    private ExecutionPlanNode? RewriteUnion(ExecutionPlanNode node, ExecutionRewriteContext? context)
+    {
+        if (node is not UnionExecutionPlanNode union)
+        {
+            return null;
+        }
+
+        var branchQueries = new List<(SelectStatement Sql, bool IsAll)>();
+        foreach (var operation in union.Operations)
+        {
+            if (!TryGetParentQuery(operation.Input, out var parentQuery))
+            {
+                return null;
+            }
+
+            branchQueries.Add((parentQuery.Sql, operation.IsAll));
+        }
+
+        if (branchQueries.Count == 0)
+        {
+            return null;
+        }
+
+        var first = branchQueries[0].Sql;
+        var unionStatements = new List<UnionStatement>();
+        foreach (var (sql, isAll) in branchQueries.Skip(1))
+        {
+            unionStatements.Add(new UnionStatement(isAll, sql.SelectQuery));
+        }
+
+        var mergedCtes = new List<CommonTableExpression>();
+        foreach (var (sql, _) in branchQueries)
+        {
+            mergedCtes.AddRange(sql.CommonTableExpressions);
+        }
+
+        var select = new SelectExpression(
+            first.SelectQuery.IsBracketed,
+            first.SelectQuery.Top,
+            first.SelectQuery.Distinctness,
+            first.SelectQuery.Projections,
+            first.SelectQuery.From,
+            first.SelectQuery.Where,
+            first.SelectQuery.GroupBy,
+            first.SelectQuery.Having,
+            first.SelectQuery.OrderBy,
+            unionStatements);
+
+        var result = new SelectStatement(mergedCtes.DistinctBy(x => x.Alias, StringComparer.OrdinalIgnoreCase), select);
+        context?.Report("SqlPushdownApplied", "Union inputs were merged into a single SQL query.", ExecutionRewriteDiagnosticLevel.Debug, nameof(UnionExecutionPlanNode), union.ToString());
+        return new RemoteSqProviderSqlExecutionPlanNode(this, result);
+    }
 
     private ExecutionPlanNode? RewriteTableScan(ExecutionPlanNode node, ExecutionRewriteContext? context)
     {
@@ -93,6 +214,17 @@ public abstract class RemoteSqlProviderBase : IExecutionProvider
             return null;
         }
 
+        var ctes = parentQuery.Sql.CommonTableExpressions;
+        if (filter.Input is SubqueryExecutionPlanNode filterSubquery)
+        {
+            var seen = new HashSet<string>(parentQuery.Sql.CommonTableExpressions.Select(x => x.Alias), StringComparer.OrdinalIgnoreCase);
+            var nestedCtes = CollectCteDefinitions(ResolveCteSource(filterSubquery, parentQuery.Sql.SelectQuery), seen);
+            var currentCte = filterSubquery.IsCte && !string.IsNullOrEmpty(filterSubquery.CteName) && filterSubquery.CteBody is not null
+                ? [new CommonTableExpression(filterSubquery.CteName, filterSubquery.CteBody)]
+                : Enumerable.Empty<CommonTableExpression>();
+            ctes = MergeCteDefinitions(parentQuery.Sql.CommonTableExpressions, nestedCtes, currentCte).ToList();
+        }
+
         if (ContainsUnsupportedFunction(filter.Condition))
         {
             context?.Report("SqlPushdownSkipped", "Filter could not be pushed to SQL because it contains an unsupported function.", ExecutionRewriteDiagnosticLevel.Warning, nameof(FilterExecutionPlanNode), filter.Condition.ToString());
@@ -115,7 +247,7 @@ public abstract class RemoteSqlProviderBase : IExecutionProvider
             parentQuery.Sql.SelectQuery.OrderBy,
             parentQuery.Sql.SelectQuery.UnionStatements);
 
-        var select = new SelectStatement(parentQuery.Sql.CommonTableExpressions, sql);
+        var select = new SelectStatement(ctes.Distinct(), sql);
         return new RemoteSqProviderSqlExecutionPlanNode(this, select);
     }
 
@@ -161,8 +293,20 @@ public abstract class RemoteSqlProviderBase : IExecutionProvider
             return null;
         }
 
+        IEnumerable<CommonTableExpression> ctes = projection.Input is SubqueryExecutionPlanNode projectionSubquery
+            ? MergeCteDefinitions(
+                CollectCteDefinitions(ResolveCteSource(projectionSubquery, projection.SourceSelect), new HashSet<string>(StringComparer.OrdinalIgnoreCase)),
+                projectionSubquery.IsCte && !string.IsNullOrEmpty(projectionSubquery.CteName) && projectionSubquery.CteBody is not null
+                    ? [new CommonTableExpression(projectionSubquery.CteName, projectionSubquery.CteBody)]
+                    : Enumerable.Empty<CommonTableExpression>())
+            : TryGetParentQuery(projection.Input, out var parentQuery)
+                ? MergeCteDefinitions(
+                    parentQuery.Sql.CommonTableExpressions,
+                    CollectCteDefinitions(projection.SourceSelect, new HashSet<string>(parentQuery.Sql.CommonTableExpressions.Select(x => x.Alias), StringComparer.OrdinalIgnoreCase)))
+                : CollectCteDefinitions(projection.SourceSelect, new HashSet<string>(StringComparer.OrdinalIgnoreCase));
+
         context?.Report("SqlPushdownApplied", "Projection was pushed to SQL provider.", ExecutionRewriteDiagnosticLevel.Debug, nameof(ProjectionExecutionPlanNode), projection.SourceSelect.ToString());
-        return new RemoteSqProviderSqlExecutionPlanNode(this, new SelectStatement([], projection.SourceSelect));
+        return new RemoteSqProviderSqlExecutionPlanNode(this, new SelectStatement(ctes, projection.SourceSelect));
     }
 
     private SelectExpression? TryCreatePushdownSelect(SelectExpression source)

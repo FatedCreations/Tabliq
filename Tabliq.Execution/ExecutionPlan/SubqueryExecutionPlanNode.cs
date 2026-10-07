@@ -8,14 +8,27 @@ public sealed class SubqueryExecutionPlanNode : ExecutionPlanNode
 {
     private readonly ExecutionPlanNode _inner;
     private readonly string? _alias;
+    private readonly string? _cteName;
+    private readonly SelectExpression? _cteBody;
 
-    public SubqueryExecutionPlanNode(ExecutionPlanNode inner, string? alias)
+    public SubqueryExecutionPlanNode(ExecutionPlanNode inner, string? alias, SelectExpression? cteBody = null)
+        : this(inner, alias, cteBody is not null ? alias : null, cteBody)
+    {
+    }
+
+    public SubqueryExecutionPlanNode(ExecutionPlanNode inner, string? alias, string? cteName, SelectExpression? cteBody)
     {
         _inner = inner;
         _alias = alias;
+        _cteName = cteName;
+        _cteBody = cteBody;
     }
 
     public ExecutionPlanNode Inner => _inner;
+    public string? Alias => _alias;
+    public string? CteName => _cteName;
+    public SelectExpression? CteBody => _cteBody;
+    public bool IsCte => _cteBody is not null && !string.IsNullOrEmpty(_cteName);
 
     public override IExecutionProvider? Provider => _inner.Provider;
     public override IEnumerable<ExecutionPlanNode> GetInputs() => [_inner];
@@ -26,7 +39,7 @@ public sealed class SubqueryExecutionPlanNode : ExecutionPlanNode
         var newInner = _inner.TryRewrite(context) ?? _inner;
         if (newInner != _inner)
         {
-            currentNode = new SubqueryExecutionPlanNode(newInner, _alias);
+            currentNode = new SubqueryExecutionPlanNode(newInner, _alias, _cteName, _cteBody);
         }
 
         currentNode = newInner.Provider?.TryRewrite(currentNode, context) ?? currentNode;

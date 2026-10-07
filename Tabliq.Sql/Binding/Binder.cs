@@ -17,6 +17,7 @@ public class Binder
 
     private DiagnosticBag _diagnostics = new();
     private readonly ISchemaProvider _catalog;
+    private int _cteDeclarationOrder;
 
     public DiagnosticBag Diagnostics => _diagnostics;
 
@@ -633,7 +634,7 @@ public class Binder
             // we are adding the cte into the current parent scope
             // bind the common table expression
             BindChildren(cte);
-        }, table => table.WithState(new CteTableMetadata(cte.Alias, cte.Body)));
+        }, table => table.WithState(new CteTableMetadata(cte.Alias, cte.Body, _cteDeclarationOrder++)));
 
     private void Bind(UnionStatement unionStatement)
         => InsideUnion(string.Empty, () =>

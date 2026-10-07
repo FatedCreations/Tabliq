@@ -4,6 +4,7 @@ using Tabliq.Execution.Policies;
 using Tabliq.Execution.SqlServer;
 using Tabliq.Sql.Ast;
 using Tabliq.Sql.Core;
+using Tabliq.Sql.Parsing;
 using Tabliq.Sql.Printer;
 using static Tabliq.Execution.Providers.RemoteSqlProviderBase;
 
@@ -149,6 +150,28 @@ public class AssertExecuterSql
                     var canon = cmdSql.Replace("\r\n", "\n").Trim();
                     expected = expected.Replace("\r\n", "\n").Trim();
 
+                    var expectedParsed = Parser.Parse(expected).Script;
+                    var executedParsed = Parser.Parse(cmdSql).Script;
+
+                    // fix up the order of CTEs!
+                    Statement NormalizeSelect(Statement statement)
+                    {
+                        if(statement is not SelectStatement selectStatement)
+                        {
+                            return statement;
+                        }
+                        return new SelectStatement(selectStatement.CommonTableExpressions.OrderBy(cte => cte.Alias).ToList(), selectStatement.SelectQuery, selectStatement.HasSemicolon).WithLocation(selectStatement.Span);
+                    }
+                    SqlScript NormalizeScript(SqlScript script)
+                    {
+                        return new SqlScript(script.Statements.Select(x=> NormalizeSelect(x)).ToList()).WithLocation(script.Span);
+                    }
+                    expectedParsed = NormalizeScript(expectedParsed);
+                    executedParsed = NormalizeScript(executedParsed);
+
+
+                    expected = expectedParsed.ToString();
+                    canon = executedParsed.ToString();
                     // Do not parse the expected SQL -- tests assert the raw expected formatting
                     Console.WriteLine("EXPECTED (raw):");
                     Console.WriteLine(string.Empty);
