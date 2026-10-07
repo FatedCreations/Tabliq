@@ -4,6 +4,7 @@ using Tabliq.Sql;
 using Tabliq.Sql.Ast;
 using Tabliq.Sql.Binding;
 using Tabliq.Sql.Core;
+using Tabliq.Sql.Diagnostics;
 using Tabliq.Sql.Parsing;
 using Tabliq.Sql.Printer;
 using Tabliq.Sql.Rewriter;
@@ -36,7 +37,7 @@ public class AssertSql
     public static void Equal(string underTest, SyntaxNode expectedAst)
         => new Asserter().Equal(underTest, expectedAst);
 
-    public static void WithErrors(string underTest, params string[] errors)
+    public static IEnumerable<Diagnostic> WithErrors(string underTest, params string[] errors)
         => new Asserter().WithErrors(underTest, errors);
 
     internal static Asserter SkipBinder(bool skip = true)
@@ -125,8 +126,9 @@ public class AssertSql
             return new Asserter(new CombineSchema(s, this._databaseSchema));
         }
 
-        public void WithErrors(string underTest, params string[] errors)
+        public IEnumerable<Diagnostic> WithErrors(string underTest, params string[] errors)
         {
+            IEnumerable<Diagnostic> diagnostics = [];
             try
             {
                 Task.Run(() =>
@@ -161,12 +163,16 @@ public class AssertSql
                         Assert.Equal(errors, messages);
                     }
 
+                    diagnostics = tree.Diagnostics;
+
                 }, new CancellationTokenSource(100).Token).GetAwaiter().GetResult();
             }
             catch (TaskCanceledException)
             {
                 Assert.Fail("The test timed out. This may indicate an infinite loop or a long-running operation in the parser or binder.");
             }
+
+            return diagnostics;
         }
 
         private IEnumerable<SyntaxNode> GetAllNodes(SyntaxNode syntaxNode)
