@@ -1,4 +1,6 @@
+using System.Reflection;
 using Tabliq.Execution.ExecutionReader;
+using Tabliq.Execution.ExpressionPlan;
 using Tabliq.Sql.Binding;
 
 namespace Tabliq.Execution;
@@ -18,6 +20,7 @@ public sealed class TableScanExecutionPlanNode : ExecutionPlanNode
     }
 
     public override IEnumerable<ExecutionPlanNode> GetInputs() => Enumerable.Empty<ExecutionPlanNode>();
+    public override IEnumerable<ExpressionPlanNode> GetExpressions() => [];
 
     public string TableName => _table.TableName;
 

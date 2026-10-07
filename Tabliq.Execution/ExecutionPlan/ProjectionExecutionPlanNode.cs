@@ -1,4 +1,5 @@
 using Tabliq.Execution.ExecutionReader;
+using Tabliq.Execution.ExpressionPlan;
 using Tabliq.Execution.Functions;
 using Tabliq.Sql.Ast;
 using Tabliq.Sql.Binding;
@@ -9,20 +10,25 @@ public sealed class ProjectionExecutionPlanNode : ExecutionPlanNode
 {
     private readonly ExecutionPlanNode _input;
     private readonly IReadOnlyList<SelectProjection> _projections;
+    private readonly IReadOnlyList<ExpressionPlan.ExpressionPlanNode> _expressionPlans;
 
     public SelectExpression? SourceSelect { get; }
 
     public IReadOnlyList<SelectProjection> Projections => _projections;
+    public IReadOnlyList<ExpressionPlan.ExpressionPlanNode> ExpressionPlans => _expressionPlans;
 
     public ExecutionPlanNode Input => _input;
     public override IEnumerable<ExecutionPlanNode> GetInputs() => [_input];
+    public override IEnumerable<ExpressionPlanNode> GetExpressions() => [.. _input.GetExpressions(), .. _expressionPlans];
 
-    public ProjectionExecutionPlanNode(ExecutionPlanNode input, IReadOnlyList<SelectProjection> projections, SelectExpression? sourceSelect = null)
+    public ProjectionExecutionPlanNode(ExecutionPlanNode input, IReadOnlyList<ExpressionPlan.ExpressionPlanNode> expressionPlans, IReadOnlyList<SelectProjection>? projections, SelectExpression? sourceSelect = null)
     {
         _input = input;
-        _projections = projections;
+        _expressionPlans = expressionPlans;
+        _projections = projections ?? Array.Empty<SelectProjection>();
         SourceSelect = sourceSelect;
     }
+
     public override IExecutionProvider? Provider => null;
 
     public override ExecutionPlanNode? TryRewrite(ExecutionRewriteContext? context = null)
@@ -31,7 +37,7 @@ public sealed class ProjectionExecutionPlanNode : ExecutionPlanNode
         var newInput = _input.TryRewrite(context) ?? _input;
         if (newInput != _input)
         {
-            currentNode = new ProjectionExecutionPlanNode(newInput, _projections, SourceSelect);
+            currentNode = new ProjectionExecutionPlanNode(newInput, _expressionPlans, _projections, SourceSelect);
         }
 
         currentNode = newInput.Provider?.TryRewrite(currentNode, context) ?? currentNode;
@@ -48,7 +54,7 @@ public sealed class ProjectionExecutionPlanNode : ExecutionPlanNode
             var emptyRow = new RowAccessor(Array.Empty<string>(), Array.Empty<object?>());
             if (_input is FilterExecutionPlanNode filter && filter.Input is EmptyExecutionPlanNode)
             {
-                if (!EvaluationHelpers.EvaluateCondition(filter.Condition, emptyRow))
+                if (!filter.ConditionPlan.Execute(emptyRow))
                 {
                     return new EnumeratorExecutionReader(GetProjectedFields(Array.Empty<string>()), new List<object?[]?>().GetEnumerator(), Array.Empty<IAsyncDisposable>());
                 }
@@ -62,12 +68,7 @@ public sealed class ProjectionExecutionPlanNode : ExecutionPlanNode
                 var aggregateStates = new Dictionary<FunctionCallExpression, AggregateFunctionState>();
                 foreach (var aggregateCall in aggregateCalls)
                 {
-                    if (aggregateCall.Binding?.GetState<SqlFunction>() is not AggregateFunction aggregateFunction)
-                    {
-                        continue;
-                    }
-
-                    aggregateStates[aggregateCall] = aggregateFunction.InitState();
+                    aggregateStates[aggregateCall.Expression] = aggregateCall.Function.InitState();
                 }
 
                 var aggregateValues = aggregateStates.ToDictionary(x => x.Key, x => x.Value.GetAggregateValue(cancellationToken));
@@ -114,6 +115,7 @@ public sealed class ProjectionExecutionPlanNode : ExecutionPlanNode
         var groupedRows = new List<GroupProjectionState>();
         var groups = new Dictionary<string, GroupProjectionState>(StringComparer.OrdinalIgnoreCase);
         var aggregateCalls = GetAggregateFunctionCalls();
+
         var groupByEntries = SourceSelect?.GroupBy?.Entries ?? [];
 
         while (await executionReader.ReadAsync(cancellationToken))
@@ -129,17 +131,13 @@ public sealed class ProjectionExecutionPlanNode : ExecutionPlanNode
 
             foreach (var aggregateCall in aggregateCalls)
             {
-                if (aggregateCall.Binding?.GetState<SqlFunction>() is not AggregateFunction aggregateFunction)
-                {
-                    continue;
-                }
 
-                if (!state.AggregateStates.TryGetValue(aggregateCall, out var priorState))
+                if (!state.AggregateStates.TryGetValue(aggregateCall.Expression, out var priorState))
                 {
-                    priorState = aggregateFunction.InitState();
-                    state.AggregateStates[aggregateCall] = priorState;
+                    priorState = aggregateCall.Function.InitState();
+                    state.AggregateStates[aggregateCall.Expression] = priorState;
                 }
-                state.AggregateStates[aggregateCall] = aggregateFunction.ProcessRow(aggregateCall, accessor, priorState);
+                state.AggregateStates[aggregateCall.Expression] = aggregateCall.Function.ProcessRow(aggregateCall.Expression, accessor, aggregateCall.Arguments, priorState);
             }
         }
 
@@ -163,7 +161,7 @@ public sealed class ProjectionExecutionPlanNode : ExecutionPlanNode
         var parts = new List<string>();
         foreach (var groupEntry in groupByEntries)
         {
-            var value = EvaluationHelpers.EvaluateExpression(groupEntry, row);
+            var value = ExpressionPlan.ExpressionPlanNode.Create(groupEntry).Execute(row);
             parts.Add(value is null ? "<null>" : $"{value.GetType().FullName}:{value}");
         }
 
@@ -188,17 +186,12 @@ public sealed class ProjectionExecutionPlanNode : ExecutionPlanNode
 
             foreach (var aggregateCall in aggregateCalls)
             {
-                if (aggregateCall.Binding?.GetState<SqlFunction>() is not AggregateFunction aggregateFunction)
+                if (!aggregateStates.TryGetValue(aggregateCall.Expression, out var state))
                 {
-                    continue;
+                    state = aggregateCall.Function.InitState();
+                    aggregateStates[aggregateCall.Expression] = state;
                 }
-
-                if (!aggregateStates.TryGetValue(aggregateCall, out var state))
-                {
-                    state = aggregateFunction.InitState();
-                    aggregateStates[aggregateCall] = state;
-                }
-                aggregateStates[aggregateCall] = aggregateFunction.ProcessRow(aggregateCall, accessor, state);
+                aggregateStates[aggregateCall.Expression] = aggregateCall.Function.ProcessRow(aggregateCall.Expression, accessor, aggregateCall.Arguments, state);
             }
         }
 
@@ -235,8 +228,9 @@ public sealed class ProjectionExecutionPlanNode : ExecutionPlanNode
     private object?[] ProjectRow(RowAccessor row, IReadOnlyDictionary<FunctionCallExpression, object?>? aggregateValues)
     {
         var current = new List<object?>();
-        foreach (var projection in _projections)
+        for (var i = 0; i < _projections.Count; i++)
         {
+            var projection = _projections[i];
             if (projection.Expression is StarIdentifierExpression star)
             {
                 var bindings = star.Bindings.Count == 0
@@ -256,7 +250,8 @@ public sealed class ProjectionExecutionPlanNode : ExecutionPlanNode
                 continue;
             }
 
-            current.Add(EvaluationHelpers.NormalizeValue(EvaluateExpression(projection.Expression, row, aggregateValues)));
+            var plan = _expressionPlans.Count > i ? _expressionPlans[i] : ExpressionPlan.ExpressionPlanNode.Create(projection.Expression);
+            current.Add(ExpressionPlan.ExpressionPlanNode.NormalizeValue(plan.Execute(row, aggregateValues)));
         }
 
         return current.ToArray();
@@ -309,30 +304,27 @@ public sealed class ProjectionExecutionPlanNode : ExecutionPlanNode
     private bool ContainsAggregateProjection()
         => _projections.Any(x => ContainsAggregateFunction(x.Expression));
 
-    private List<FunctionCallExpression> GetAggregateFunctionCalls()
+    private List<AggregateFunctionCallExpressionExecutionPlan> GetAggregateFunctionCalls()
     {
-        var aggregateFunctions = new List<FunctionCallExpression>();
-        foreach (var projection in _projections)
+        var aggregateFunctions = new List<AggregateFunctionCallExpressionExecutionPlan>();
+        foreach (var projection in _expressionPlans)
         {
-            CollectAggregateFunctions(projection.Expression, aggregateFunctions);
+            CollectAggregateFunctions(projection, aggregateFunctions);
         }
 
         return aggregateFunctions;
     }
 
-    private static void CollectAggregateFunctions(Expression expression, List<FunctionCallExpression> aggregateFunctions)
+    private static void CollectAggregateFunctions(ExpressionPlan.ExpressionPlanNode expressionPlan, List<AggregateFunctionCallExpressionExecutionPlan> aggregateFunctions)
     {
-        if (expression is FunctionCallExpression functionCall && functionCall.Binding?.GetState<SqlFunction>() is AggregateFunction)
+        if (expressionPlan is AggregateFunctionCallExpressionExecutionPlan aggregateFunction)
         {
-            aggregateFunctions.Add(functionCall);
+            aggregateFunctions.Add(aggregateFunction);
         }
 
-        foreach (var child in expression.GetChildren())
+        foreach (var child in expressionPlan.GetExpressions())
         {
-            if (child is Expression childExpression)
-            {
-                CollectAggregateFunctions(childExpression, aggregateFunctions);
-            }
+            CollectAggregateFunctions(child, aggregateFunctions);
         }
     }
 
@@ -354,8 +346,8 @@ public sealed class ProjectionExecutionPlanNode : ExecutionPlanNode
         return false;
     }
 
-    private static object? EvaluateExpression(Expression expression, RowAccessor row, IReadOnlyDictionary<FunctionCallExpression, object?>? aggregateValues)
-        => EvaluationHelpers.EvaluateExpression(expression, row, aggregateValues);
+    private static object? EvaluateExpression(ExpressionPlan.ExpressionPlanNode expressionPlan, RowAccessor row, IReadOnlyDictionary<FunctionCallExpression, object?>? aggregateValues)
+        => expressionPlan.Execute(row, aggregateValues);
 
     private static string GetFieldName(Expression expression)
         => expression switch
@@ -367,6 +359,6 @@ public sealed class ProjectionExecutionPlanNode : ExecutionPlanNode
         };
 
     private static object? GetValue(RowAccessor row, string? tableName, string columnName)
-        => EvaluationHelpers.NormalizeValue(EvaluationHelpers.GetValue(row, tableName, columnName));
+        => ExpressionPlan.ExpressionPlanNode.NormalizeValue(ExpressionPlan.ExpressionPlanNode.GetValue(row, tableName, columnName));
 
 }

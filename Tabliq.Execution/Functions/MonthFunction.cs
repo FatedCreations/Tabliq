@@ -1,4 +1,5 @@
-﻿using Tabliq.Sql.Ast;
+﻿using Tabliq.Execution.ExpressionPlan;
+using Tabliq.Sql.Ast;
 using Tabliq.Sql.Binding;
 
 namespace Tabliq.Execution.Functions;
@@ -10,9 +11,9 @@ public class MonthFunction : ValueFunction
     {
     }
 
-    public override object? Execute(FunctionCallExpression expression, RowAccessor accessor)
+    public override object? Execute(FunctionCallExpression expression, RowAccessor accessor, IEnumerable<ExpressionPlanNode> arguments)
     {
-        var inputValue = EvaluationHelpers.EvaluateExpression(expression.Arguments[0], accessor);
+        var inputValue = arguments.Single().Execute(accessor);
 
         if (inputValue is not DateTime dt)
         {

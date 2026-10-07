@@ -1,3 +1,5 @@
+using Tabliq.Execution.ExpressionPlan;
+
 namespace Tabliq.Execution;
 
 public abstract class ExecutionPlanNode
@@ -9,6 +11,8 @@ public abstract class ExecutionPlanNode
     public abstract Task<IExecutionReader> ExecuteAsync(IEnumerable<ExecuterParameter>? parameters = null, CancellationToken cancellationToken = default);
 
     public abstract ExecutionPlanNode? TryRewrite(ExecutionRewriteContext? context = null);
+
+    public abstract IEnumerable<ExpressionPlanNode> GetExpressions();
 }
 
 public class ExecutionPlan

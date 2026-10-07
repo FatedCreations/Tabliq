@@ -1,4 +1,5 @@
 using Tabliq.Execution.ExecutionReader;
+using Tabliq.Execution.ExpressionPlan;
 using Tabliq.Execution.Functions;
 using Tabliq.Execution.Policies;
 using Tabliq.Execution.Providers;
@@ -85,10 +86,14 @@ public class ExecutionEngine
 
         if (select.Where is not null)
         {
-            source = new FilterExecutionPlanNode(source, select.Where.Condition);
+            source = new FilterExecutionPlanNode(source, BuildConditionPlan(select.Where.Condition), select.Where.Condition);
         }
 
-        var projection = new ProjectionExecutionPlanNode(source, select.Projections, select);
+        var projection = new ProjectionExecutionPlanNode(
+            source,
+            select.Projections.Select(x => BuildExpressionPlan(x.Expression)).ToArray(),
+            select.Projections,
+            select);
         if (select.UnionStatements.Count == 0)
         {
             return projection;
@@ -105,6 +110,52 @@ public class ExecutionEngine
         }
 
         return new UnionExecutionPlanNode(operations);
+    }
+
+    private static ExpressionPlanNode BuildExpressionPlan(Expression expression)
+    {
+        if (expression is SelectExpression s)
+        {
+            throw new Exception("Unexpected SelectExpression");
+        }
+
+        return expression switch
+        {
+            LiteralExpression literal => new LiteralExpressionExecutionPlan(literal.Value),
+            IdentifierExpression identifier => new IdentifierExpressionExecutionPlan(identifier),
+            BracketedExpression bracketed => BuildExpressionPlan(bracketed.Expression),
+            InExpression inExpression => new SubValueInExpressionExecutionPlan(BuildExpressionPlan(inExpression.Expression), BuildExpressionPlan(inExpression.SubValue)),
+            AsExpression asExpression => new ConvertExpressionExecutionPlan(BuildExpressionPlan(asExpression.Expression), asExpression.DataType),
+            ValueFromExpression valueFromExpression => new ValuePartExpressionPlanNode(BuildExpressionPlan(valueFromExpression.Expression), valueFromExpression.Part),
+            BinaryOperatorExpression binary => new BinaryOperatorExpressionExecutionPlan(BuildExpressionPlan(binary.Left), binary.Operator, BuildExpressionPlan(binary.Right)),
+            UnaryOperatorExpression unary => new UnaryOperatorExpressionExecutionPlan(BuildExpressionPlan(unary.Expression), unary.Operator),
+            // CaseExpression caseExpression => new CaseExpressionExecutionPlan(caseExpression),
+            FunctionCallExpression functionCall => functionCall.Binding?.GetState<SqlFunction>() switch
+            {
+                AggregateFunction agg => new AggregateFunctionCallExpressionExecutionPlan(functionCall, agg, functionCall.Arguments.Select(BuildExpressionPlan)),
+                ValueFunction valueFunc => new ValueFunctionCallExpressionExecutionPlan(functionCall, valueFunc, functionCall.Arguments.Select(BuildExpressionPlan)),
+                _ => throw new NotSupportedException($"Unsupported function type for function '{functionCall.FunctionName}': {functionCall.Binding?.GetType().Name ?? "null"}")
+            },
+            _ => throw new NotSupportedException($"Unsupported expression type: {expression.GetType().Name}")
+        };
+    }
+
+    private static ConditionExecutionPlan BuildConditionPlan(Condition expression)
+    {
+        return expression switch
+        {
+            BinaryComparisonCondition comparison => new BinaryComparisonConditionExecutionPlan(BuildExpressionPlan(comparison.Left), comparison.Operator, BuildExpressionPlan(comparison.Right)),
+            LogicalCondition logical => new LogicalConditionExecutionPlan(BuildConditionPlan(logical.Left), logical.Operator, BuildConditionPlan(logical.Right)),
+            BracketedCondition bracketed => new BracketedConditionExecutionPlan(BuildConditionPlan(bracketed.Expression)),
+            UnaryCondition unary => new UnaryConditionExecutionPlan(BuildConditionPlan(unary.Right), unary.Operator),
+            IsNullCondition isNull => new IsNullConditionExecutionPlan(BuildExpressionPlan(isNull.Expression), isNull.IsNot),
+            LikeCondition like => new LikeConditionExecutionPlan(BuildExpressionPlan(like.Left), BuildExpressionPlan(like.Right), like.IsNot),
+            BetweenCondition between => new BetweenConditionExecutionPlan(BuildExpressionPlan(between.Left), BuildExpressionPlan(between.From), BuildExpressionPlan(between.To), between.IsNot),
+            InListCondition inList => new InListConditionExecutionPlan(BuildExpressionPlan(inList.Left), inList.Items.Select(BuildExpressionPlan), inList.IsNot),
+            InSelectCondition inSelect => new InSelectConditionExecutionPlan(BuildPlan(inSelect.Expression)),
+            ExistsCondition exists => new ExistsConditionExecutionPlan(BuildPlan(exists.SelectExpression)),
+            _ => throw new NotSupportedException($"Unsupported condition type: {expression.GetType().Name}")
+        };
     }
 
     private static Dictionary<string, HashSet<string>> CollectReferencedColumnsByAlias(SyntaxNode node)
@@ -153,13 +204,16 @@ public class ExecutionEngine
         foreach (var tableReference in fromClause.TableReferences)
         {
             var next = BuildTableReference(tableReference, referencedColumns);
-            current = current is null ? next : new JoinExecutionPlanNode(current, next, JoinType.Cross, null, JoinSide.Unspecified);
+            current = current is null ? next : new JoinExecutionPlanNode(current, next, JoinType.Cross, null, null, JoinSide.Unspecified);
         }
 
         foreach (var join in fromClause.Joins)
         {
             var next = BuildTableReference(join.TableReference, referencedColumns);
-            current = current is null ? next : new JoinExecutionPlanNode(current, next, join.JoinType, join.OnCondition, join.JoinSide);
+            current = current is null ? next : new JoinExecutionPlanNode(current, next, join.JoinType,
+                join.OnCondition is null ? null : BuildConditionPlan(join.OnCondition),
+                join.OnCondition,
+                join.JoinSide);
         }
 
         return current ?? new EmptyExecutionPlanNode();

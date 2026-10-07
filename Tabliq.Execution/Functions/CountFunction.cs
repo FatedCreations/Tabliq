@@ -1,4 +1,5 @@
-﻿using Tabliq.Sql.Ast;
+﻿using Tabliq.Execution.ExpressionPlan;
+using Tabliq.Sql.Ast;
 
 namespace Tabliq.Execution.Functions;
 
@@ -9,7 +10,7 @@ public class CountFunction : AggregateFunction<CountFunction.CountFunctionState>
     {
     }
 
-    protected override CountFunctionState ProcessRow(FunctionCallExpression expression, RowAccessor accessor, CountFunctionState state)
+    protected override CountFunctionState ProcessRow(FunctionCallExpression expression, RowAccessor accessor, IEnumerable<ExpressionPlanNode> arguments, CountFunctionState state)
     {
         state.Increment();
         return state;

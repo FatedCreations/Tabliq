@@ -1,4 +1,5 @@
-﻿using Tabliq.Sql.Ast;
+﻿using Tabliq.Execution.ExpressionPlan;
+using Tabliq.Sql.Ast;
 
 namespace Tabliq.Execution.Functions;
 
@@ -9,10 +10,10 @@ public class LeftFunction : ValueFunction
     {
     }
 
-    public override object? Execute(FunctionCallExpression expression, RowAccessor accessor)
+    public override object? Execute(FunctionCallExpression expression, RowAccessor accessor, IEnumerable<ExpressionPlanNode> arguments)
     {
-        var stringValue = EvaluationHelpers.EvaluateExpression(expression.Arguments[0], accessor)?.ToString();
-        var countValue = Convert.ToInt32(EvaluationHelpers.EvaluateExpression(expression.Arguments[1], accessor));
+        var stringValue = arguments.First().Execute(accessor)?.ToString();
+        var countValue = Convert.ToInt32(arguments.Last().Execute(accessor));
 
         if (stringValue is not string)
         {

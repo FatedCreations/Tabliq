@@ -1,4 +1,5 @@
 ﻿using Tabliq.Execution.ExecutionReader;
+using Tabliq.Execution.ExpressionPlan;
 using Tabliq.Sql.Binding;
 
 namespace Tabliq.Execution.Providers;
@@ -105,6 +106,7 @@ public class ObjectProvider<T> : IExecutionProvider
 
         public override IExecutionProvider? Provider => _provider;
         public override IEnumerable<ExecutionPlanNode> GetInputs() => [];
+        public override IEnumerable<ExpressionPlanNode> GetExpressions() => [];
 
         public override Task<IExecutionReader> ExecuteAsync(IEnumerable<ExecuterParameter>? parameters = null, CancellationToken cancellationToken = default)
         {

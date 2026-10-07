@@ -1,4 +1,5 @@
 using Tabliq.Execution.ExecutionReader;
+using Tabliq.Execution.ExpressionPlan;
 
 namespace Tabliq.Execution;
 
@@ -9,6 +10,7 @@ public sealed class EmptyExecutionPlanNode : ExecutionPlanNode
 
     public override IExecutionProvider? Provider => null;
     public override IEnumerable<ExecutionPlanNode> GetInputs() => [];
+    public override IEnumerable<ExpressionPlanNode> GetExpressions() => [];
 
     public override ExecutionPlanNode? TryRewrite(ExecutionRewriteContext? context = null)
         => null;

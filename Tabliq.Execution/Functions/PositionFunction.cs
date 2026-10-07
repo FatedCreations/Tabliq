@@ -1,3 +1,4 @@
+using Tabliq.Execution.ExpressionPlan;
 using Tabliq.Sql.Ast;
 
 namespace Tabliq.Execution.Functions;
@@ -9,15 +10,17 @@ public class PositionFunction : ValueFunction
     {
     }
 
-    public override object? Execute(FunctionCallExpression expression, RowAccessor accessor)
+    public override object? Execute(FunctionCallExpression expression, RowAccessor accessor, IEnumerable<ExpressionPlanNode> arguments)
     {
-        if (expression.Arguments.Count != 1 || expression.Arguments[0] is not InExpression inExpression)
+
+        var inExpression = arguments.FirstOrDefault();
+        if (inExpression is not SubValueInExpressionExecutionPlan subValueExpression)
         {
             throw new ArgumentException("POSITION requires a single IN expression.", nameof(expression));
         }
 
-        var searchFor = EvaluationHelpers.EvaluateExpression(inExpression.SubValue, accessor)?.ToString();
-        var searchIn = EvaluationHelpers.EvaluateExpression(inExpression.Expression, accessor)?.ToString();
+        var searchFor = subValueExpression.SubValue.Execute(accessor)?.ToString();
+        var searchIn = subValueExpression.Value.Execute(accessor)?.ToString();
 
         if (searchFor is null || searchIn is null)
         {

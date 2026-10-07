@@ -4,14 +4,15 @@ namespace Tabliq.Sql.Ast;
 
 public class UnaryCondition : Condition
 {
-    public UnaryCondition(UnaryCompararisonOperator @operator, Expression right)
+    public UnaryCondition(UnaryCompararisonOperator @operator, Condition right)
     {
         Operator = @operator;
         Right = right;
     }
 
     public UnaryCompararisonOperator Operator { get; }
-    public Expression Right { get; }
+
+    public Condition Right { get; }
 
     public override IEnumerable<SyntaxNode> GetChildren()
     {

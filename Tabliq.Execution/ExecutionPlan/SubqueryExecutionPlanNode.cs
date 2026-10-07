@@ -1,4 +1,5 @@
 using Tabliq.Execution.ExecutionReader;
+using Tabliq.Execution.ExpressionPlan;
 using Tabliq.Sql.Ast;
 
 namespace Tabliq.Execution;
@@ -32,6 +33,7 @@ public sealed class SubqueryExecutionPlanNode : ExecutionPlanNode
 
     public override IExecutionProvider? Provider => _inner.Provider;
     public override IEnumerable<ExecutionPlanNode> GetInputs() => [_inner];
+    public override IEnumerable<ExpressionPlanNode> GetExpressions() => [.. _inner.GetExpressions()];
 
     public override ExecutionPlanNode? TryRewrite(ExecutionRewriteContext? context = null)
     {

@@ -136,7 +136,7 @@ public sealed partial class Parser
                 continue;
             }
 
-            if (IsMatch([SyntaxKind.NotKeyword, SyntaxKind.LikeKeyword, SyntaxKind.StringToken]) || IsMatch([SyntaxKind.LikeKeyword, SyntaxKind.StringToken]))
+            if (IsMatch([SyntaxKind.NotKeyword, SyntaxKind.LikeKeyword]) || IsMatch([SyntaxKind.LikeKeyword]))
             {
                 var isNot = TryMatchToken(SyntaxKind.NotKeyword);
                 MatchToken(SyntaxKind.LikeKeyword);//like

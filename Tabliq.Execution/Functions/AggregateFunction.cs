@@ -1,4 +1,5 @@
-﻿using Tabliq.Sql.Ast;
+﻿using Tabliq.Execution.ExpressionPlan;
+using Tabliq.Sql.Ast;
 
 namespace Tabliq.Execution.Functions;
 
@@ -14,7 +15,7 @@ public abstract class AggregateFunction : SqlFunction
 
     public abstract AggregateFunctionState InitState();
 
-    public abstract AggregateFunctionState ProcessRow(FunctionCallExpression expression, RowAccessor accessor, AggregateFunctionState state);
+    public abstract AggregateFunctionState ProcessRow(FunctionCallExpression expression, RowAccessor accessor, IEnumerable<ExpressionPlanNode> arguments, AggregateFunctionState state);
 }
 
 public abstract class AggregateFunction<TState> : AggregateFunction
@@ -31,10 +32,10 @@ public abstract class AggregateFunction<TState> : AggregateFunction
     public override AggregateFunctionState InitState()
         => new TState();
 
-    public override AggregateFunctionState ProcessRow(FunctionCallExpression expression, RowAccessor accessor, AggregateFunctionState state)
-        => ProcessRow(expression, accessor, (TState)state);
+    public override AggregateFunctionState ProcessRow(FunctionCallExpression expression, RowAccessor accessor, IEnumerable<ExpressionPlanNode> arguments, AggregateFunctionState state)
+        => ProcessRow(expression, accessor, arguments, (TState)state);
 
-    protected abstract TState ProcessRow(FunctionCallExpression expression, RowAccessor accessor, TState state);
+    protected abstract TState ProcessRow(FunctionCallExpression expression, RowAccessor accessor, IEnumerable<ExpressionPlanNode> arguments, TState state);
 }
 
 
