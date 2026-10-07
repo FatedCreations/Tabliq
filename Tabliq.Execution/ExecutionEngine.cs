@@ -1,5 +1,6 @@
 using Tabliq.Execution.ExecutionReader;
 using Tabliq.Execution.Functions;
+using Tabliq.Execution.Policies;
 using Tabliq.Execution.Providers;
 using Tabliq.Sql.Ast;
 using Tabliq.Sql.Binding;
@@ -11,6 +12,8 @@ namespace Tabliq.Execution;
 
 public class ExecutionEngine
 {
+    public List<IExecutionPolicy> Policies { get; set; } = [];
+
     private readonly IEnumerable<IExecutionProvider> _providers;
     private readonly IEnumerable<SqlFunction> _functions;
 
@@ -47,15 +50,32 @@ public class ExecutionEngine
             ?? throw new NotSupportedException("Execution engine currently supports SELECT statements only.");
 
         var rewriteContext = new ExecutionRewriteContext();
-        var plan = BuildPlan(statement.SelectQuery);
+        var node = BuildPlan(statement.SelectQuery);
         if (statement.CommonTableExpressions.Any())
         {
-            plan = new CteExecutionPlanNode(plan, statement.CommonTableExpressions);
+            node = new CteExecutionPlanNode(node, statement.CommonTableExpressions);
         }
 
-        plan = plan.TryRewrite(rewriteContext) ?? plan;
+        node = node.TryRewrite(rewriteContext) ?? node;
 
-        return new ExecutionPlan(plan, rewriteContext.Diagnostics);
+        var plan = new ExecutionPlan(node, rewriteContext.Diagnostics);
+
+        IEnumerable<PolicyValidationError> accumulatedErrors = Enumerable.Empty<PolicyValidationError>();
+        foreach(var p in Policies)
+        {
+            if(!p.Validate(plan, out var errors))
+            {
+                accumulatedErrors = accumulatedErrors.Concat(errors);
+                // Handle validation errors (e.g., throw an exception, log, etc.)
+            }
+        }
+
+        if (accumulatedErrors.Any())
+        {
+            throw new PolicyValidationException(accumulatedErrors);
+        }
+
+        return plan;
     }
 
 
@@ -170,33 +190,5 @@ public class ExecutionEngine
         }
 
         return null;
-    }
-
-    private sealed class CteExecutionPlanNode : ExecutionPlanNode
-    {
-        private readonly ExecutionPlanNode _inner;
-        private readonly IReadOnlyList<CommonTableExpression> _commonTableExpressions;
-
-        public CteExecutionPlanNode(ExecutionPlanNode inner, IEnumerable<CommonTableExpression> commonTableExpressions)
-        {
-            _inner = inner;
-            _commonTableExpressions = commonTableExpressions.ToList();
-        }
-
-        public override IExecutionProvider? Provider => _inner.Provider;
-
-        public override ExecutionPlanNode? TryRewrite(ExecutionRewriteContext? context = null)
-        {
-            var rewritten = _inner.TryRewrite(context) ?? _inner;
-            if (rewritten is RemoteSqlProviderBase.RemoteSqProviderSqlExecutionPlanNode remote && remote.Provider is RemoteSqlProviderBase provider)
-            {
-                return new RemoteSqlProviderBase.RemoteSqProviderSqlExecutionPlanNode(provider, new SelectStatement(_commonTableExpressions, remote.Sql.SelectQuery));
-            }
-
-            return rewritten;
-        }
-
-        public override Task<IExecutionReader> ExecuteAsync(IEnumerable<ExecuterParameter>? parameters = null, CancellationToken cancellationToken = default)
-            => _inner.ExecuteAsync(parameters, cancellationToken);
     }
 }

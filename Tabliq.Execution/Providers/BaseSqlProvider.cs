@@ -355,5 +355,7 @@ public abstract class RemoteSqlProviderBase : IExecutionProvider
         }
 
         public override ExecutionPlanNode? TryRewrite(ExecutionRewriteContext? context = null) => null;
+
+        public override IEnumerable<ExecutionPlanNode> GetInputs() => [];
     }
 }
