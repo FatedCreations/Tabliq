@@ -1,12 +1,14 @@
-using Xunit;
-using Tabliq.Sql.Core;
-using Tabliq.Sql.Ast;
-using Tabliq.Sql.Parsing;
-
 namespace Tabliq.Tests.Sql;
 
 public class TestCases
 {
+    [Fact]
+    public void MultiComparisonFailsToParse()
+        => AssertSql
+            .WithErrors(
+                """
+                SELECT * FROM BE WHERE 1 < 2 < 3;
+                """);
 
     [Fact]
     public void UnknownFunctionFailsToParse()

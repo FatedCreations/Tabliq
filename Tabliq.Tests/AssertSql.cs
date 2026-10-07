@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Tabliq.RemoteExecuter;
+using Tabliq.Sql;
 using Tabliq.Sql.Ast;
 using Tabliq.Sql.Binding;
 using Tabliq.Sql.Core;
@@ -10,6 +11,8 @@ using Tabliq.Tests;
 
 public class AssertSql
 {
+    internal static Asserter WithSettings(Action<TabliqSettings> builder)
+        => new Asserter().WithSettings(builder);
     public static Asserter WithSchema(VirtualSchema provider)
         => new Asserter().WithSchema(provider);
     public static Asserter WithSchema(ISchemaProvider provider)
@@ -41,6 +44,8 @@ public class AssertSql
 
     public class Asserter : IServiceProvider
     {
+        public TabliqSettings TabliqSettings { get; private set; } = new TabliqSettings();
+
         private readonly ISchemaProvider _databaseSchema;
         private IEnumerable<SqlRewiter> _rewriters;
 
@@ -51,6 +56,13 @@ public class AssertSql
             _rewriters = rewriters ?? [];
             _databaseSchema = schema ?? TestSchema.DatabaseSchema;
         }
+
+        internal Asserter WithSettings(Action<TabliqSettings> builder)
+        {
+            builder(this.TabliqSettings);
+            return this;
+        }
+
         internal Asserter WithSchema(Action<SchemaBuilder> builder)
         {
             var newBuilder = new SchemaBuilder();
@@ -119,17 +131,21 @@ public class AssertSql
             {
                 Task.Run(() =>
                 {
-                    var tree = Parser.Parse(underTest.Replace("\r\n", "\n"));
-                    var boundTree = Binder.Bind(tree, _databaseSchema);
-
-                    foreach (var rewiter in _rewriters)
+                    var tree = Parser.Parse(underTest.Replace("\r\n", "\n"), TabliqSettings);
+                    if (tree.Script is not null)
                     {
-                        boundTree = rewiter.Execute(boundTree);
+
+                        tree = Binder.Bind(tree, _databaseSchema);
+
+                        foreach (var rewiter in _rewriters)
+                        {
+                            tree = rewiter.Execute(tree);
+                        }
                     }
 
-                    Assert.NotEmpty(boundTree.Diagnostics);
+                    Assert.NotEmpty(tree.Diagnostics);
 
-                    var messages = boundTree.Diagnostics.Select(x => $"{x.Id}: [{x.Start}:{x.Length}] : {x.Message}");
+                    var messages = tree.Diagnostics.Select(x => $"{x.Id}: [{x.Start}:{x.Length}] : {x.Message}").ToArray();
 
                     Console.WriteLine("--- ASSERTSQL DIAGNOSTIC START ---");
                     Console.WriteLine("EXPECTED (messages):");
@@ -140,8 +156,10 @@ public class AssertSql
                     Console.WriteLine(string.Empty);
                     Console.WriteLine(string.Join("\n", messages));
                     Console.WriteLine("--- ASSERTSQL DIAGNOSTIC END ---");
-
-                    Assert.Equal(errors, messages);
+                    if (errors.Any())
+                    {
+                        Assert.Equal(errors, messages);
+                    }
 
                 }, new CancellationTokenSource(100).Token).GetAwaiter().GetResult();
             }
