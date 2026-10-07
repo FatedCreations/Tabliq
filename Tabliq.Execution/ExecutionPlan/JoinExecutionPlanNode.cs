@@ -28,6 +28,8 @@ public sealed class JoinExecutionPlanNode : ExecutionPlanNode
     public JoinSide JoinSide => _joinSide;
     public override IExecutionProvider? Provider => null;
 
+    public override IEnumerable<ExecutionPlanNode> GetInputs() => [_left, _right];
+
     public override ExecutionPlanNode? TryRewrite(ExecutionRewriteContext? context = null)
     {
         ExecutionPlanNode currentNode = this;

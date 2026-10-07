@@ -19,6 +19,8 @@ public sealed class FilterExecutionPlanNode : ExecutionPlanNode
 
     public override IExecutionProvider? Provider => null;
 
+    public override IEnumerable<ExecutionPlanNode> GetInputs() => [_input];
+
     public override ExecutionPlanNode? TryRewrite(ExecutionRewriteContext? context = null)
     {
         ExecutionPlanNode currentNode = this;

@@ -18,6 +18,7 @@ public sealed class SubqueryExecutionPlanNode : ExecutionPlanNode
     public ExecutionPlanNode Inner => _inner;
 
     public override IExecutionProvider? Provider => _inner.Provider;
+    public override IEnumerable<ExecutionPlanNode> GetInputs() => [_inner];
 
     public override ExecutionPlanNode? TryRewrite(ExecutionRewriteContext? context = null)
     {

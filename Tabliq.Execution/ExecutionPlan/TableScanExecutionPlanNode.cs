@@ -17,6 +17,8 @@ public sealed class TableScanExecutionPlanNode : ExecutionPlanNode
         ReferencedColumns = referencedColumns;
     }
 
+    public override IEnumerable<ExecutionPlanNode> GetInputs() => Enumerable.Empty<ExecutionPlanNode>();
+
     public string TableName => _table.TableName;
 
     public string? SchemaName => _table.SchemaName;

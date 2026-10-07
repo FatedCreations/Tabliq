@@ -1,5 +1,6 @@
 ﻿using Tabliq.Execution;
 using Tabliq.Execution.ExecutionReader;
+using Tabliq.Execution.Policies;
 using Tabliq.Execution.SqlServer;
 using Tabliq.Sql.Ast;
 using Tabliq.Sql.Core;
@@ -112,7 +113,12 @@ public class AssertExecuterSql
                 {
                     var fakeDataExecuter = new FakeDataExecuter();
                     var provider = new SqlServerProvider(_databaseSchema, fakeDataExecuter);
-                    var ex = new ExecutionEngine([provider]);
+                    var ex = new ExecutionEngine([provider])
+                    {
+                        Policies = [
+                            new SingleProviderPolicy(provider)
+                        ]
+                    };
 
                     var plan = ex.BuildPlan(underTest.Replace("\r\n", "\n"), _parameters);
 
