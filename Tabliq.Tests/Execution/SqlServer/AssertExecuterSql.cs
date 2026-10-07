@@ -1,0 +1,208 @@
+﻿using Tabliq.Execution;
+using Tabliq.Execution.ExecutionReader;
+using Tabliq.Execution.Policies;
+using Tabliq.Execution.SqlServer;
+using Tabliq.Sql.Ast;
+using Tabliq.Sql.Core;
+using Tabliq.Sql.Printer;
+using static Tabliq.Execution.Providers.RemoteSqlProviderBase;
+
+namespace Tabliq.Tests.Execution.SqlServer;
+
+public class AssertExecuterSql
+{
+    public static Asserter WithSchema(VirtualSchema provider)
+        => new Asserter(provider);
+    public static Asserter WithParameters(IEnumerable<string> parameters)
+        => new Asserter().WithParameters(parameters.Select(x => new ExecuterParameter(x, null)));
+    public static Asserter WithParameters(params string[] parameters)
+        => new Asserter().WithParameters(parameters.Select(x => new ExecuterParameter(x, null)));
+
+
+    public static void Equal(string underTest, string expected)
+        => new Asserter().Equal(underTest, expected);
+    public static void Errors(string underTest, params string[] expectedDiagnostics)
+        => new Asserter().Errors(underTest, expectedDiagnostics);
+
+    //public static void WithErrors(string underTest, List<string>? errors = null)
+    //    => new Asserter().WithErrors(underTest, errors ?? []);
+
+    public class Asserter
+    {
+        private readonly VirtualSchema _databaseSchema;
+        private IEnumerable<ExecuterParameter> _parameters;
+
+        public Asserter(VirtualSchema? schema = null, IEnumerable<ExecuterParameter>? parameters = null)
+        {
+            _parameters = parameters ?? [];
+            _databaseSchema = schema ?? TestConfigSchema.SchemaFriendlyNamesSchema;
+        }
+
+        internal Asserter WithSchema(VirtualSchema provider)
+            => new Asserter(provider);
+
+        internal Asserter WithParameters(params ExecuterParameter[] parameters)
+            => WithParameters((IEnumerable<ExecuterParameter>)parameters);
+
+        internal Asserter WithParameters(IEnumerable<ExecuterParameter> parameters)
+        {
+            return new Asserter(_databaseSchema, parameters);
+        }
+
+        internal Asserter WithParameters(params string[] parameters)
+            => WithParameters((IEnumerable<string>)parameters);
+
+        internal Asserter WithParameters(IEnumerable<string> parameters)
+            => WithParameters(parameters.Select(x => new ExecuterParameter(x, null)));
+
+        //public void WithErrors(string underTest, List<string> errors)
+        //{
+        //    try
+        //    {
+        //        Task.Run(() =>
+        //        {
+        //            var tree = Parser.Parse(underTest);
+        //            var boundTree = Binder.Bind(tree, _databaseSchema);
+
+        //            foreach (var rewiter in _rewriters)
+        //            {
+        //                boundTree = rewiter.Rewrite(boundTree);
+        //            }
+
+        //            Assert.NotEmpty(boundTree.Diagnostics);
+
+        //            Assert.All(errors, expectedError =>
+        //            {
+        //                Assert.Contains(boundTree.Diagnostics, d => d.Message == expectedError);
+        //            });
+        //        }, new CancellationTokenSource(100).Token).GetAwaiter().GetResult();
+        //    }
+        //    catch (TaskCanceledException)
+        //    {
+        //        Assert.Fail("The test timed out. This may indicate an infinite loop or a long-running operation in the parser or binder.");
+        //    }
+        //}
+
+        private IEnumerable<SyntaxNode> GetAllNodes(SyntaxNode syntaxNode)
+        {
+            yield return syntaxNode;
+            foreach (var child in syntaxNode.GetChildren())
+            {
+                foreach (var descendant in GetAllNodes(child))
+                {
+                    yield return descendant;
+                }
+            }
+        }
+
+        private class FakeDataExecuter : ISqlServerDatabaseExecuter
+        {
+            public List<(string Sql, IDictionary<string, object?>? Parameters, CancellationToken cancellationToken)> ExecutedCommands { get; } = new();
+
+            Task<IExecutionReader> ISqlServerDatabaseExecuter.ExecuteAsync(string sqlScript, IDictionary<string, object?>? paramaters, CancellationToken cancellationToken)
+            {
+                ExecutedCommands.Add((sqlScript, paramaters, cancellationToken));
+                return Task.FromResult<IExecutionReader>(new EmptyExecutionReader());
+            }
+        }
+        public void Equal(string underTest, string expected)
+        {
+            try
+            {
+                Task.Run(() =>
+                {
+                    var fakeDataExecuter = new FakeDataExecuter();
+                    var provider = new SqlServerProvider(_databaseSchema, fakeDataExecuter);
+                    var ex = new ExecutionEngine([provider])
+                    {
+                        Policies = [
+                            new SingleProviderPolicy(provider)
+                        ]
+                    };
+
+                    var plan = ex.BuildPlan(underTest.Replace("\r\n", "\n"), _parameters);
+
+
+                    Console.WriteLine("--- ASSERTSQL DIAGNOSTIC START ---");
+                    if (plan.Diagnostics.Any(x=>x.Level > ExecutionRewriteDiagnosticLevel.Info))
+                    {
+                        Console.WriteLine("Rewrite Diagnostics (raw):");
+                        foreach (var diag in plan.Diagnostics.Where(x => x.Level > ExecutionRewriteDiagnosticLevel.Info))
+                        {
+                            Console.WriteLine($"- {diag.Id}: {diag.Message}");
+                        }
+                        Console.WriteLine("-----");
+                    }
+
+                    if(plan.RootNode is not RemoteSqProviderSqlExecutionPlanNode)
+                    {
+                        Assert.NotEmpty(plan.Diagnostics.Where(x => x.Level > ExecutionRewriteDiagnosticLevel.Info));
+                    }
+
+                    var sqlPlan = Assert.IsType<RemoteSqProviderSqlExecutionPlanNode>(plan.RootNode);
+
+                    _ = sqlPlan.ExecuteAsync(_parameters, default).GetAwaiter().GetResult();
+
+                    var cmdSql = Assert.Single(fakeDataExecuter.ExecutedCommands).Sql;
+
+                    // Normalize line endings to avoid platform-specific differences
+                    var canon = cmdSql.Replace("\r\n", "\n").Trim();
+                    expected = expected.Replace("\r\n", "\n").Trim();
+
+                    // Do not parse the expected SQL -- tests assert the raw expected formatting
+                    Console.WriteLine("EXPECTED (raw):");
+                    Console.WriteLine(string.Empty);
+                    Console.WriteLine(expected);
+                    Console.WriteLine("-----");
+                    Console.WriteLine("REWITTEN:");
+                    Console.WriteLine(string.Empty);
+                    Console.WriteLine(canon);
+                    Console.WriteLine("--- ASSERTSQL DIAGNOSTIC END ---");
+
+                    Assert.Equal(expected, canon);
+
+                }, new CancellationTokenSource(100).Token).GetAwaiter().GetResult();
+            }
+            catch (TaskCanceledException)
+            {
+                Assert.Fail("The test timed out. This may indicate an infinite loop or a long-running operation in the parser or binder.");
+            }
+        }
+        public void Errors(string underTest, params string[] expectedDiagnostics)
+        {
+            var ex = Assert.Throws<CompilationDiagnosticsException>(() =>
+           {
+               try
+               {
+                   Task.Run(() =>
+                   {
+                       var fakeDataExecuter = new FakeDataExecuter();
+                       var provider = new SqlServerProvider(_databaseSchema, fakeDataExecuter);
+                       var ex = new ExecutionEngine([provider]);
+
+                       _ = ex.ExecuteAsync(underTest.Replace("\r\n", "\n"), _parameters, default).GetAwaiter().GetResult();
+
+                   }, new CancellationTokenSource(100).Token).GetAwaiter().GetResult();
+               }
+               catch (TaskCanceledException)
+               {
+                   Assert.Fail("The test timed out. This may indicate an infinite loop or a long-running operation in the parser or binder.");
+               }
+           });
+
+            var messages = ex.Diagnostics.Select(x => $"{x.Id}: [{x.Start}:{x.Length}] : {x.Message}");
+
+            Console.WriteLine("--- ASSERTSQL DIAGNOSTIC START ---");
+            Console.WriteLine("EXPECTED (messages):");
+            Console.WriteLine(string.Empty);
+            Console.WriteLine(string.Join("\n", expectedDiagnostics));
+            Console.WriteLine("-----");
+            Console.WriteLine("ACTUAL:");
+            Console.WriteLine(string.Empty);
+            Console.WriteLine(string.Join("\n", messages));
+            Console.WriteLine("--- ASSERTSQL DIAGNOSTIC END ---");
+
+            Assert.Equal(expectedDiagnostics, messages);
+        }
+    }
+}

@@ -1,0 +1,1969 @@
+[
+    {
+        "Name": "Best Practice Rules",
+        "Description": "",
+        "RemoteTableSql": "[landscapeQuery_strategy_A].[BE]",
+        "Columns": [
+            {
+                "RemoteColumnSql": "BEId",
+                "Name": "_id",
+                "DataType": "bigint",
+                "IsNullable": false,
+                "ExcludeFromExpansion": true
+            },
+            {
+                "RemoteColumnSql": "BE_BPR",
+                "Name": "BP Rule ID",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "BE_CAV",
+                "Name": "Caveat",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "BE_COR",
+                "Name": "Corrective Action",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "BE_CRE",
+                "Name": "Created Date",
+                "DataType": "datetime2(7)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "BE_DES",
+                "Name": "Description",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "BE_OST",
+                "Name": "OS Type",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "BE_PRI",
+                "Name": "Primary Technology",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "BE_REC",
+                "Name": "Recommendation",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "BE_RIS",
+                "Name": "Risk",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "BE_RUL",
+                "Name": "Rule Title",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "BE_SEC",
+                "Name": "Secondary Technology",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            }
+        ]
+    },
+    {
+        "Name": "Contract List",
+        "Description": "",
+        "RemoteTableSql": "[landscapeQuery_strategy_A].[CO]",
+        "Columns": [
+            {
+                "RemoteColumnSql": "COId",
+                "Name": "_id",
+                "DataType": "bigint",
+                "IsNullable": false,
+                "ExcludeFromExpansion": true
+            },
+            {
+                "RemoteColumnSql": "CO_ONT",
+                "Name": "Contract Number",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            }
+        ]
+    },
+    {
+        "Name": "Defects",
+        "Description": "",
+        "RemoteTableSql": "[landscapeQuery_strategy_A].[DE]",
+        "Columns": [
+            {
+                "RemoteColumnSql": "DEId",
+                "Name": "_id",
+                "DataType": "bigint",
+                "IsNullable": false,
+                "ExcludeFromExpansion": true
+            },
+            {
+                "RemoteColumnSql": "DE_CTF",
+                "Name": "Defect Fixed Version",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "DE_DEF",
+                "Name": "Defect Number",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "DE_ECT",
+                "Name": "Defect Reported Version",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "DE_EFE",
+                "Name": "Defect Title",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "DE_FEC",
+                "Name": "Defect Submitted On",
+                "DataType": "datetime2(7)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            }
+        ]
+    },
+    {
+        "Name": "Technologies",
+        "Description": "",
+        "RemoteTableSql": "[landscapeQuery_strategy_A].[EC]",
+        "Columns": [
+            {
+                "RemoteColumnSql": "ECId",
+                "Name": "_id",
+                "DataType": "bigint",
+                "IsNullable": false,
+                "ExcludeFromExpansion": true
+            },
+            {
+                "RemoteColumnSql": "EC_DIS",
+                "Name": "Disruption Index",
+                "DataType": "float",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "EC_TEC",
+                "Name": "Technology Name",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            }
+        ]
+    },
+    {
+        "Name": "Best Practice Exceptions",
+        "Description": "",
+        "RemoteTableSql": "[landscapeQuery_strategy_A].[ES]",
+        "Columns": [
+            {
+                "RemoteColumnSql": "ESId",
+                "Name": "_id",
+                "DataType": "bigint",
+                "IsNullable": false,
+                "ExcludeFromExpansion": true
+            },
+            {
+                "RemoteColumnSql": "ES_BPR",
+                "Name": "bpRuleID",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "ES_DEV",
+                "Name": "Device ID",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "ES_UNI",
+                "Name": "Unique ID",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            }
+        ]
+    },
+    {
+        "Name": "Device History",
+        "Description": "",
+        "RemoteTableSql": "[landscapeQuery_strategy_A].[EV]",
+        "Columns": [
+            {
+                "RemoteColumnSql": "EVId",
+                "Name": "_id",
+                "DataType": "bigint",
+                "IsNullable": false,
+                "ExcludeFromExpansion": true
+            },
+            {
+                "RemoteColumnSql": "EV_EOX",
+                "Name": "EOX Milestone",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "EV_FRO",
+                "Name": "Historic Month",
+                "DataType": "datetime2(7)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "EV_OPE",
+                "Name": "Operational Status",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "EV_PSI",
+                "Name": "PSIRT Count",
+                "DataType": "int",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "EV_SHI",
+                "Name": "Shipped Date",
+                "DataType": "datetime2(7)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "EV_SRS",
+                "Name": "SRs as % of IB",
+                "DataType": "float",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "EV_SWC",
+                "Name": "SW Conformance",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "EV_TOT",
+                "Name": "Total SRs on active Devices",
+                "DataType": "int",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "EV_UID",
+                "Name": "Unique Key",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            }
+        ]
+    },
+    {
+        "Name": "Business Unit",
+        "Description": "",
+        "RemoteTableSql": "[landscapeQuery_strategy_A].[JP]",
+        "Columns": [
+            {
+                "RemoteColumnSql": "JPId",
+                "Name": "_id",
+                "DataType": "bigint",
+                "IsNullable": false,
+                "ExcludeFromExpansion": true
+            },
+            {
+                "RemoteColumnSql": "JP_DIS",
+                "Name": "Disruption Index",
+                "DataType": "float",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "JP_SER",
+                "Name": "Unit Name",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            }
+        ]
+    },
+    {
+        "Name": "Shipments \u0026 Returns",
+        "Description": "",
+        "RemoteTableSql": "[landscapeQuery_strategy_A].[MA]",
+        "Columns": [
+            {
+                "RemoteColumnSql": "MAId",
+                "Name": "_id",
+                "DataType": "bigint",
+                "IsNullable": false,
+                "ExcludeFromExpansion": true
+            },
+            {
+                "RemoteColumnSql": "MA_BOO",
+                "Name": "Boomerang Line Flag",
+                "DataType": "int",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "MA_HIP",
+                "Name": "Ship-To Contact Name",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "MA_INE",
+                "Name": "Line ID",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "MA_LAB",
+                "Name": "Labor RMA",
+                "DataType": "bit",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "MA_OTA",
+                "Name": "Total Shipped \u002B Received",
+                "DataType": "float",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "MA_PRO",
+                "Name": "Product ID",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "MA_REC",
+                "Name": "Received Quantity",
+                "DataType": "int",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "MA_RET",
+                "Name": "Returned RMA",
+                "DataType": "bit",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "MA_RMA",
+                "Name": "RMA Line Status",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "MA_SER",
+                "Name": "Serial Number",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "MA_SHI",
+                "Name": "Shipped Quantity",
+                "DataType": "int",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            }
+        ]
+    },
+    {
+        "Name": "Initiatives*",
+        "Description": "",
+        "RemoteTableSql": "[landscapeQuery_strategy_A].[NE]",
+        "Columns": [
+            {
+                "RemoteColumnSql": "NEId",
+                "Name": "_id",
+                "DataType": "bigint",
+                "IsNullable": false,
+                "ExcludeFromExpansion": true
+            },
+            {
+                "RemoteColumnSql": "NE_INI",
+                "Name": "Initiative ID",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            }
+        ]
+    },
+    {
+        "Name": "Product IDs",
+        "Description": "",
+        "RemoteTableSql": "[landscapeQuery_strategy_A].[OD]",
+        "Columns": [
+            {
+                "RemoteColumnSql": "ODId",
+                "Name": "_id",
+                "DataType": "bigint",
+                "IsNullable": false,
+                "ExcludeFromExpansion": true
+            },
+            {
+                "RemoteColumnSql": "OD_MOD",
+                "Name": "Model Name",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "OD_SKU",
+                "Name": "SKU List Price",
+                "DataType": "float",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            }
+        ]
+    },
+    {
+        "Name": "Installed Software",
+        "Description": "",
+        "RemoteTableSql": "[landscapeQuery_strategy_A].[OF]",
+        "Columns": [
+            {
+                "RemoteColumnSql": "OFId",
+                "Name": "_id",
+                "DataType": "bigint",
+                "IsNullable": false,
+                "ExcludeFromExpansion": true
+            },
+            {
+                "RemoteColumnSql": "OF_CUR",
+                "Name": "Version History",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "OF_DOF",
+                "Name": "End of Vulnerability / Security Support (EoVSS)",
+                "DataType": "datetime2(7)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "OF_ECO",
+                "Name": "Recommendation Created",
+                "DataType": "datetime2(7)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "OF_END",
+                "Name": "End of Software Maintenance (EoSWM)",
+                "DataType": "datetime2(7)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "OF_LAS",
+                "Name": "SW  LDOS",
+                "DataType": "datetime2(7)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "OF_NDO",
+                "Name": "End of Sale (EoSale)",
+                "DataType": "datetime2(7)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "OF_OFT",
+                "Name": "Installation Software Compliance",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "OF_REC",
+                "Name": "Recommended SW Version",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "OF_SWI",
+                "Name": "SW Installation Date",
+                "DataType": "datetime2(7)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "OF_SWR",
+                "Name": "SW Replaced Date",
+                "DataType": "datetime2(7)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "OF_SWT",
+                "Name": "SW Track",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "OF_TRA",
+                "Name": "Track Description",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "OF_UID",
+                "Name": "Unique Key",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "OF_URR",
+                "Name": "Current SW EOX Milestone",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            }
+        ]
+    },
+    {
+        "Name": "All Components",
+        "Description": "",
+        "RemoteTableSql": "[landscapeQuery_strategy_A].[PH]",
+        "Columns": [
+            {
+                "RemoteColumnSql": "PHId",
+                "Name": "_id",
+                "DataType": "bigint",
+                "IsNullable": false,
+                "ExcludeFromExpansion": true
+            },
+            {
+                "RemoteColumnSql": "PH_ACT",
+                "Name": "Active Status",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "PH_CUR",
+                "Name": "Current EOX Milestone",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "PH_DAT",
+                "Name": "Device Found in Data Source(s)",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "PH_DEC",
+                "Name": "Decommissioned Date",
+                "DataType": "datetime2(7)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "PH_DEV",
+                "Name": "Device SubType",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "PH_HOS",
+                "Name": "Host Name",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "PH_INS",
+                "Name": "Instance ID (C3)",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "PH_IPA",
+                "Name": "IP Address",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "PH_LDO",
+                "Name": "HW LDOS",
+                "DataType": "datetime2(7)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "PH_LOG",
+                "Name": "Parent Chassis (NEN)",
+                "DataType": "bit",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "PH_NEW",
+                "Name": "Cost of Device",
+                "DataType": "float",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "PH_ONT",
+                "Name": "Contract Number",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "PH_REC",
+                "Name": "Recommended PID (EoL)",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "PH_SER",
+                "Name": "Serial Number",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "PH_SHI",
+                "Name": "Shipped Date",
+                "DataType": "datetime2(7)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "PH_UID",
+                "Name": "Unique Key",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            }
+        ]
+    },
+    {
+        "Name": "Product Families",
+        "Description": "",
+        "RemoteTableSql": "[landscapeQuery_strategy_A].[PR]",
+        "Columns": [
+            {
+                "RemoteColumnSql": "PRId",
+                "Name": "_id",
+                "DataType": "bigint",
+                "IsNullable": false,
+                "ExcludeFromExpansion": true
+            },
+            {
+                "RemoteColumnSql": "PR_DIS",
+                "Name": "Disruption Index",
+                "DataType": "float",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "PR_FAM",
+                "Name": "Family Name",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            }
+        ]
+    },
+    {
+        "Name": "PSIRTs",
+        "Description": "",
+        "RemoteTableSql": "[landscapeQuery_strategy_A].[PS]",
+        "Columns": [
+            {
+                "RemoteColumnSql": "PSId",
+                "Name": "_id",
+                "DataType": "bigint",
+                "IsNullable": false,
+                "ExcludeFromExpansion": true
+            },
+            {
+                "RemoteColumnSql": "PS_BUL",
+                "Name": "Bulletin Title",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "PS_CVE",
+                "Name": "CVE ID",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "PS_CVS",
+                "Name": "CVSS Base Score",
+                "DataType": "float",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "PS_LLE",
+                "Name": "Bulletin Last Updated",
+                "DataType": "datetime2(7)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "PS_POT",
+                "Name": "Total Potentially Vulnerable Devices",
+                "DataType": "int",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "PS_PSI",
+                "Name": "PSIRT ID",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "PS_SEC",
+                "Name": "Security Impact Rating",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "PS_TOT",
+                "Name": "Total Vulnerable Devices",
+                "DataType": "int",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "PS_ULL",
+                "Name": "Bulletin First Published",
+                "DataType": "datetime2(7)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            }
+        ]
+    },
+    {
+        "Name": "RMAs",
+        "Description": "",
+        "RemoteTableSql": "[landscapeQuery_strategy_A].[RM]",
+        "Columns": [
+            {
+                "RemoteColumnSql": "RMId",
+                "Name": "_id",
+                "DataType": "bigint",
+                "IsNullable": false,
+                "ExcludeFromExpansion": true
+            },
+            {
+                "RemoteColumnSql": "RM_AIL",
+                "Name": "Failure Code Name",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RM_CIT",
+                "Name": "City",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RM_COU",
+                "Name": "Country",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RM_FAI",
+                "Name": "Failure Code",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RM_HEA",
+                "Name": "Header ID",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RM_MAC",
+                "Name": "RMA Close Date",
+                "DataType": "datetime2(7)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RM_ONT",
+                "Name": "Contractual Service Level Key",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RM_ORD",
+                "Name": "Order Number",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RM_OTA",
+                "Name": "Total Boomerang Lines within Header",
+                "DataType": "float",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RM_QUE",
+                "Name": "Requested Service Level Description",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RM_REQ",
+                "Name": "Requested Service Level Key",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RM_RMA",
+                "Name": "RMA Creation Date",
+                "DataType": "datetime2(7)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RM_STA",
+                "Name": "State",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RM_TRA",
+                "Name": "Contractual Service Level Description",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RM_UPL",
+                "Name": "Uplift Requested",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            }
+        ]
+    },
+    {
+        "Name": "Deliverables",
+        "Description": "",
+        "RemoteTableSql": "[landscapeQuery_strategy_A].[RO]",
+        "Columns": [
+            {
+                "RemoteColumnSql": "ROId",
+                "Name": "_id",
+                "DataType": "bigint",
+                "IsNullable": false,
+                "ExcludeFromExpansion": true
+            },
+            {
+                "RemoteColumnSql": "RO_ASS",
+                "Name": "Assignee",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RO_CLI",
+                "Name": "Client Contact",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RO_CRE",
+                "Name": "Created",
+                "DataType": "datetime2(7)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RO_DES",
+                "Name": "Description",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RO_DUE",
+                "Name": "Due",
+                "DataType": "datetime2(7)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RO_EPI",
+                "Name": "Epic Link",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RO_LAB",
+                "Name": "labels",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RO_OMM",
+                "Name": "Comment History",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RO_OMP",
+                "Name": "Components",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RO_PRI",
+                "Name": "Priority",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RO_PRO",
+                "Name": "Project ID",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RO_REC",
+                "Name": "Recent Comment",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RO_REP",
+                "Name": "Reporter",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RO_RES",
+                "Name": "Resolution",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RO_STA",
+                "Name": "Status",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RO_TYP",
+                "Name": "Type",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "RO_UPD",
+                "Name": "Updated",
+                "DataType": "datetime2(7)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            }
+        ]
+    },
+    {
+        "Name": "TAC SRs",
+        "Description": "",
+        "RemoteTableSql": "[landscapeQuery_strategy_A].[SE]",
+        "Columns": [
+            {
+                "RemoteColumnSql": "SEId",
+                "Name": "_id",
+                "DataType": "bigint",
+                "IsNullable": false,
+                "ExcludeFromExpansion": true
+            },
+            {
+                "RemoteColumnSql": "SE_ASS",
+                "Name": "Assigned Technology",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "SE_AST",
+                "Name": "Last Update By",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "SE_CLO",
+                "Name": "Close Date",
+                "DataType": "datetime2(7)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "SE_CRE",
+                "Name": "Creation Date",
+                "DataType": "datetime2(7)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "SE_CUS",
+                "Name": "Customer Incident Number",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "SE_ENG",
+                "Name": "Engineer Email",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "SE_FSO",
+                "Name": "FResolution Time (h)",
+                "DataType": "float",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "SE_IGN",
+                "Name": "Assigned Product Family",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "SE_INC",
+                "Name": "SR Number",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "SE_ISO",
+                "Name": "ISolution Time (h)",
+                "DataType": "float",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "SE_ITI",
+                "Name": "Initial Sev.",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "SE_LAS",
+                "Name": "Last Updated",
+                "DataType": "datetime2(7)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "SE_NCI",
+                "Name": "Incident Status",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "SE_NIT",
+                "Name": "Initial Response Time (m)",
+                "DataType": "float",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "SE_NTR",
+                "Name": "Contract Number",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "SE_ONT",
+                "Name": "Contact Name",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "SE_OUT",
+                "Name": "Outage Indicator",
+                "DataType": "int",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "SE_PRO",
+                "Name": "Problem Code",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "SE_RES",
+                "Name": "Resolution Code",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "SE_SRS",
+                "Name": "SR Summary",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "SE_SSI",
+                "Name": "Assigned Sub Technology",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "SE_TAC",
+                "Name": "Contact Email",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "SE_TIM",
+                "Name": "Time to Close (Days)",
+                "DataType": "float",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "SE_URR",
+                "Name": "Current Sev.",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "SE_XIM",
+                "Name": "Maximum Sev.",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            }
+        ]
+    },
+    {
+        "Name": "Customer Locations",
+        "Description": "",
+        "RemoteTableSql": "[landscapeQuery_strategy_A].[SI]",
+        "Columns": [
+            {
+                "RemoteColumnSql": "SIId",
+                "Name": "_id",
+                "DataType": "bigint",
+                "IsNullable": false,
+                "ExcludeFromExpansion": true
+            },
+            {
+                "RemoteColumnSql": "SI_ADD",
+                "Name": "Address",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "SI_CIT",
+                "Name": "City",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "SI_KEY",
+                "Name": "Key Site",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "SI_LOC",
+                "Name": "Location",
+                "DataType": "",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "SI_SIT",
+                "Name": "Site ID",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "SI_STA",
+                "Name": "State",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            }
+        ]
+    },
+    {
+        "Name": "Software Versions",
+        "Description": "",
+        "RemoteTableSql": "[landscapeQuery_strategy_A].[SO]",
+        "Columns": [
+            {
+                "RemoteColumnSql": "SOId",
+                "Name": "_id",
+                "DataType": "bigint",
+                "IsNullable": false,
+                "ExcludeFromExpansion": true
+            },
+            {
+                "RemoteColumnSql": "SO_AJO",
+                "Name": "Major Version",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "SO_DAT",
+                "Name": "Date First Seen",
+                "DataType": "datetime2(7)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "SO_DES",
+                "Name": "Version Name",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "SO_DIS",
+                "Name": "Disruption Index",
+                "DataType": "float",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "SO_INT",
+                "Name": "Maintenance Version Transformed",
+                "DataType": "float",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "SO_MAI",
+                "Name": "Maintenance Version",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "SO_MAJ",
+                "Name": "Major Version Transformed",
+                "DataType": "float",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "SO_OST",
+                "Name": "OS Type",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            }
+        ]
+    },
+    {
+        "Name": "Countries",
+        "Description": "",
+        "RemoteTableSql": "[landscapeQuery_strategy_A].[UN]",
+        "Columns": [
+            {
+                "RemoteColumnSql": "UNId",
+                "Name": "_id",
+                "DataType": "bigint",
+                "IsNullable": false,
+                "ExcludeFromExpansion": true
+            },
+            {
+                "RemoteColumnSql": "UN_OFF",
+                "Name": "Country Name",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "UN_REG",
+                "Name": "Region",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "UN_UNT",
+                "Name": "Country Code",
+                "DataType": "",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            }
+        ]
+    },
+    {
+        "Name": "Customer Value",
+        "Description": "",
+        "RemoteTableSql": "[landscapeQuery_strategy_A].[UT]",
+        "Columns": [
+            {
+                "RemoteColumnSql": "UTId",
+                "Name": "_id",
+                "DataType": "bigint",
+                "IsNullable": false,
+                "ExcludeFromExpansion": true
+            },
+            {
+                "RemoteColumnSql": "UT_AYS",
+                "Name": "Days within a Week Case Free",
+                "DataType": "float",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "UT_IGH",
+                "Name": "High Value Cases",
+                "DataType": "float",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "UT_LEA",
+                "Name": "Lead Time",
+                "DataType": "float",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "UT_NAM",
+                "Name": "Name",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "UT_ODU",
+                "Name": "Productivity Savings",
+                "DataType": "float",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "UT_OWV",
+                "Name": "Low Value Cases",
+                "DataType": "float",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "UT_REP",
+                "Name": "Replacement Cost",
+                "DataType": "float",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "UT_ROD",
+                "Name": "Productivity Savings - User Volume/Hour",
+                "DataType": "float",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "UT_TRA",
+                "Name": "Tracking Date",
+                "DataType": "datetime2(7)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            }
+        ]
+    },
+    {
+        "Name": "PSIRT Vulnerability Records",
+        "Description": "",
+        "RemoteTableSql": "[landscapeQuery_strategy_A].[VI]",
+        "Columns": [
+            {
+                "RemoteColumnSql": "VIId",
+                "Name": "_id",
+                "DataType": "bigint",
+                "IsNullable": false,
+                "ExcludeFromExpansion": true
+            },
+            {
+                "RemoteColumnSql": "VI_PSI",
+                "Name": "PSIRT ID",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "VI_UNI",
+                "Name": "Unique ID",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            },
+            {
+                "RemoteColumnSql": "VI_VUL",
+                "Name": "Vulnerability of Device",
+                "DataType": "nvarchar(4000)",
+                "IsNullable": true,
+                "ExcludeFromExpansion": false
+            }
+        ]
+    },
+    {
+        "Name": "BE_ES",
+        "Description": "Many to many relationship table joining [Best Practice Rules] and [Best Practice Exceptions]",
+        "RemoteTableSql": "[landscapeQuery_strategy_A].[BE_ES]",
+        "Columns": [
+            {
+                "RemoteColumnSql": "BEId",
+                "Name": "BE_id",
+                "DataType": "bigint",
+                "IsNullable": false,
+                "ExcludeFromExpansion": true
+            },
+            {
+                "RemoteColumnSql": "ESId",
+                "Name": "ES_id",
+                "DataType": "bigint",
+                "IsNullable": false,
+                "ExcludeFromExpansion": true
+            }
+        ]
+    },
+    {
+        "Name": "CO_PH",
+        "Description": "Many to many relationship table joining [Contract List] and [All Components]",
+        "RemoteTableSql": "[landscapeQuery_strategy_A].[CO_PH]",
+        "Columns": [
+            {
+                "RemoteColumnSql": "COId",
+                "Name": "CO_id",
+                "DataType": "bigint",
+                "IsNullable": false,
+                "ExcludeFromExpansion": true
+            },
+            {
+                "RemoteColumnSql": "PHId",
+                "Name": "PH_id",
+                "DataType": "bigint",
+                "IsNullable": false,
+                "ExcludeFromExpansion": true
+            }
+        ]
+    },
+    {
+        "Name": "CO_SE",
+        "Description": "Many to many relationship table joining [Contract List] and [TAC SRs]",
+        "RemoteTableSql": "[landscapeQuery_strategy_A].[CO_SE]",
+        "Columns": [
+            {
+                "RemoteColumnSql": "COId",
+                "Name": "CO_id",
+                "DataType": "bigint",
+                "IsNullable": false,
+                "ExcludeFromExpansion": true
+            },
+            {
+                "RemoteColumnSql": "SEId",
+                "Name": "SE_id",
+                "DataType": "bigint",
+                "IsNullable": false,
+                "ExcludeFromExpansion": true
+            }
+        ]
+    },
+    {
+        "Name": "DE_SE",
+        "Description": "Many to many relationship table joining [Defects] and [TAC SRs]",
+        "RemoteTableSql": "[landscapeQuery_strategy_A].[DE_SE]",
+        "Columns": [
+            {
+                "RemoteColumnSql": "DEId",
+                "Name": "DE_id",
+                "DataType": "bigint",
+                "IsNullable": false,
+                "ExcludeFromExpansion": true
+            },
+            {
+                "RemoteColumnSql": "SEId",
+                "Name": "SE_id",
+                "DataType": "bigint",
+                "IsNullable": false,
+                "ExcludeFromExpansion": true
+            }
+        ]
+    },
+    {
+        "Name": "EC_PH",
+        "Description": "Many to many relationship table joining [Technologies] and [All Components]",
+        "RemoteTableSql": "[landscapeQuery_strategy_A].[EC_PH]",
+        "Columns": [
+            {
+                "RemoteColumnSql": "ECId",
+                "Name": "EC_id",
+                "DataType": "bigint",
+                "IsNullable": false,
+                "ExcludeFromExpansion": true
+            },
+            {
+                "RemoteColumnSql": "PHId",
+                "Name": "PH_id",
+                "DataType": "bigint",
+                "IsNullable": false,
+                "ExcludeFromExpansion": true
+            }
+        ]
+    },
+    {
+        "Name": "ES_PH",
+        "Description": "Many to many relationship table joining [Best Practice Exceptions] and [All Components]",
+        "RemoteTableSql": "[landscapeQuery_strategy_A].[ES_PH]",
+        "Columns": [
+            {
+                "RemoteColumnSql": "ESId",
+                "Name": "ES_id",
+                "DataType": "bigint",
+                "IsNullable": false,
+                "ExcludeFromExpansion": true
+            },
+            {
+                "RemoteColumnSql": "PHId",
+                "Name": "PH_id",
+                "DataType": "bigint",
+                "IsNullable": false,
+                "ExcludeFromExpansion": true
+            }
+        ]
+    },
+    {
+        "Name": "EV_PH",
+        "Description": "Many to many relationship table joining [Device History] and [All Components]",
+        "RemoteTableSql": "[landscapeQuery_strategy_A].[EV_PH]",
+        "Columns": [
+            {
+                "RemoteColumnSql": "EVId",
+                "Name": "EV_id",
+                "DataType": "bigint",
+                "IsNullable": false,
+                "ExcludeFromExpansion": true
+            },
+            {
+                "RemoteColumnSql": "PHId",
+                "Name": "PH_id",
+                "DataType": "bigint",
+                "IsNullable": false,
+                "ExcludeFromExpansion": true
+            }
+        ]
+    },
+    {
+        "Name": "JP_PH",
+        "Description": "Many to many relationship table joining [Business Unit] and [All Components]",
+        "RemoteTableSql": "[landscapeQuery_strategy_A].[JP_PH]",
+        "Columns": [
+            {
+                "RemoteColumnSql": "JPId",
+                "Name": "JP_id",
+                "DataType": "bigint",
+                "IsNullable": false,
+                "ExcludeFromExpansion": true
+            },
+            {
+                "RemoteColumnSql": "PHId",
+                "Name": "PH_id",
+                "DataType": "bigint",
+                "IsNullable": false,
+                "ExcludeFromExpansion": true
+            }
+        ]
+    },
+    {
+        "Name": "MA_OD",
+        "Description": "Many to many relationship table joining [Shipments \u0026 Returns] and [Product IDs]",
+        "RemoteTableSql": "[landscapeQuery_strategy_A].[MA_OD]",
+        "Columns": [
+            {
+                "RemoteColumnSql": "MAId",
+                "Name": "MA_id",
+                "DataType": "bigint",
+                "IsNullable": false,
+                "ExcludeFromExpansion": true
+            },
+            {
+                "RemoteColumnSql": "ODId",
+                "Name": "OD_id",
+                "DataType": "bigint",
+                "IsNullable": false,
+                "ExcludeFromExpansion": true
+            }
+        ]
+    },
+    {
+        "Name": "MA_RM",
+        "Description": "Many to many relationship table joining [Shipments \u0026 Returns] and [RMAs]",
+        "RemoteTableSql": "[landscapeQuery_strategy_A].[MA_RM]",
+        "Columns": [
+            {
+                "RemoteColumnSql": "MAId",
+                "Name": "MA_id",
+                "DataType": "bigint",
+                "IsNullable": false,
+                "ExcludeFromExpansion": true
+            },
+            {
+                "RemoteColumnSql": "RMId",
+                "Name": "RM_id",
+                "DataType": "bigint",
+                "IsNullable": false,
+                "ExcludeFromExpansion": true
+            }
+        ]
+    },
+    {
+        "Name": "OD_PH",
+        "Description": "Many to many relationship table joining [Product IDs] and [All Components]",
+        "RemoteTableSql": "[landscapeQuery_strategy_A].[OD_PH]",
+        "Columns": [
+            {
+                "RemoteColumnSql": "ODId",
+                "Name": "OD_id",
+                "DataType": "bigint",
+                "IsNullable": false,
+                "ExcludeFromExpansion": true
+            },
+            {
+                "RemoteColumnSql": "PHId",
+                "Name": "PH_id",
+                "DataType": "bigint",
+                "IsNullable": false,
+                "ExcludeFromExpansion": true
+            }
+        ]
+    },
+    {
+        "Name": "OD_PR",
+        "Description": "Many to many relationship table joining [Product IDs] and [Product Families]",
+        "RemoteTableSql": "[landscapeQuery_strategy_A].[OD_PR]",
+        "Columns": [
+            {
+                "RemoteColumnSql": "ODId",
+                "Name": "OD_id",
+                "DataType": "bigint",
+                "IsNullable": false,
+                "ExcludeFromExpansion": true
+            },
+            {
+                "RemoteColumnSql": "PRId",
+                "Name": "PR_id",
+                "DataType": "bigint",
+                "IsNullable": false,
+                "ExcludeFromExpansion": true
+            }
+        ]
+    },
+    {
+        "Name": "OF_PH",
+        "Description": "Many to many relationship table joining [Installed Software] and [All Components]",
+        "RemoteTableSql": "[landscapeQuery_strategy_A].[OF_PH]",
+        "Columns": [
+            {
+                "RemoteColumnSql": "OFId",
+                "Name": "OF_id",
+                "DataType": "bigint",
+                "IsNullable": false,
+                "ExcludeFromExpansion": true
+            },
+            {
+                "RemoteColumnSql": "PHId",
+                "Name": "PH_id",
+                "DataType": "bigint",
+                "IsNullable": false,
+                "ExcludeFromExpansion": true
+            }
+        ]
+    },
+    {
+        "Name": "OF_SO",
+        "Description": "Many to many relationship table joining [Installed Software] and [Software Versions]",
+        "RemoteTableSql": "[landscapeQuery_strategy_A].[OF_SO]",
+        "Columns": [
+            {
+                "RemoteColumnSql": "OFId",
+                "Name": "OF_id",
+                "DataType": "bigint",
+                "IsNullable": false,
+                "ExcludeFromExpansion": true
+            },
+            {
+                "RemoteColumnSql": "SOId",
+                "Name": "SO_id",
+                "DataType": "bigint",
+                "IsNullable": false,
+                "ExcludeFromExpansion": true
+            }
+        ]
+    },
+    {
+        "Name": "PH_SE",
+        "Description": "Many to many relationship table joining [All Components] and [TAC SRs]",
+        "RemoteTableSql": "[landscapeQuery_strategy_A].[PH_SE]",
+        "Columns": [
+            {
+                "RemoteColumnSql": "PHId",
+                "Name": "PH_id",
+                "DataType": "bigint",
+                "IsNullable": false,
+                "ExcludeFromExpansion": true
+            },
+            {
+                "RemoteColumnSql": "SEId",
+                "Name": "SE_id",
+                "DataType": "bigint",
+                "IsNullable": false,
+                "ExcludeFromExpansion": true
+            }
+        ]
+    },
+    {
+        "Name": "PH_SI",
+        "Description": "Many to many relationship table joining [All Components] and [Customer Locations]",
+        "RemoteTableSql": "[landscapeQuery_strategy_A].[PH_SI]",
+        "Columns": [
+            {
+                "RemoteColumnSql": "PHId",
+                "Name": "PH_id",
+                "DataType": "bigint",
+                "IsNullable": false,
+                "ExcludeFromExpansion": true
+            },
+            {
+                "RemoteColumnSql": "SIId",
+                "Name": "SI_id",
+                "DataType": "bigint",
+                "IsNullable": false,
+                "ExcludeFromExpansion": true
+            }
+        ]
+    },
+    {
+        "Name": "PH_VI",
+        "Description": "Many to many relationship table joining [All Components] and [PSIRT Vulnerability Records]",
+        "RemoteTableSql": "[landscapeQuery_strategy_A].[PH_VI]",
+        "Columns": [
+            {
+                "RemoteColumnSql": "PHId",
+                "Name": "PH_id",
+                "DataType": "bigint",
+                "IsNullable": false,
+                "ExcludeFromExpansion": true
+            },
+            {
+                "RemoteColumnSql": "VIId",
+                "Name": "VI_id",
+                "DataType": "bigint",
+                "IsNullable": false,
+                "ExcludeFromExpansion": true
+            }
+        ]
+    },
+    {
+        "Name": "PS_VI",
+        "Description": "Many to many relationship table joining [PSIRTs] and [PSIRT Vulnerability Records]",
+        "RemoteTableSql": "[landscapeQuery_strategy_A].[PS_VI]",
+        "Columns": [
+            {
+                "RemoteColumnSql": "PSId",
+                "Name": "PS_id",
+                "DataType": "bigint",
+                "IsNullable": false,
+                "ExcludeFromExpansion": true
+            },
+            {
+                "RemoteColumnSql": "VIId",
+                "Name": "VI_id",
+                "DataType": "bigint",
+                "IsNullable": false,
+                "ExcludeFromExpansion": true
+            }
+        ]
+    },
+    {
+        "Name": "RM_SE",
+        "Description": "Many to many relationship table joining [RMAs] and [TAC SRs]",
+        "RemoteTableSql": "[landscapeQuery_strategy_A].[RM_SE]",
+        "Columns": [
+            {
+                "RemoteColumnSql": "RMId",
+                "Name": "RM_id",
+                "DataType": "bigint",
+                "IsNullable": false,
+                "ExcludeFromExpansion": true
+            },
+            {
+                "RemoteColumnSql": "SEId",
+                "Name": "SE_id",
+                "DataType": "bigint",
+                "IsNullable": false,
+                "ExcludeFromExpansion": true
+            }
+        ]
+    },
+    {
+        "Name": "SE_UT",
+        "Description": "Many to many relationship table joining [TAC SRs] and [Customer Value]",
+        "RemoteTableSql": "[landscapeQuery_strategy_A].[SE_UT]",
+        "Columns": [
+            {
+                "RemoteColumnSql": "SEId",
+                "Name": "SE_id",
+                "DataType": "bigint",
+                "IsNullable": false,
+                "ExcludeFromExpansion": true
+            },
+            {
+                "RemoteColumnSql": "UTId",
+                "Name": "UT_id",
+                "DataType": "bigint",
+                "IsNullable": false,
+                "ExcludeFromExpansion": true
+            }
+        ]
+    },
+    {
+        "Name": "SI_UN",
+        "Description": "Many to many relationship table joining [Customer Locations] and [Countries]",
+        "RemoteTableSql": "[landscapeQuery_strategy_A].[SI_UN]",
+        "Columns": [
+            {
+                "RemoteColumnSql": "SIId",
+                "Name": "SI_id",
+                "DataType": "bigint",
+                "IsNullable": false,
+                "ExcludeFromExpansion": true
+            },
+            {
+                "RemoteColumnSql": "UNId",
+                "Name": "UN_id",
+                "DataType": "bigint",
+                "IsNullable": false,
+                "ExcludeFromExpansion": true
+            }
+        ]
+    }
+]
