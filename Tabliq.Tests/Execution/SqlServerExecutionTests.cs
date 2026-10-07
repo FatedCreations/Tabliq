@@ -57,6 +57,30 @@ public class SqlServerExecutionTests
     }
 
     [Fact]
+    public async Task RecursiveCteAreResolvedBeforePushdown()
+    {
+        var results = await _engine.ExecuteToDictionaryList("""
+            WITH d AS (SELECT * FROM Data),
+                 e AS (SELECT * FROM d)
+            SELECT * FROM e
+            """, Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
+
+        Assert.Equal("""
+            WITH d AS (
+                SELECT *
+                FROM Data
+            ), 
+            e AS (
+                SELECT *
+                FROM d
+            )
+            SELECT *
+            FROM e
+            """,
+            _provider.LastSqlExecuted);
+    }
+
+    [Fact]
     public async Task SelectStarFromSingleTable()
     {
         var results = await _engine.ExecuteToDictionaryList("SELECT * FROM Data", Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
@@ -109,6 +133,20 @@ public class SqlServerExecutionTests
                 ON d.Id = o.Id
             """,
             _provider.LastSqlExecuted);
+    }
+
+    [Fact]
+    public async Task UnionPushesDownToSqlProvider()
+    {
+        var results = await _engine.ExecuteToDictionaryList("""
+            SELECT d.Name FROM Data d
+            UNION ALL
+            SELECT o.Name FROM Other o
+        """, Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
+
+        Assert.Contains("UNION ALL", _provider.LastSqlExecuted, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("FROM Data", _provider.LastSqlExecuted, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("FROM Other", _provider.LastSqlExecuted, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

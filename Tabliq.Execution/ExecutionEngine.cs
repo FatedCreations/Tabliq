@@ -46,15 +46,14 @@ public class ExecutionEngine
         var bound = Binder.Bind(compilation, schema);
         bound.ThrowIfInvalid();
 
-        var statement = bound.Script.Statements.FirstOrDefault() as SelectStatement
-            ?? throw new NotSupportedException("Execution engine currently supports SELECT statements only.");
+        var statements = bound.Script.Statements.ToList();
+        if (statements.Count != 1 || statements[0] is not SelectStatement statement)
+        {
+            throw new NotSupportedException($"Execution engine currently supports exactly one SELECT statement at a time; found {statements.Count} statement(s).");
+        }
 
         var rewriteContext = new ExecutionRewriteContext();
         var node = BuildPlan(statement.SelectQuery);
-        if (statement.CommonTableExpressions.Any())
-        {
-            node = new CteExecutionPlanNode(node, statement.CommonTableExpressions);
-        }
 
         node = node.TryRewrite(rewriteContext) ?? node;
 
@@ -89,7 +88,23 @@ public class ExecutionEngine
             source = new FilterExecutionPlanNode(source, select.Where.Condition);
         }
 
-        return new ProjectionExecutionPlanNode(source, select.Projections, select);
+        var projection = new ProjectionExecutionPlanNode(source, select.Projections, select);
+        if (select.UnionStatements.Count == 0)
+        {
+            return projection;
+        }
+
+        var operations = new List<(ExecutionPlanNode Input, bool IsAll)>
+        {
+            (projection, true)
+        };
+
+        foreach (var union in select.UnionStatements)
+        {
+            operations.Add((BuildPlan(union.Select), union.IsAll));
+        }
+
+        return new UnionExecutionPlanNode(operations);
     }
 
     private static Dictionary<string, HashSet<string>> CollectReferencedColumnsByAlias(SyntaxNode node)
@@ -158,7 +173,7 @@ public class ExecutionEngine
             if (table.GetState<CteTableMetadata>() is CteTableMetadata cte)
             {
                 var cteAlias = namedTableReference.Alias ?? cte.Alias;
-                return new SubqueryExecutionPlanNode(BuildPlan(cte.Body), cteAlias);
+                return new SubqueryExecutionPlanNode(BuildPlan(cte.Body), cteAlias, cte.Alias, cte.Body);
             }
 
             var tableAlias = namedTableReference.Alias ?? table.TableName;

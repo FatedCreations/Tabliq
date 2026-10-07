@@ -164,4 +164,4 @@ public enum BinderHandling
     Skip = 1,
 }
 
-public sealed record CteTableMetadata(string Alias, SelectExpression Body);
+public sealed record CteTableMetadata(string Alias, SelectExpression Body, int DeclarationOrder);

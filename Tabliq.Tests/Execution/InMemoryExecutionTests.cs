@@ -148,6 +148,42 @@ public class InMemoryExecutionTests
     }
 
     [Fact]
+    public async Task Cte()
+    {
+        var results = await _engine.ExecuteToDictionaryList("""
+        with cte as (
+            SELECT d.Name from Data d
+            )
+            SELECT * FROM cte
+        """, Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
+
+        Assert.Equal(20, results.Count);
+    }
+    [Fact]
+    public async Task Union()
+    {
+        var results = await _engine.ExecuteToDictionaryList("""
+            SELECT d.Name from Data d
+            UNION ALL
+            SELECT d.Name from Other d
+        """, Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
+
+        Assert.Equal(40, results.Count);
+    }
+
+    [Fact]
+    public async Task UnionDistinct()
+    {
+        var results = await _engine.ExecuteToDictionaryList("""
+            SELECT d.Name from Data d
+            UNION
+            SELECT d.Name from Data d
+        """, Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
+
+        Assert.Equal(20, results.Count);
+    }
+
+    [Fact]
     public async Task PositionIn()
     {
         var results = await _engine.ExecuteToDictionaryList(
