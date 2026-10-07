@@ -26,15 +26,7 @@ public sealed partial class Parser
         }
 
         var parser = new Parser(tokens, lexer.Diagnostics, settings);
-        SqlScript? root = null;
-        try
-        {
-            root = parser.ParseCompilationUnit();
-        }
-        catch (ParserLimitExcption _)
-        {
-            // noop this is a short circuit to stop parsing when we hit a limit, the diagnostics will be reported in the parser
-        }
+        var root = parser.ParseCompilationUnit();
 
         var diags = new List<Diagnostic>();
         diags.AddRange(lexer.Diagnostics.Diagnostics);
@@ -219,7 +211,7 @@ public sealed partial class Parser
             }
             return new SqlScript(statements).WithLocation(loc);
         }
-        catch (ParserLimitExcption ex)
+        catch (ParserLimitException ex)
         {
             return null;
         }
@@ -816,7 +808,7 @@ public sealed partial class Parser
             {
                 var loc = location ?? _parser.Track();
                 _parser._diagnostics.Report(_diagnosticId, _diagnosticMessage, loc.Span.Start, 0);
-                throw new ParserLimitExcption(_diagnosticMessage);
+                throw new ParserLimitException(_diagnosticMessage);
             }
 
             return tracker;

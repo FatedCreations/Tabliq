@@ -1,3 +1,4 @@
+using System.Runtime.ExceptionServices;
 using Tabliq.Sql;
 using Tabliq.Sql.Parsing;
 
@@ -14,7 +15,7 @@ public class LimitTests
     [Theory]
     [InlineData("not", "AND, OR, NOT and UNION operators")]
     [InlineData("or", "AND, OR, NOT and UNION operators")]
-    public async Task ValidateDefaultConditionLimits(string shape, string reason)
+    public void ValidateDefaultConditionLimits(string shape, string reason)
     {
         // Each of these overflows the parser's stack, which ends the process instead of throwing, so the
         // refusal has to come before the parser and both endpoints have to apply it.
@@ -27,7 +28,7 @@ public class LimitTests
 
     [Theory]
     [InlineData("comparisons", "UnexpectedToken: '<' was unexpected (52,19995)")]
-    public async Task Invalid(string shape, string expectedError)
+    public void Invalid(string shape, string expectedError)
     {
         // Each of these overflows the parser's stack, which ends the process instead of throwing, so the
         // refusal has to come before the parser and both endpoints have to apply it.
@@ -44,7 +45,7 @@ public class LimitTests
     [InlineData("case", "levels of brackets or CASE")]
     [InlineData("minus", "arithmetic operators")]
     [InlineData("end-in-brackets", "levels of brackets or CASE")]
-    public async Task ValidateDefaultExpressionLiimits(string shape, string reason)
+    public void ValidateDefaultExpressionLiimits(string shape, string reason)
     {
         // Each of these overflows the parser's stack, which ends the process instead of throwing, so the
         // refusal has to come before the parser and both endpoints have to apply it.
@@ -60,19 +61,19 @@ public class LimitTests
     [InlineData("subqueries", "levels of brackets or CASE")]
     [InlineData("union", "AND, OR, NOT and UNION operators")]
     [InlineData("stray-closers", "levels of brackets or CASE")]
-    public async Task ValidateDefaultQueryDepthLimit(string shape, string reason)
+    public void ValidateDefaultQueryDepthLimit(string shape, string reason)
     {
         // Each of these overflows the parser's stack, which ends the process instead of throwing, so the
         // refusal has to come before the parser and both endpoints have to apply it.
         var sql = Nested(shape, 5_000);
-        
+
         var results = Parser.Parse(sql);
 
         Assert.Contains("QueryDepthExceeded", results.Diagnostics.Select(x => x.Id));
     }
 
     [Fact]
-    public void just_missing_limit_shoudl_error()
+    public void just_missing_limit_should_error()
     {
         var defualts = new TabliqSettings();
         //defualts.MaxSubQueryDepth = 5;
@@ -81,8 +82,6 @@ public class LimitTests
         // Subqueries to the depth limit, with the logical and arithmetic operators all spent in the
         // innermost one: the most stack a query the guard accepts can ask of parsing, binding and rewriting.
         var sqlDepth = defualts.MaxSubQueryDepth ?? 0;
-        var expDepth = defualts.MaxExpressionDepth ?? 0;
-        var conDepth = defualts.MaxConditionDepth ?? 0;
 
         var sqlRepeat = sqlDepth + 1;
 
@@ -125,9 +124,20 @@ public class LimitTests
     [Fact]
     public void A_query_at_every_limit_at_once_parses_on_half_a_megabyte_of_stack()
     {
-        var thread = new Thread(() => A_query_at_every_limit_at_once_still_runs(), 512 * 1024);
+        Exception? threadException = null;
+        var thread = new Thread(() =>
+        {
+            try { A_query_at_every_limit_at_once_still_runs(); }
+            catch (Exception ex) { threadException = ex; }
+        }, 512 * 1024);
+
         thread.Start();
         thread.Join();
+
+        if (threadException is not null)
+        {
+            ExceptionDispatchInfo.Throw(threadException);
+        }
     }
 
     private static string Nested(string shape, int n) => shape switch
