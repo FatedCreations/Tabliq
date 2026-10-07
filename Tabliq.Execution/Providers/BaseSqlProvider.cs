@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics.CodeAnalysis;
+using Tabliq.Execution.ExpressionPlan;
 using Tabliq.Execution.Functions;
 using Tabliq.Sql.Ast;
 using Tabliq.Sql.Binding;
@@ -64,7 +65,8 @@ public abstract class RemoteSqlProviderBase : IExecutionProvider
         if (node is ProjectionExecutionPlanNode projectionNode && projectionNode.SourceSelect is not null
             && (projectionNode.Input is EmptyExecutionPlanNode || projectionNode.Input is FilterExecutionPlanNode { Input: EmptyExecutionPlanNode }))
         {
-            res = new RemoteSqProviderSqlExecutionPlanNode(this, new SelectStatement([], projectionNode.SourceSelect));
+            var sourceCtes = CollectCteDefinitions(projectionNode.SourceSelect, new HashSet<string>(StringComparer.OrdinalIgnoreCase));
+            res = new RemoteSqProviderSqlExecutionPlanNode(this, new SelectStatement(sourceCtes, projectionNode.SourceSelect));
             return true;
         }
 
@@ -79,6 +81,17 @@ public abstract class RemoteSqlProviderBase : IExecutionProvider
 
         void Visit(SyntaxNode current)
         {
+            if (current is SelectExpression nestedSelect && !ReferenceEquals(current, node))
+            {
+                foreach (var nested in CollectCteDefinitions(nestedSelect, seen))
+                {
+                    if (seen.Add(nested.Alias))
+                    {
+                        ctes.Add(nested);
+                    }
+                }
+            }
+
             if (current is NamedTableReference namedTable && namedTable.Binding is not null)
             {
                 if (namedTable.Binding.GetState<CteTableMetadata>() is CteTableMetadata cte && seen.Add(cte.Alias))
@@ -225,6 +238,9 @@ public abstract class RemoteSqlProviderBase : IExecutionProvider
             ctes = MergeCteDefinitions(parentQuery.Sql.CommonTableExpressions, nestedCtes, currentCte).ToList();
         }
 
+        var nestedExpressionCtes = CollectCteDefinitions(filter.Condition, new HashSet<string>(ctes.Select(x => x.Alias), StringComparer.OrdinalIgnoreCase));
+        ctes = MergeCteDefinitions(ctes, nestedExpressionCtes).ToList();
+
         if (ContainsUnsupportedFunction(filter.Condition))
         {
             context?.Report("SqlPushdownSkipped", "Filter could not be pushed to SQL because it contains an unsupported function.", ExecutionRewriteDiagnosticLevel.Warning, nameof(FilterExecutionPlanNode), filter.Condition.ToString());
@@ -281,6 +297,8 @@ public abstract class RemoteSqlProviderBase : IExecutionProvider
                     nameof(ProjectionExecutionPlanNode),
                     projection.SourceSelect.ToString());
                 var pushedDownInput = new RemoteSqProviderSqlExecutionPlanNode(this, new SelectStatement([], pushedDownSelect));
+
+
                 return new ProjectionExecutionPlanNode(pushedDownInput, projection.Projections, pushedDownSelect);
             }
 
@@ -304,6 +322,16 @@ public abstract class RemoteSqlProviderBase : IExecutionProvider
                     parentQuery.Sql.CommonTableExpressions,
                     CollectCteDefinitions(projection.SourceSelect, new HashSet<string>(parentQuery.Sql.CommonTableExpressions.Select(x => x.Alias), StringComparer.OrdinalIgnoreCase)))
                 : CollectCteDefinitions(projection.SourceSelect, new HashSet<string>(StringComparer.OrdinalIgnoreCase));
+
+        var projectionExpressionCtes = projection.Projections
+            .SelectMany(projectionItem => CollectCteDefinitions(
+                projectionItem.Expression,
+                new HashSet<string>(ctes.Select(x => x.Alias), StringComparer.OrdinalIgnoreCase)))
+            .ToList();
+        ctes = MergeCteDefinitions(ctes, projectionExpressionCtes).ToList();
+
+        var nestedExpressionCtes = CollectCteDefinitions(projection.SourceSelect, new HashSet<string>(ctes.Select(x => x.Alias), StringComparer.OrdinalIgnoreCase));
+        ctes = MergeCteDefinitions(ctes, nestedExpressionCtes).ToList();
 
         context?.Report("SqlPushdownApplied", "Projection was pushed to SQL provider.", ExecutionRewriteDiagnosticLevel.Debug, nameof(ProjectionExecutionPlanNode), projection.SourceSelect.ToString());
         return new RemoteSqProviderSqlExecutionPlanNode(this, new SelectStatement(ctes, projection.SourceSelect));
@@ -501,5 +529,6 @@ public abstract class RemoteSqlProviderBase : IExecutionProvider
         public override ExecutionPlanNode? TryRewrite(ExecutionRewriteContext? context = null) => null;
 
         public override IEnumerable<ExecutionPlanNode> GetInputs() => [];
+        public override IEnumerable<ExpressionPlanNode> GetExpressions() => [];
     }
 }

@@ -1,3 +1,4 @@
+using Tabliq.Execution.ExpressionPlan;
 using Tabliq.Sql.Ast;
 using Tabliq.Sql.Binding;
 
@@ -29,7 +30,7 @@ public class PassThroughValueFunction : ValueFunction
     {
     }
 
-    public override object? Execute(FunctionCallExpression expression, RowAccessor accessor)
+    public override object? Execute(FunctionCallExpression expression, RowAccessor accessor, IEnumerable<ExpressionPlanNode> arguments)
         => throw new NotSupportedException($"Function '{Name}' must be executed by the SQL provider.");
 }
 
@@ -50,9 +51,9 @@ public class PassThroughAggregateFunction : AggregateFunction<PassThroughAggrega
     {
     }
 
-    protected override State ProcessRow(FunctionCallExpression expression, RowAccessor accessor, State state)
+    protected override State ProcessRow(FunctionCallExpression expression, RowAccessor accessor, IEnumerable<ExpressionPlanNode> arguments, State state)
     {
-        state.LastValue = EvaluationHelpers.EvaluateExpression(expression.Arguments.FirstOrDefault() ?? expression, accessor);
+        state.LastValue = arguments.FirstOrDefault()?.Execute(accessor);
         return state;
     }
 

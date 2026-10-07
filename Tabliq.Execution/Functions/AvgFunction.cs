@@ -1,4 +1,5 @@
-﻿using Tabliq.Sql.Ast;
+﻿using Tabliq.Execution.ExpressionPlan;
+using Tabliq.Sql.Ast;
 
 namespace Tabliq.Execution.Functions;
 
@@ -9,10 +10,10 @@ public class AvgFunction : AggregateFunction<AvgFunction.State>
     {
     }
 
-    protected override State ProcessRow(FunctionCallExpression expression, RowAccessor accessor, State? state)
+    protected override State ProcessRow(FunctionCallExpression expression, RowAccessor accessor, IEnumerable<ExpressionPlanNode> arguments, State? state)
     {
         state ??= new State();
-        var val = EvaluationHelpers.EvaluateExpression(expression.Arguments[0], accessor);
+        var val = arguments.Single().Execute(accessor);
         state.AddValue(val);
         return state;
     }

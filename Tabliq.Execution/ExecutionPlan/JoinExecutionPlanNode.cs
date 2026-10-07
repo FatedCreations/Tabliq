@@ -1,4 +1,5 @@
 using Tabliq.Execution.ExecutionReader;
+using Tabliq.Execution.ExpressionPlan;
 using Tabliq.Sql.Ast;
 
 namespace Tabliq.Execution;
@@ -9,13 +10,15 @@ public sealed class JoinExecutionPlanNode : ExecutionPlanNode
     private readonly ExecutionPlanNode _right;
     private readonly JoinType _joinType;
     private readonly Condition? _onCondition;
+    private readonly ConditionExecutionPlan? _onConditionPlan;
     private readonly JoinSide _joinSide;
 
-    public JoinExecutionPlanNode(ExecutionPlanNode left, ExecutionPlanNode right, JoinType joinType, Condition? onCondition, JoinSide joinSide)
+    public JoinExecutionPlanNode(ExecutionPlanNode left, ExecutionPlanNode right, JoinType joinType, ConditionExecutionPlan? onConditionPlan, Condition? onCondition, JoinSide joinSide)
     {
         _left = left;
         _right = right;
         _joinType = joinType;
+        _onConditionPlan = onConditionPlan;
         _onCondition = onCondition;
         _joinSide = joinSide;
     }
@@ -25,10 +28,12 @@ public sealed class JoinExecutionPlanNode : ExecutionPlanNode
     public ExecutionPlanNode Right => _right;
     public JoinType JoinType => _joinType;
     public Condition? Condition => _onCondition;
+    public ConditionExecutionPlan? OnConditionPlan => _onConditionPlan;
     public JoinSide JoinSide => _joinSide;
     public override IExecutionProvider? Provider => null;
 
     public override IEnumerable<ExecutionPlanNode> GetInputs() => [_left, _right];
+    public override IEnumerable<ExpressionPlanNode> GetExpressions() => [.._left.GetExpressions(), .._right.GetExpressions(), .._onConditionPlan?.GetExpressions() ?? []];
 
     public override ExecutionPlanNode? TryRewrite(ExecutionRewriteContext? context = null)
     {
@@ -37,7 +42,7 @@ public sealed class JoinExecutionPlanNode : ExecutionPlanNode
         var newRight = _right.TryRewrite(context) ?? _right;
         if (newLeft != _left || newRight != _right)
         {
-            currentNode = new JoinExecutionPlanNode(newLeft, newRight, _joinType, _onCondition, _joinSide);
+            currentNode = new JoinExecutionPlanNode(newLeft, newRight, _joinType, _onConditionPlan, _onCondition, _joinSide);
         }
 
         var provider = newLeft.Provider ?? newRight.Provider;
@@ -103,7 +108,7 @@ public sealed class JoinExecutionPlanNode : ExecutionPlanNode
                     var rightRow = rightRows[i];
                     var leftRow = left.GetValues();
                     var combinedRow = CombineRows(leftRow, rightRow);
-                    if (_onCondition is not null && !EvaluationHelpers.EvaluateCondition(_onCondition, new RowAccessor(fields, combinedRow)))
+                    if (_onConditionPlan is not null && !_onConditionPlan.Execute(new RowAccessor(fields, combinedRow)))
                     {
                         continue;
                     }

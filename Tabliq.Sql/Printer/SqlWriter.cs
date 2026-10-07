@@ -41,21 +41,30 @@ public class SqlWriter
 
     protected virtual void Write(Statement statement)
     {
-        if (statement is SelectStatement selectStatement)
-        {
-            Write(selectStatement);
-        }
-        else if (statement is EmptyStatement emptyStatement)
-        {
-            Write(emptyStatement);
-        }
-        else
-        {
-            throw new NotImplementedException($"Writing for {statement.GetType().Name} is not implemented.");
-        }
-    }
+             if (statement is SelectStatement selectStatement)
+             {
+                 Write(selectStatement);
+             }
+             else if (statement is EmptyStatement emptyStatement)
+             {
+                 Write(emptyStatement);
+             }
+             else if (statement is BadStatement badStatement)
+             {
+                 Write(badStatement);
+             }
+             else
+             {
+                 throw new NotImplementedException($"Writing for {statement.GetType().Name} is not implemented.");
+             }
+         }
 
-    protected virtual void Write(EmptyStatement emptyStatement)
+        protected virtual void Write(BadStatement badStatement)
+        {
+            Write("/* BAD STATEMENT */");
+        }
+
+        protected virtual void Write(EmptyStatement emptyStatement)
     {
         if (emptyStatement.HasSemicolon)
         {
@@ -398,16 +407,32 @@ public class SqlWriter
             case WithinGroupClause WithinGroupClause:
                 Write(WithinGroupClause);
                 break;
-            case InExpression InExpression:
-                Write(InExpression);
-                break;
-            case UnaryOperatorExpression UnaryOperatorExpression:
-                Write(UnaryOperatorExpression);
-                break;
-            default:
-                throw new NotImplementedException($"Writing for {node.GetType().Name} is not implemented.");
-        }
-    }
+                     case InExpression InExpression:
+                         Write(InExpression);
+                         break;
+                     case UnaryOperatorExpression UnaryOperatorExpression:
+                         Write(UnaryOperatorExpression);
+                         break;
+                     case BadCondition BadCondition:
+                         Write(BadCondition);
+                         break;
+                     case BadExpression BadExpression:
+                         Write(BadExpression);
+                         break;
+                     default:
+                         throw new NotImplementedException($"Writing for {node.GetType().Name} is not implemented.");
+                 }
+             }
+
+            protected virtual void Write(BadCondition badCondition)
+            {
+                Write("/* BAD CONDITION */");
+            }
+
+            protected virtual void Write(BadExpression badExpression)
+            {
+                Write("/* BAD EXPRESSION */");
+            }
 
     protected virtual void Write(UnaryOperatorExpression unaryOperatorExpression)
     {
