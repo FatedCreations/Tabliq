@@ -6,27 +6,71 @@ using Tabliq.Sql.Binding;
 
 namespace Tabliq.Execution;
 
+public sealed class ProjectionColumnPlan
+{
+    public required ExpressionPlanNode Value { get; init; }
+
+    public required string Alias { get; init; }
+
+    public TableSymbol? TableSymbol => Value is IdentifierExpressionExecutionPlan identifierPlan
+        ? identifierPlan.Identifier.Binding?.TableSymbol
+        : null;
+
+    public ColumnSymbol? ColumnSymbol => Value is IdentifierExpressionExecutionPlan identifierPlan
+        ? identifierPlan.Identifier.Binding?.ColumnSymbol
+        : null;
+}
+
+public sealed class OrderByExpressionPlan
+{
+    public required ExpressionPlanNode Value { get; init; }
+
+    public required OrderByDirection Direction { get; init; }
+}
+
+public sealed class OffsetExpressionPlan
+{
+    public required ExpressionPlanNode? OffsetCount { get; init; }
+
+    public required ExpressionPlanNode? FetchCount { get; init; }
+}
+
 public sealed class ProjectionExecutionPlanNode : ExecutionPlanNode
 {
     private readonly ExecutionPlanNode _input;
-    private readonly IReadOnlyList<SelectProjection> _projections;
-    private readonly IReadOnlyList<ExpressionPlan.ExpressionPlanNode> _expressionPlans;
+    private readonly IReadOnlyList<ProjectionColumnPlan> _projections;
 
-    public SelectExpression? SourceSelect { get; }
+    public IReadOnlyList<ProjectionColumnPlan> Projections => _projections;
+    private readonly IReadOnlyList<ExpressionPlanNode> _groupBys;
 
-    public IReadOnlyList<SelectProjection> Projections => _projections;
-    public IReadOnlyList<ExpressionPlan.ExpressionPlanNode> ExpressionPlans => _expressionPlans;
+    public IReadOnlyList<ExpressionPlanNode> GroupBys => _groupBys;
+    private readonly IReadOnlyList<OrderByExpressionPlan> _orderBys;
+
+    public IReadOnlyList<OrderByExpressionPlan> OrderBys => _orderBys;
+    public long? Top { get; }
+    public OffsetExpressionPlan? Offset { get; }
+    public Distinctness Distinctness { get; }
 
     public ExecutionPlanNode Input => _input;
     public override IEnumerable<ExecutionPlanNode> GetInputs() => [_input];
-    public override IEnumerable<ExpressionPlanNode> GetExpressions() => [.. _input.GetExpressions(), .. _expressionPlans];
+    public override IEnumerable<ExpressionPlanNode> GetExpressions() =>
+        _input.GetExpressions()
+            .Concat(_projections.Select(p => p.Value))
+            .Concat(_groupBys)
+            .Concat(_orderBys.Select(x => x.Value))
+            .Concat(Offset is null
+                ? Enumerable.Empty<ExpressionPlanNode>()
+                : new[] { Offset.OffsetCount, Offset.FetchCount }.OfType<ExpressionPlanNode>());
 
-    public ProjectionExecutionPlanNode(ExecutionPlanNode input, IReadOnlyList<ExpressionPlan.ExpressionPlanNode> expressionPlans, IReadOnlyList<SelectProjection>? projections, SelectExpression? sourceSelect = null)
+    public ProjectionExecutionPlanNode(ExecutionPlanNode input, IReadOnlyList<ProjectionColumnPlan> projections, IReadOnlyList<ExpressionPlanNode> groupBys, IReadOnlyList<OrderByExpressionPlan>? orderBys = null, long? top = null, OffsetExpressionPlan? offset = null, Distinctness distinctness = Distinctness.Unspecified)
     {
         _input = input;
-        _expressionPlans = expressionPlans;
-        _projections = projections ?? Array.Empty<SelectProjection>();
-        SourceSelect = sourceSelect;
+        _projections = projections;
+        _groupBys = groupBys;
+        _orderBys = orderBys ?? Array.Empty<OrderByExpressionPlan>();
+        Top = top;
+        Offset = offset;
+        Distinctness = distinctness;
     }
 
     public override IExecutionProvider? Provider => null;
@@ -37,8 +81,10 @@ public sealed class ProjectionExecutionPlanNode : ExecutionPlanNode
         var newInput = _input.TryRewrite(context) ?? _input;
         if (newInput != _input)
         {
-            currentNode = new ProjectionExecutionPlanNode(newInput, _expressionPlans, _projections, SourceSelect);
+            currentNode = new ProjectionExecutionPlanNode(newInput, _projections, _groupBys, _orderBys, Top, Offset, Distinctness);
         }
+
+        // todo apply rewriting rule for the expressions etc too
 
         currentNode = newInput.Provider?.TryRewrite(currentNode, context) ?? currentNode;
 
@@ -47,7 +93,7 @@ public sealed class ProjectionExecutionPlanNode : ExecutionPlanNode
 
     public override async Task<IExecutionReader> ExecuteAsync(IEnumerable<ExecuterParameter>? parameters = null, CancellationToken cancellationToken = default)
     {
-        var hasGroupBy = SourceSelect?.GroupBy is not null;
+        var hasGroupBy = _groupBys.Any();
 
         if (_input is EmptyExecutionPlanNode || _input is FilterExecutionPlanNode { Input: EmptyExecutionPlanNode })
         {
@@ -116,7 +162,7 @@ public sealed class ProjectionExecutionPlanNode : ExecutionPlanNode
         var groups = new Dictionary<string, GroupProjectionState>(StringComparer.OrdinalIgnoreCase);
         var aggregateCalls = GetAggregateFunctionCalls();
 
-        var groupByEntries = SourceSelect?.GroupBy?.Entries ?? [];
+        var groupByEntries = _groupBys;
 
         while (await executionReader.ReadAsync(cancellationToken))
         {
@@ -151,7 +197,7 @@ public sealed class ProjectionExecutionPlanNode : ExecutionPlanNode
         return result;
     }
 
-    private static string BuildGroupKey(RowAccessor row, IReadOnlyList<Expression> groupByEntries)
+    private static string BuildGroupKey(RowAccessor row, IReadOnlyList<ExpressionPlan.ExpressionPlanNode> groupByEntries)
     {
         if (groupByEntries.Count == 0)
         {
@@ -161,7 +207,7 @@ public sealed class ProjectionExecutionPlanNode : ExecutionPlanNode
         var parts = new List<string>();
         foreach (var groupEntry in groupByEntries)
         {
-            var value = ExpressionPlan.ExpressionPlanNode.Create(groupEntry).Execute(row);
+            var value = groupEntry.Execute(row);
             parts.Add(value is null ? "<null>" : $"{value.GetType().FullName}:{value}");
         }
 
@@ -231,27 +277,30 @@ public sealed class ProjectionExecutionPlanNode : ExecutionPlanNode
         for (var i = 0; i < _projections.Count; i++)
         {
             var projection = _projections[i];
-            if (projection.Expression is StarIdentifierExpression star)
-            {
-                var bindings = star.Bindings.Count == 0
-                    ? ExpandStarBindings(row.Columns)
-                    : star.Bindings;
 
-                foreach (var binding in bindings)
-                {
-                    if (binding.ColumnSymbol.ExcludeFromStarExpansion)
-                    {
-                        continue;
-                    }
+            // start needs to be been expanded to the individual columns before its planned!
+            // rewiting stage should always handle it???
 
-                    current.Add(GetValue(row, binding.TableSymbol.TableName, binding.ColumnSymbol.Name));
-                }
+            //if (projection.Expression is StarIdentifierExpression star)
+            //{
+            //    var bindings = star.Bindings.Count == 0
+            //        ? ExpandStarBindings(row.Columns)
+            //        : star.Bindings;
 
-                continue;
-            }
+            //    foreach (var binding in bindings)
+            //    {
+            //        if (binding.ColumnSymbol.ExcludeFromStarExpansion)
+            //        {
+            //            continue;
+            //        }
 
-            var plan = _expressionPlans.Count > i ? _expressionPlans[i] : ExpressionPlan.ExpressionPlanNode.Create(projection.Expression);
-            current.Add(ExpressionPlan.ExpressionPlanNode.NormalizeValue(plan.Execute(row, aggregateValues)));
+            //        current.Add(GetValue(row, binding.TableSymbol.TableName, binding.ColumnSymbol.Name));
+            //    }
+
+            //    continue;
+            //}
+
+            current.Add(ExpressionPlan.ExpressionPlanNode.NormalizeValue(projection.Value.Execute(row, aggregateValues)));
         }
 
         return current.ToArray();
@@ -262,25 +311,27 @@ public sealed class ProjectionExecutionPlanNode : ExecutionPlanNode
         var outputFields = new List<string>();
         foreach (var projection in _projections)
         {
-            if (projection.Expression is StarIdentifierExpression star)
-            {
-                var bindings = star.Bindings.Count == 0
-                    ? ExpandStarBindings(inputFields)
-                    : star.Bindings;
+            // must be expanded before reaching this step!
 
-                foreach (var binding in bindings)
-                {
-                    var name = binding.ColumnSymbol.Name;
-                    if (!outputFields.Contains(name, StringComparer.OrdinalIgnoreCase))
-                    {
-                        outputFields.Add(name);
-                    }
-                }
+            //if (projection.Expression is StarIdentifierExpression star)
+            //{
+            //    var bindings = star.Bindings.Count == 0
+            //        ? ExpandStarBindings(inputFields)
+            //        : star.Bindings;
 
-                continue;
-            }
+            //    foreach (var binding in bindings)
+            //    {
+            //        var name = binding.ColumnSymbol.Name;
+            //        if (!outputFields.Contains(name, StringComparer.OrdinalIgnoreCase))
+            //        {
+            //            outputFields.Add(name);
+            //        }
+            //    }
 
-            var fieldName = projection.Alias ?? GetFieldName(projection.Expression);
+            //    continue;
+            //}
+
+            var fieldName = projection.Alias ?? throw new Exception("name should already be defined!");// GetFieldName(projection.Value);
             if (!outputFields.Contains(fieldName, StringComparer.OrdinalIgnoreCase))
             {
                 outputFields.Add(fieldName);
@@ -302,14 +353,35 @@ public sealed class ProjectionExecutionPlanNode : ExecutionPlanNode
     }
 
     private bool ContainsAggregateProjection()
-        => _projections.Any(x => ContainsAggregateFunction(x.Expression));
+        => _projections.Any(ContainsAggregateFunction);
+
+    private static bool ContainsAggregateFunction(ProjectionColumnPlan expressionPlan)
+        => ContainsAggregateFunction(expressionPlan.Value);
+
+    private static bool ContainsAggregateFunction(ExpressionPlan.ExpressionPlanNode expressionPlan)
+    {
+        if (expressionPlan is AggregateFunctionCallExpressionExecutionPlan)
+        {
+            return true;
+        }
+
+        foreach (var child in expressionPlan.GetExpressions())
+        {
+            if (ContainsAggregateFunction(child))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     private List<AggregateFunctionCallExpressionExecutionPlan> GetAggregateFunctionCalls()
     {
         var aggregateFunctions = new List<AggregateFunctionCallExpressionExecutionPlan>();
-        foreach (var projection in _expressionPlans)
+        foreach (var projection in _projections)
         {
-            CollectAggregateFunctions(projection, aggregateFunctions);
+            CollectAggregateFunctions(projection.Value, aggregateFunctions);
         }
 
         return aggregateFunctions;
@@ -326,24 +398,6 @@ public sealed class ProjectionExecutionPlanNode : ExecutionPlanNode
         {
             CollectAggregateFunctions(child, aggregateFunctions);
         }
-    }
-
-    private static bool ContainsAggregateFunction(Expression expression)
-    {
-        if (expression is FunctionCallExpression functionCall && functionCall.Binding?.GetState<SqlFunction>() is AggregateFunction)
-        {
-            return true;
-        }
-
-        foreach (var child in expression.GetChildren())
-        {
-            if (child is Expression childExpression && ContainsAggregateFunction(childExpression))
-            {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     private static object? EvaluateExpression(ExpressionPlan.ExpressionPlanNode expressionPlan, RowAccessor row, IReadOnlyDictionary<FunctionCallExpression, object?>? aggregateValues)

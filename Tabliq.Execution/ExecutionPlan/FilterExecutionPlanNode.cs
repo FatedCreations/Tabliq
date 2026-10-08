@@ -46,16 +46,6 @@ public sealed class FilterExecutionPlanNode : ExecutionPlanNode
 
         async IAsyncEnumerable<object?[]> Filter()
         {
-            if (_input is EmptyExecutionPlanNode)
-            {
-                if (_conditionPlan.Execute(new RowAccessor(Array.Empty<string>(), Array.Empty<object?>())))
-                {
-                    yield return Array.Empty<object?>();
-                }
-
-                yield break;
-            }
-
             var row = new object?[reader.GetFields().Length];
 
             while (await reader.ReadAsync(cancellationToken))

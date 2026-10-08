@@ -335,6 +335,9 @@ public class SqlWriter
             case OrderByClause OrderByClause:
                 Write(OrderByClause);
                 break;
+            case OffsetClause OffsetClause:
+                Write(OffsetClause);
+                break;
             case IsNullCondition IsNullCondition:
                 Write(IsNullCondition);
                 break;
@@ -839,6 +842,16 @@ public class SqlWriter
 
         void WriteBody()
         {
+            if (order.Entries.Count == 0)
+            {
+                if (order.OffsetClause is not null)
+                {
+                    Write(order.OffsetClause);
+                }
+
+                return;
+            }
+
             Write(order.Entries.First());
             foreach (var entry in order.Entries.Skip(1))
             {

@@ -66,6 +66,12 @@ public class IdentifierExpression : Expression
 
     public ColumnBinding? Binding { get; internal set; }
 
+    public IdentifierExpression WithBinding(ColumnBinding binding)
+    {
+        Binding = binding;
+        return this;
+    }
+
     public override IEnumerable<SyntaxNode> GetChildren()
     {
         yield break;

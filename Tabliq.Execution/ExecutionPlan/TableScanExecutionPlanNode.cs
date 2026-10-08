@@ -26,6 +26,10 @@ public sealed class TableScanExecutionPlanNode : ExecutionPlanNode
 
     public string? SchemaName => _table.SchemaName;
 
+    public TableSymbol Table => _table;
+
+    public IReadOnlyList<ColumnSymbol> Columns => _table.Columns;
+
     public string Alias => _alias;
 
     /// <summary>The set of columns referenced from this table in the query. Null means all columns are needed.</summary>
