@@ -39,13 +39,9 @@ public class StarIdentifierExpression : Expression
         {
             return (IdentifierParts[0], null);
         }
-        else if (IdentifierParts.Count == 2)
-        {
-            return (IdentifierParts[1], IdentifierParts[0]);
-        }
         else
         {
-            throw new InvalidOperationException($"Invalid identifier parts: {string.Join(".", IdentifierParts)}");
+            return (IdentifierParts[^1], IdentifierParts[^2]);
         }
     }
 }
