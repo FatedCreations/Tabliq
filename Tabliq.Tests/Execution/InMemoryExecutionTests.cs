@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 using Tabliq.Execution;
+using Tabliq.Execution.ExpressionPlan;
 using Tabliq.Execution.Functions;
 using Tabliq.Execution.Providers;
 using Tabliq.Sql.Ast;
@@ -214,7 +215,7 @@ public class InMemoryExecutionTests
             """, Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
 
         var row = Assert.Single(results);
-        Assert.Equal(1, row["1"]);
+        Assert.Equal(1, row["'1'"]);
     }
 
     [Fact]
@@ -237,7 +238,7 @@ public class InMemoryExecutionTests
             """, Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
 
         var row = Assert.Single(results);
-        Assert.Equal(1, row["1"]);
+        Assert.Equal(1, row["'1'"]);
     }
 
 
@@ -261,7 +262,7 @@ public class InMemoryExecutionTests
             """, Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
 
         var row = Assert.Single(results);
-        Assert.Equal(1, row["1"]);
+        Assert.Equal(1, row["'1'"]);
     }
 
 
@@ -275,7 +276,7 @@ public class InMemoryExecutionTests
         }
 
         // we be called multiple times once for each row, but we just return the same value for testing purposes
-        public override AggregateFunctionState ProcessRow(FunctionCallExpression expression, RowAccessor accessor, AggregateFunctionState state)
+        public override AggregateFunctionState ProcessRow(FunctionCallExpression expression, RowAccessor accessor, IEnumerable<ExpressionPlanNode> arguments, AggregateFunctionState state)
             => AggregateFunctionState.FromResult(TestValue);
 
         public override AggregateFunctionState InitState()
@@ -291,7 +292,7 @@ public class InMemoryExecutionTests
         {
         }
 
-        public override object? Execute(FunctionCallExpression expression, RowAccessor accessor)
+        public override object? Execute(FunctionCallExpression expression, RowAccessor accessor, IEnumerable<ExpressionPlanNode> arguments)
         {
             return TestValue;
         }

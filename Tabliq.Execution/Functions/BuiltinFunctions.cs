@@ -45,6 +45,7 @@ public static class BuiltinFunctions
             new PassThroughValueFunction("DATEPART",
                 SqlFunctionArgs.Arg("datepart", skipBinding: true),
                 SqlFunctionArgs.Arg("date")),
+            new PassThroughValueFunction("EXTRACT", SqlFunctionArgs.Arg("expression")),
             new PassThroughValueFunction("DATETIME2FROMPARTS",
                 SqlFunctionArgs.Arg("year"),
                 SqlFunctionArgs.Arg("month"),

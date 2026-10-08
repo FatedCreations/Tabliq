@@ -1,5 +1,6 @@
 ﻿using Tabliq.Execution;
 using Tabliq.Execution.ExecutionReader;
+using Tabliq.Execution.ExpressionPlan;
 using Tabliq.Execution.Functions;
 using Tabliq.Execution.Providers;
 using Tabliq.Sql.Ast;
@@ -86,11 +87,17 @@ public class SqlServerExecutionTests
         var results = await _engine.ExecuteToDictionaryList("SELECT * FROM Data", Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
 
         Assert.Equal("""
-            SELECT *
+            SELECT
+                Data.Id,
+                Data.Name,
+                Data.NameTest,
+                Data.Value,
+                Data.Value2
             FROM Data
             """,
             _provider.LastSqlExecuted);
     }
+
     [Fact]
     public async Task SelectProjection()
     {
@@ -329,9 +336,9 @@ public class SqlServerExecutionTests
         {
         }
 
-        public override object? Execute(FunctionCallExpression expression, RowAccessor accessor)
+        public override object? Execute(FunctionCallExpression expression, RowAccessor accessor, IEnumerable<ExpressionPlanNode> arguments)
         {
-            var val = EvaluationHelpers.EvaluateExpression(expression.Arguments[0], accessor);
+            var val = arguments.First().Execute(accessor);
             return $"{val}#CUST_VALUE";
         }
     }

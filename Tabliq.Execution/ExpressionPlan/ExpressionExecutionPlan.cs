@@ -1,8 +1,6 @@
-using System.Linq.Expressions;
 using Tabliq.Execution.Functions;
 using Tabliq.Sql.Ast;
 using Tabliq.Sql.Binding;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Tabliq.Execution.ExpressionPlan;
 
@@ -14,6 +12,50 @@ public abstract class ExpressionPlanNode
         => this;
 
     public abstract IEnumerable<ExpressionPlanNode> GetExpressions();
+
+    public static ExpressionPlanNode Create(Expression expression)
+    {
+        if (expression is SelectExpression select)
+        {
+            return new ScalarSubqueryExpressionExecutionPlan(select);
+        }
+
+        return expression switch
+        {
+            LiteralExpression literal => new LiteralExpressionExecutionPlan(literal.Value),
+            IdentifierExpression identifier => new IdentifierExpressionExecutionPlan(identifier),
+            StarIdentifierExpression => new ConstantExpressionExecutionPlan(null),
+            ParameterIdentifier parameter => new ParameterExpressionExecutionPlan(parameter),
+            BracketedExpression bracketed => Create(bracketed.Expression),
+            InExpression inExpression => new SubValueInExpressionExecutionPlan(Create(inExpression.Expression), Create(inExpression.SubValue)),
+            AsExpression asExpression => new ConvertExpressionExecutionPlan(Create(asExpression.Expression), asExpression.DataType),
+            ValueFromExpression valueFromExpression => new ValuePartExpressionPlanNode(Create(valueFromExpression.Expression), valueFromExpression.Part),
+            BinaryOperatorExpression binary => new BinaryOperatorExpressionExecutionPlan(Create(binary.Left), binary.Operator, Create(binary.Right)),
+            UnaryOperatorExpression unary => new UnaryOperatorExpressionExecutionPlan(Create(unary.Expression), unary.Operator),
+            CaseExpression caseExpression => new CaseExpressionExecutionPlan(caseExpression),
+            DistinctValueExpression distinctValue => Create(distinctValue.Expression),
+            CurrentDate => new CurrentDateExpressionExecutionPlan(),
+            CurrentTime => new CurrentTimeExpressionExecutionPlan(),
+            CurrentTimestamp => new CurrentTimestampExpressionExecutionPlan(),
+            NullValue => new ConstantExpressionExecutionPlan(null),
+            FunctionCallExpression functionCall => functionCall.Binding?.GetState<SqlFunction>() switch
+            {
+                AggregateFunction agg => new AggregateFunctionCallExpressionExecutionPlan(functionCall, agg, functionCall.Arguments.Select(Create)),
+                ValueFunction valueFunc => new ValueFunctionCallExpressionExecutionPlan(functionCall, valueFunc, functionCall.Arguments.Select(Create)),
+                _ when functionCall.Binding is not null => functionCall.Binding.IsAggregate
+                    ? new AggregateFunctionCallExpressionExecutionPlan(
+                        functionCall,
+                        new PassThroughAggregateFunction(functionCall.FunctionName, functionCall.Arguments.Select(_ => new SqlFunction.FunctionArgument("expression"))),
+                        functionCall.Arguments.Select(Create))
+                    : new ValueFunctionCallExpressionExecutionPlan(
+                        functionCall,
+                        new PassThroughValueFunction(functionCall.FunctionName, functionCall.Arguments.Select(_ => new SqlFunction.FunctionArgument("expression"))),
+                        functionCall.Arguments.Select(Create)),
+                _ => throw new NotSupportedException($"Unsupported function type for function '{functionCall.FunctionName}': {functionCall.Binding?.GetType().Name ?? "null"}"),
+            },
+            _ => throw new NotSupportedException($"Unsupported expression type: {expression.GetType().Name}")
+        };
+    }
 
     public static object? NormalizeValue(object? value)
         => value switch
@@ -80,28 +122,149 @@ public abstract class ExpressionPlanNode
 
 }
 
-public sealed class LiteralExpressionExecutionPlan(object? value) : ExpressionPlanNode
+public sealed class LiteralExpressionExecutionPlan : ExpressionPlanNode
 {
+    public LiteralExpressionExecutionPlan(object? value)
+    {
+        Value = value;
+    }
+
+    public object? Value { get; }
+
     public override object? Execute(RowAccessor row, IReadOnlyDictionary<FunctionCallExpression, object?>? aggregateValues = null)
-        => value;
+        => Value;
 
     public override IEnumerable<ExpressionPlanNode> GetExpressions() => [];
 }
 
-public sealed class IdentifierExpressionExecutionPlan(IdentifierExpression identifier) : ExpressionPlanNode
+public sealed class IdentifierExpressionExecutionPlan : ExpressionPlanNode
 {
+    public IdentifierExpressionExecutionPlan(IdentifierExpression identifier)
+    {
+        Identifier = identifier;
+    }
+
+    public IdentifierExpression Identifier { get; }
+
+    public TableSymbol? TableSymbol => Identifier.Binding?.TableSymbol;
+
+    public ColumnSymbol? ColumnSymbol => Identifier.Binding?.ColumnSymbol;
+
     public override object? Execute(RowAccessor row, IReadOnlyDictionary<FunctionCallExpression, object?>? aggregateValues = null)
     {
-        if (identifier.Binding is not null)
+        if (Identifier.Binding is not null)
         {
-            var tableName = identifier.Binding.TableSymbol.TableName;
-            var column = identifier.Binding.ColumnSymbol.Name;
-            return GetValue(row, tableName, column) ?? GetValue(row, null, identifier.Column);
+            var tableName = Identifier.Binding.TableSymbol.TableName;
+            var column = Identifier.Binding.ColumnSymbol.Name;
+            return GetValue(row, tableName, column) ?? GetValue(row, null, Identifier.Column);
         }
 
-        return GetValue(row, null, identifier.Column);
+        return GetValue(row, null, Identifier.Column);
     }
     public override IEnumerable<ExpressionPlanNode> GetExpressions() => [];
+}
+
+public sealed class ParameterExpressionExecutionPlan : ExpressionPlanNode
+{
+    public ParameterExpressionExecutionPlan(ParameterIdentifier parameter)
+    {
+        Parameter = parameter;
+    }
+
+    public ParameterIdentifier Parameter { get; }
+
+    public override object? Execute(RowAccessor row, IReadOnlyDictionary<FunctionCallExpression, object?>? aggregateValues = null)
+        => Parameter.Binding?.ParameterSymbol.State is ExecuterParameter executerParameter ? executerParameter.Value : null;
+
+    public override IEnumerable<ExpressionPlanNode> GetExpressions() => [];
+}
+
+public sealed class CurrentDateExpressionExecutionPlan : ExpressionPlanNode
+{
+    public override object? Execute(RowAccessor row, IReadOnlyDictionary<FunctionCallExpression, object?>? aggregateValues = null)
+        => DateTime.Now.Date;
+
+    public override IEnumerable<ExpressionPlanNode> GetExpressions() => [];
+}
+
+public sealed class CurrentTimeExpressionExecutionPlan : ExpressionPlanNode
+{
+    public override object? Execute(RowAccessor row, IReadOnlyDictionary<FunctionCallExpression, object?>? aggregateValues = null)
+        => DateTime.Now.TimeOfDay;
+
+    public override IEnumerable<ExpressionPlanNode> GetExpressions() => [];
+}
+
+public sealed class CurrentTimestampExpressionExecutionPlan : ExpressionPlanNode
+{
+    public override object? Execute(RowAccessor row, IReadOnlyDictionary<FunctionCallExpression, object?>? aggregateValues = null)
+        => DateTime.Now;
+
+    public override IEnumerable<ExpressionPlanNode> GetExpressions() => [];
+}
+
+public sealed class CaseExpressionExecutionPlan : ExpressionPlanNode
+{
+    public CaseExpressionExecutionPlan(CaseExpression expression)
+    {
+        Expression = expression;
+    }
+
+    public CaseExpression Expression { get; }
+
+    public override object? Execute(RowAccessor row, IReadOnlyDictionary<FunctionCallExpression, object?>? aggregateValues = null)
+    {
+        throw new NotImplementedException();
+
+        //if (Expression.Expression is not null)
+        //{
+        //    var switchValue = Create(Expression.Expression).Execute(row, aggregateValues);
+        //    foreach (var when in Expression.WhenClauses)
+        //    {
+        //        var whenCondition = when.Expression is Condition condition
+        //            ? Create(condition).Execute(row)
+        //            : Equals(switchValue, Create(when.Expression).Execute(row, aggregateValues));
+        //        if (whenCondition)
+        //        {
+        //            return Create(when.Result).Execute(row, aggregateValues);
+        //        }
+        //    }
+        //}
+        //else
+        //{
+        //    foreach (var when in Expression.WhenClauses)
+        //    {
+        //        if (when.Expression is Condition condition && Create(condition).Execute(row))
+        //        {
+        //            return Create(when.Result).Execute(row, aggregateValues);
+        //        }
+        //    }
+        //}
+
+        //return Expression.ElseResult is not null ? Create(Expression.ElseResult).Execute(row, aggregateValues) : null;
+    }
+
+    public override IEnumerable<ExpressionPlanNode> GetExpressions()
+    {
+        var expressions = new List<ExpressionPlanNode>();
+        if (Expression.Expression is not null)
+        {
+            expressions.Add(Create(Expression.Expression));
+        }
+
+        foreach (var when in Expression.WhenClauses)
+        {
+            expressions.Add(Create(when.Expression));
+            expressions.Add(Create(when.Result));
+        }
+
+        if (Expression.ElseResult is not null)
+        {
+            expressions.Add(Create(Expression.ElseResult));
+        }
+
+        return expressions;
+    }
 }
 
 public sealed class ConvertExpressionExecutionPlan : ExpressionPlanNode
@@ -250,7 +413,12 @@ public sealed class AggregateFunctionCallExpressionExecutionPlan : ExpressionPla
     }
     public override object? Execute(RowAccessor row, IReadOnlyDictionary<FunctionCallExpression, object?>? aggregateValues = null)
     {
-        throw new InvalidOperationException("Unsupported function call");
+        if (aggregateValues is not null && aggregateValues.TryGetValue(Expression, out var aggregateValue))
+        {
+            return aggregateValue;
+        }
+
+        return null;
     }
     public override IEnumerable<ExpressionPlanNode> GetExpressions() => Arguments;
 }
@@ -274,6 +442,21 @@ public sealed class ValueFunctionCallExpressionExecutionPlan : ExpressionPlanNod
     }
 }
 
+public sealed class ScalarSubqueryExpressionExecutionPlan : ExpressionPlanNode
+{
+    public ScalarSubqueryExpressionExecutionPlan(SelectExpression select)
+    {
+        Select = select;
+    }
+
+    public SelectExpression Select { get; }
+
+    public override object? Execute(RowAccessor row, IReadOnlyDictionary<FunctionCallExpression, object?>? aggregateValues = null)
+        => throw new NotSupportedException("Scalar subqueries must be rewritten to SQL; they are not directly executable in-memory.");
+
+    public override IEnumerable<ExpressionPlanNode> GetExpressions() => [];
+}
+
 public sealed class ConstantExpressionExecutionPlan(object? value) : ExpressionPlanNode
 {
     public override object? Execute(RowAccessor row, IReadOnlyDictionary<FunctionCallExpression, object?>? aggregateValues = null)
@@ -288,6 +471,24 @@ public abstract class ConditionExecutionPlan
     public virtual ConditionExecutionPlan TryRewrite(IExecutionProvider? provider, ExecutionRewriteContext? context = null)
         => this;
     public abstract IEnumerable<ExpressionPlanNode> GetExpressions();
+
+
+    public static ConditionExecutionPlan Create(Condition expression)
+        => expression switch
+        {
+            BinaryComparisonCondition comparison => new BinaryComparisonConditionExecutionPlan(ExpressionPlanNode.Create(comparison.Left), comparison.Operator, ExpressionPlanNode.Create(comparison.Right)),
+            LogicalCondition logical => new LogicalConditionExecutionPlan(Create(logical.Left), logical.Operator, Create(logical.Right)),
+            BracketedCondition bracketed => new BracketedConditionExecutionPlan(Create(bracketed.Expression)),
+            UnaryCondition unary => new UnaryConditionExecutionPlan(Create(unary.Right), unary.Operator),
+            IsNullCondition isNull => new IsNullConditionExecutionPlan(ExpressionPlanNode.Create(isNull.Expression), isNull.IsNot),
+            LikeCondition like => new LikeConditionExecutionPlan(ExpressionPlanNode.Create(like.Left), ExpressionPlanNode.Create(like.Right), like.IsNot),
+            BetweenCondition between => new BetweenConditionExecutionPlan(ExpressionPlanNode.Create(between.Left), ExpressionPlanNode.Create(between.From), ExpressionPlanNode.Create(between.To), between.IsNot),
+            InListCondition inList => new InListConditionExecutionPlan(ExpressionPlanNode.Create(inList.Left), inList.Items.Select(ExpressionPlanNode.Create), inList.IsNot),
+            InSelectCondition inSelect => new InSelectConditionExecutionPlan(ExecutionPlanNode.Create(inSelect.Expression)),
+            ExistsCondition exists => new ExistsConditionExecutionPlan(ExecutionPlanNode.Create(exists.SelectExpression)),
+            _ => throw new NotSupportedException($"Unsupported condition type: {expression.GetType().Name}")
+        };
+
 }
 
 public sealed class BinaryComparisonConditionExecutionPlan : ConditionExecutionPlan

@@ -66,7 +66,7 @@ internal class RemoteSqlRewiter : ReplaceStarsRewriter
                     else if (vt.RemoteSql is not null)
                     {
                         hasChanges = true;
-                        return new SelectTableReference(vt.RemoteSql, namedTable.Alias ?? namedTable.Identifer.Column)
+                        return new SelectTableReference(new SelectExpression(true, vt.RemoteSql), namedTable.Alias ?? namedTable.Identifer.Column)
                         {
                             Span = namedTable.Span
                         };
