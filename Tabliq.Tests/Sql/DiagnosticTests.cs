@@ -32,8 +32,44 @@ public class DiagnosticTests
         var diag = Assert.Single(diagnostics);
 
         Assert.NotNull(diag.State);
-        Assert.Null(diag.State["TableName"]);
-        Assert.Null(diag.State["SchemaName"]);
+        Assert.Equal(string.Empty, diag.State["TableName"]);
+        Assert.Equal(string.Empty, diag.State["SchemaName"]);
+        Assert.Equal("UnknownColumn", diag.State["ColumnName"]);
+    }
+    [Fact]
+    public void UnknownColumnBoundTable()
+    {
+        var diagnostics = AssertSql
+            .WithErrors(
+                """
+                SELECT be.UnknownColumn FROM [BE];
+                """,
+                "ColumnNotFound: [7:16] : Column 'UnknownColumn' not found in table 'BE'.");
+
+        var diag = Assert.Single(diagnostics);
+
+        Assert.NotNull(diag.State);
+        Assert.Equal(string.Empty, diag.State["SchemaName"]);
+        Assert.Equal("BE", diag.State["TableName"]);
+        Assert.Equal("UnknownColumn", diag.State["ColumnName"]);
+    }
+
+    [Fact]
+    public void UnknownColumnBoundTableAlias()
+    {
+        var diagnostics = AssertSql
+            .WithErrors(
+                """
+                SELECT s.UnknownColumn FROM [BE] s;
+                """,
+                "ColumnNotFound: [7:15] : Column 'UnknownColumn' not found in table 'BE'.");
+
+        var diag = Assert.Single(diagnostics);
+
+        Assert.NotNull(diag.State);
+        Assert.Equal(string.Empty, diag.State["SchemaName"]);
+        Assert.Equal("BE", diag.State["TableName"]);
+        Assert.Equal("s", diag.State["TableNameAlias"]);
         Assert.Equal("UnknownColumn", diag.State["ColumnName"]);
     }
 
@@ -51,7 +87,7 @@ public class DiagnosticTests
 
         Assert.NotNull(diag.State);
         Assert.Equal("BE", diag.State["TableName"]);
-        Assert.Null(diag.State["SchemaName"]);
+        Assert.Equal(string.Empty, diag.State["SchemaName"]);
         Assert.Equal("UnknownColumn", diag.State["ColumnName"]);
     }
 }

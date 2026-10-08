@@ -439,36 +439,58 @@ public class Binder
 
     private void Bind(IdentifierExpression p)
     {
+        void ReportColumnNotFound(TableSymbol? tableSymbol, ColumnSymbol? columnSymbol, string? tableName, string? schemaName, string columnName, string? message = null, string id = "ColumnNotFound")
+        {
+            var finalTableAlias = tableSymbol?.TableName ?? tableName ?? string.Empty;
+            var finalTableName = tableSymbol?.State is TableSymbol ts ? ts.TableName : tableSymbol?.TableName ?? tableName ?? string.Empty;
+            var finalSchemaName = tableSymbol?.State is TableSymbol ss ? ss.SchemaName : tableSymbol?.SchemaName ?? schemaName ?? string.Empty;
+            var finalColumnName = columnSymbol?.Name ?? columnName;
+
+            if (message is null)
+            {
+                if (tableSymbol is null && columnSymbol is null)
+                {
+                    message = $"Column '{finalColumnName}' not found.";
+                }
+                else if (tableSymbol is null)
+                {
+                    message = $"Table '{finalTableName}' not found in the current scope.";
+                }
+                else
+                {
+                    message = $"Column '{finalColumnName}' not found in table '{finalTableName}'.";
+                }
+            }
+
+            Diagnostics.Report(id, message, p.Span, new()
+            {
+                ["TableName"] = finalTableName,
+                ["TableNameAlias"] = finalTableAlias ?? finalTableName,
+                ["SchemaName"] = finalSchemaName,
+                ["ColumnName"] = finalColumnName,
+            });
+        }
+
         Expression expressionToValidate = p;
         if (p.Binding is null)
         {
-
             var (tableName, schemaName, columnName) = p.GetColumnParts();
 
-            if (tableName is not null)
+            if (schemaName is not null)
             {
-                tableName = p.IdentifierParts[0];
+                var (table, col) = Current.FindColumn(tableName ?? string.Empty, columnName);
+                ReportColumnNotFound(table, col, tableName, schemaName, columnName, "Only simple '[col]' or 'table.[col]' identifiers are supported for now.");
+                p.Binding = ColumnBinding.Missing;
+                return;
+            }
+            else if (tableName is not null)
+            {
                 var (table, col) = Current.FindColumn(tableName, columnName);
                 if (table is null || col is null)
                 {
-                    if (table is null)
-                    {
-                        Diagnostics.Report("TableNotFound", $"Table '{tableName}' not found in the current scope.", p.Span, new()
-                        {
-                            ["TableName"] = tableName,
-                            ["SchemaName"] = schemaName,
-                            ["ColumnName"] = columnName,
-                        });
-                    }
-                    else
-                    {
-                        Diagnostics.Report("ColumnNotFound", $"Column '{columnName}' not found in table '{table}'.", p.Span, new()
-                        {
-                            ["TableName"] = tableName,
-                            ["SchemaName"] = schemaName,
-                            ["ColumnName"] = columnName,
-                        });
-                    }
+
+                    ReportColumnNotFound(table, col, tableName, schemaName, columnName);
+
                     p.Binding = ColumnBinding.Missing;
                     return;
                 }
@@ -476,41 +498,20 @@ public class Binder
                 p.Binding = new ColumnBinding(table, col);
                 return;
             }
-            else if (schemaName is not null)
-            {
-                Diagnostics.Report("ColumnNotFound", "Only simple '[col]' or 'table.[col]' identifiers are supported for now.", p.Span, new()
-                {
-                    ["TableName"] = tableName,
-                    ["SchemaName"] = schemaName,
-                    ["ColumnName"] = columnName,
-                });
-                p.Binding = ColumnBinding.Missing;
-                return;
-            }
             else
             {
                 // need to handle aliased columns too??
-
                 var cols = Current.FindColumnsInScope(columnName).ToList();
                 if (cols.Count == 0)
                 {
-                    Diagnostics.Report("ColumnNotFound", $"Column '{columnName}' not found.", p.Span, new()
-                    {
-                        ["TableName"] = tableName,
-                        ["SchemaName"] = schemaName,
-                        ["ColumnName"] = columnName,
-                    });
+                    ReportColumnNotFound(null, null, tableName, schemaName, columnName);
+
                     p.Binding = ColumnBinding.Missing;
                     return;
                 }
                 else if (cols.Count > 1)
                 {
-                    Diagnostics.Report("AmbiguousColumn", $"Column '{p}' is ambiguous.", p.Span, new()
-                    {
-                        ["TableName"] = tableName,
-                        ["SchemaName"] = schemaName,
-                        ["ColumnName"] = columnName,
-                    });
+                    ReportColumnNotFound(null, null, tableName, schemaName, columnName, $"Column '{p}' is ambiguous.", "AmbiguousColumn");
                     p.Binding = ColumnBinding.Missing;
                     return;
                 }
@@ -734,7 +735,10 @@ public class BindingScope
     {
         if (!string.IsNullOrEmpty(alias))
         {
-            table = new TableSymbol(alias, table.Columns);
+            table = new TableSymbol(alias, table.Columns)
+            {
+                State = table
+            };
             _tables[alias] = table;
         }
 
