@@ -442,21 +442,32 @@ public class Binder
         Expression expressionToValidate = p;
         if (p.Binding is null)
         {
-            string columName = p.Column;
-            string? tableName = null;
-            if (p.IdentifierParts.Count == 2)
+
+            var (tableName, schemaName, columnName) = p.GetColumnParts();
+
+            if (tableName is not null)
             {
                 tableName = p.IdentifierParts[0];
-                var (table, col) = Current.FindColumn(tableName, columName);
+                var (table, col) = Current.FindColumn(tableName, columnName);
                 if (table is null || col is null)
                 {
                     if (table is null)
                     {
-                        Diagnostics.Report("TableNotFound", $"Table '{tableName}' not found in the current scope", p.Span);
+                        Diagnostics.Report("TableNotFound", $"Table '{tableName}' not found in the current scope.", p.Span, new()
+                        {
+                            ["TableName"] = tableName,
+                            ["SchemaName"] = schemaName,
+                            ["ColumnName"] = columnName,
+                        });
                     }
                     else
                     {
-                        Diagnostics.Report("ColumnNotFound", $"Column '{columName}' not found in table '{table}'", p.Span);
+                        Diagnostics.Report("ColumnNotFound", $"Column '{columnName}' not found in table '{table}'.", p.Span, new()
+                        {
+                            ["TableName"] = tableName,
+                            ["SchemaName"] = schemaName,
+                            ["ColumnName"] = columnName,
+                        });
                     }
                     p.Binding = ColumnBinding.Missing;
                     return;
@@ -465,82 +476,100 @@ public class Binder
                 p.Binding = new ColumnBinding(table, col);
                 return;
             }
-            else if (p.IdentifierParts.Count > 2)
+            else if (schemaName is not null)
             {
-                Diagnostics.Report("ColumnNotFound", "Only simple '[col]' or 'table.[col]' identifiers are supported for now", p.Span);
+                Diagnostics.Report("ColumnNotFound", "Only simple '[col]' or 'table.[col]' identifiers are supported for now.", p.Span, new()
+                {
+                    ["TableName"] = tableName,
+                    ["SchemaName"] = schemaName,
+                    ["ColumnName"] = columnName,
+                });
                 p.Binding = ColumnBinding.Missing;
                 return;
             }
-
-            // need to handle aliased columns too??
-
-            var cols = Current.FindColumnsInScope(columName).ToList();
-            if (cols.Count == 0)
+            else
             {
-                Diagnostics.Report("ColumnNotFound", $"Column '{columName}' not found in the current scope", p.Span);
-                p.Binding = ColumnBinding.Missing;
-                return;
+                // need to handle aliased columns too??
+
+                var cols = Current.FindColumnsInScope(columnName).ToList();
+                if (cols.Count == 0)
+                {
+                    Diagnostics.Report("ColumnNotFound", $"Column '{columnName}' not found.", p.Span, new()
+                    {
+                        ["TableName"] = tableName,
+                        ["SchemaName"] = schemaName,
+                        ["ColumnName"] = columnName,
+                    });
+                    p.Binding = ColumnBinding.Missing;
+                    return;
+                }
+                else if (cols.Count > 1)
+                {
+                    Diagnostics.Report("AmbiguousColumn", $"Column '{p}' is ambiguous.", p.Span, new()
+                    {
+                        ["TableName"] = tableName,
+                        ["SchemaName"] = schemaName,
+                        ["ColumnName"] = columnName,
+                    });
+                    p.Binding = ColumnBinding.Missing;
+                    return;
+                }
+
+                var (t, c) = cols[0];
+
+                var binding = new ColumnBinding(t, c, null);
+
+                p.Binding = binding;
             }
-            else if (cols.Count > 1)
-            {
-                Diagnostics.Report("AmbiguousColumn", $"Column '{p}' is ambiguous in the current scope", p.Span);
-                p.Binding = ColumnBinding.Missing;
-                return;
-            }
-
-            var (t, c) = cols[0];
-
-            var binding = new ColumnBinding(t, c, null);
-
-            p.Binding = binding;
         }
-        //if (Current.InsideGroupBy)
-        //{
-        //    if (!Current.InsideAggregate)
-        //    {
-        //        if (p.Binding.Expression is not null)
-        //        {
-        //            Bind(p.Binding.Expression);
-        //        }
-        //        else
-        //        {
-        //            Current.AddColumnGrouping(p);
-        //        }
-        //    }
-        //}
-
-        //if (Current.InsideOrderBy)
-        //{
-        //    if (!Current.InsideAggregate)
-        //    {
-        //        if (p.Binding.Expression is not null) // i'm an alias to somthing else, process the referenced expression instead
-        //        {
-        //            Bind(p.Binding.Expression);
-        //        }
-        //        else
-        //        {
-        //            if (!Current.IsColumnInGroupBy(p.Binding))
-        //            {
-        //                // todo get this working, the logic is deep than it look on face value.
-
-        //                //Diagnostics.Report("InvalidColumnInOrderBy", $"Column \"{p}\" is invalid in the ORDER BY clause because it is not contained in either an aggregate function or the GROUP BY clause.", p.Span);
-        //            }
-        //        }
-        //    }
-        //}
-
-        return;
     }
 
     private void Bind(StarIdentifierExpression p)
     {
-        if (p.IdentifierParts.Count == 0)
+        var (tableName, schemaName) = p.GetColumnParts();
+
+        if (tableName is not null)
+        {
+            // all columns for a specific table in scope
+            var table = Current.LookupReferenceTables(tableName);
+            if (table is null)
+            {
+                Diagnostics.Report("TableNotFound", $"Table '{tableName}' not found in the current scope", p.Span, new()
+                {
+                    ["TableName"] = tableName,
+                    ["SchemaName"] = schemaName,
+                    ["ColumnName"] = "*",
+                });
+                return;
+            }
+            List<ColumnBinding> bindings = new List<ColumnBinding>();
+            foreach (var column in table.Columns)
+            {
+                bindings.Add(new ColumnBinding(table, column));
+            }
+            p.Bindings = bindings;
+        }
+        else if (schemaName is not null)
+        {
+            Diagnostics.Report("UnsupportedStarIdentifier", "Only simple '*' or 'table.*' identifiers are supported for now", p.Span, new()
+            {
+                ["TableName"] = tableName,
+                ["SchemaName"] = schemaName,
+                ["ColumnName"] = "*",
+            });
+        }
+        else
         {
             // all columns for all reference tables in scope
             var refs = Current.ReferencedTables;
             if (!refs.Any())
             {
-                Diagnostics.Report("NoTablesInScope", "No tables in scope to expand '*'", p.Span);
+                Diagnostics.Report("NoTablesInScope", "No tables in scope to expand '*'", p.Span, new()
+                {
+                    ["TableName"] = tableName,
+                    ["SchemaName"] = schemaName,
+                    ["ColumnName"] = "*",
+                });
                 return;
             }
 
@@ -553,27 +582,6 @@ public class Binder
                 }
             }
             p.Bindings = bindings;
-        }
-        else if (p.IdentifierParts.Count == 1)
-        {
-            // all columns for a specific table in scope
-            var tableName = p.IdentifierParts[0];
-            var table = Current.LookupReferenceTables(tableName);
-            if (table is null)
-            {
-                Diagnostics.Report("TableNotFound", $"Table '{tableName}' not found in the current scope", p.Span);
-                return;
-            }
-            List<ColumnBinding> bindings = new List<ColumnBinding>();
-            foreach (var column in table.Columns)
-            {
-                bindings.Add(new ColumnBinding(table, column));
-            }
-            p.Bindings = bindings;
-        }
-        else
-        {
-            Diagnostics.Report("UnsupportedStarIdentifier", "Only simple '*' or 'table.*' identifiers are supported for now", p.Span);
         }
     }
     private void Bind(ParameterIdentifier p)
@@ -617,8 +625,8 @@ public class Binder
 
         if (table is null)
         {
-            Diagnostics.Report("UnsupportedTableReference", $"Table '{tableName}' not found in the current scope", tbl.Identifer.Span);
-            return;
+            table = new TableSymbol(tableName, schemaName, new List<ColumnSymbol>()); // create a fake unknown table to bind to, prevents cascading errors
+            Diagnostics.Report("TableNotFound", $"Table '{tableName}' not found.", tbl.Identifer.Span, new() { ["TableName"] = tableName, ["SchemaName"] = schemaName });
         }
 
         tbl.Binding = table;
@@ -757,7 +765,7 @@ public class BindingScope
             if (fullName.Equals(_tableName, StringComparison.OrdinalIgnoreCase))
                 return Build();
         }
-        else if(schemaName.Length > 0)
+        else if (schemaName.Length > 0)
         {
             fullName = $"{schemaName}.{name}";
         }

@@ -80,7 +80,7 @@ public class TestCases
                 FROM OD_PR
                 join OD on OD_PR.ODId = OD.ODId
             """,
-            "AmbiguousColumn: [12:4] : Column 'ODId' is ambiguous in the current scope");
+            "AmbiguousColumn: [12:4] : Column 'ODId' is ambiguous.");
     [Fact]
     public void OrderByAliasColumns()
         => AssertSql.Equal(
@@ -103,7 +103,7 @@ public class TestCases
             FROM SE 
             GROUP BY d
             """,
-            "ColumnNotFound: [37:1] : Column 'd' not found in the current scope"
+            "ColumnNotFound: [37:1] : Column 'd' not found."
             );
 
     [Fact]

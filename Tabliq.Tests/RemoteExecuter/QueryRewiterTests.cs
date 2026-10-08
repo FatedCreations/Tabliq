@@ -116,12 +116,12 @@ public class QueryRewiterTests
             GROUP BY EXTRACT(YEAR FROM "Shipped Date"), EXTRACT(QUARTER FROM "Shipped Date")
             ORDER BY year, quarter
             """,
-            "ColumnNotFound: [25:12] : Column 'Shipped Date' not found in the current scope",
-            "ColumnNotFound: [79:12] : Column 'Shipped Date' not found in the current scope",
-            "ColumnNotFound: [133:12] : Column 'Shipped Date' not found in the current scope",
-            "ColumnNotFound: [181:12] : Column 'Shipped Date' not found in the current scope",
-            "ColumnNotFound: [315:12] : Column 'Shipped Date' not found in the current scope",
-            "ColumnNotFound: [353:12] : Column 'Shipped Date' not found in the current scope"
+            "ColumnNotFound: [25:12] : Column 'Shipped Date' not found.",
+            "ColumnNotFound: [79:12] : Column 'Shipped Date' not found.",
+            "ColumnNotFound: [133:12] : Column 'Shipped Date' not found.",
+            "ColumnNotFound: [181:12] : Column 'Shipped Date' not found.",
+            "ColumnNotFound: [315:12] : Column 'Shipped Date' not found.",
+            "ColumnNotFound: [353:12] : Column 'Shipped Date' not found."
             );
 
     [Fact]
@@ -899,9 +899,9 @@ public class QueryRewiterTests
         """
         SELECT EXTRACT(YEAR FROM dh.[Historic Month]) AS year, EXTRACT(MONTH FROM dh.[Historic Month]) AS month, SUM(dh.[Total SRs on active Devices]) AS service_requests, CASE WHEN ac.[Decommissioned Date] IS NULL THEN 'Nearing EOL' ELSE 'Replaced' END AS status FROM [Device History] dh JOIN [All Components] ac ON dh.[Unique Key]=ac.[Unique Key] WHERE ac.[Device SubType] LIKE '%router%' AND dh.[Historic Month] >= DATEADD(month,-24, CURRENT_DATE) GROUP BY year, month, status ORDER BY year, month, status
         """,
-        "ColumnNotFound: [452:4] : Column 'year' not found in the current scope",
-        "ColumnNotFound: [458:5] : Column 'month' not found in the current scope",
-        "ColumnNotFound: [465:6] : Column 'status' not found in the current scope"
+        "ColumnNotFound: [452:4] : Column 'year' not found.",
+        "ColumnNotFound: [458:5] : Column 'month' not found.",
+        "ColumnNotFound: [465:6] : Column 'status' not found."
         );
 
     [Fact]

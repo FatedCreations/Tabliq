@@ -8,22 +8,22 @@ public sealed class DiagnosticBag
     private readonly List<Diagnostic> _diagnostics = new();
     public IReadOnlyList<Diagnostic> Diagnostics => _diagnostics;
 
-    public void Report(string id, string message, int start, int length)
+    public void Report(string id, string message, int start, int length, Dictionary<string, object?>? state = null)
     {
-        _diagnostics.Add(new Diagnostic(id, message, start, length));
+        _diagnostics.Add(new Diagnostic(id, message, start, length, state));
     }
 
-    public void Report(string id, string message, SyntaxToken token)
-        => Report(id, message, new SyntaxTokenSpan(token));
+    public void Report(string id, string message, SyntaxToken token, Dictionary<string, object?>? state = null)
+        => Report(id, message, new SyntaxTokenSpan(token), state);
 
-    public void Report(string id, string message, IEnumerable<SyntaxToken> tokens)
-        => Report(id, message, new SyntaxTokenSpan(tokens));
+    public void Report(string id, string message, IEnumerable<SyntaxToken> tokens, Dictionary<string, object?>? state = null)
+        => Report(id, message, new SyntaxTokenSpan(tokens), state);
 
-    public void Report(string id, string message, SyntaxTokenSpan span)
-        => Report(id, message, span.Start, span.Length);
+    public void Report(string id, string message, SyntaxTokenSpan span, Dictionary<string, object?>? state = null)
+        => Report(id, message, span.Start, span.Length, state);
 
-    public void Report(string id, string message, SyntaxNode node)
-        => Report(id, message, node.Span);
+    public void Report(string id, string message, SyntaxNode node, Dictionary<string, object?>? state = null)
+        => Report(id, message, node.Span, state);
 
     public void AddRange(IEnumerable<Diagnostic> diagnostics) => _diagnostics.AddRange(diagnostics);
 }
