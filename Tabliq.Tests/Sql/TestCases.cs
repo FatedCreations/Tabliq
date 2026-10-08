@@ -3,7 +3,7 @@ namespace Tabliq.Tests.Sql;
 public class TestCases
 {
     [Fact]
-    public void multiComp()
+    public void MultiComparisonFailsToParse()
         => AssertSql
             .WithErrors(
                 """

@@ -22,19 +22,11 @@ public sealed partial class Parser
 
         if (lexer.Diagnostics.Diagnostics.Any())
         {
-            return new CompilationResult(text, null, tokens, lexer.Diagnostics.Diagnostics);
+            return new CompilationResult(text, new SqlScript([]), tokens, lexer.Diagnostics.Diagnostics);
         }
 
         var parser = new Parser(tokens, lexer.Diagnostics, settings);
-        SqlScript? root = null;
-        try
-        {
-            root = parser.ParseCompilationUnit();
-        }
-        catch (ParserLimitExcption _)
-        {
-            // noop this is a short circuit to stop parsing when we hit a limit, the diagnostics will be reported in the parser
-        }
+        var root = parser.ParseCompilationUnit();
 
         var diags = new List<Diagnostic>();
         diags.AddRange(lexer.Diagnostics.Diagnostics);
@@ -195,13 +187,12 @@ public sealed partial class Parser
     private bool IsMatch(params ReadOnlySpan<SyntaxKind> kinds)
         => IsMatch(0, kinds);
 
-    public SqlScript? ParseCompilationUnit()
+    public SqlScript ParseCompilationUnit()
     {
+        var loc = Track();
+        List<Statement> statements = new List<Statement>();
         try
         {
-            var loc = Track();
-            List<Statement> statements = new List<Statement>();
-
             while (Current.Kind != SyntaxKind.EndOfFileToken)
             {
                 var bad = ConsumeUntil(k => k.Kind == SyntaxKind.SelectKeyword || k.Kind == SyntaxKind.WithKeyword || k.Kind == SyntaxKind.SemicolonToken);
@@ -217,12 +208,23 @@ public sealed partial class Parser
                     }
                 }
             }
-            return new SqlScript(statements).WithLocation(loc);
         }
-        catch (ParserLimitExcption ex)
+        catch (ParserLimitException)
         {
-            return null;
+            while (Current.Kind != SyntaxKind.EndOfFileToken)
+            {
+                NextToken();
+            }
+
+            //consume remaining tokens, not need to report diagnostic one will already have been recorded by the limit tracker
+            if (loc.HasTokens)
+            {
+                statements.Add(new BadStatement(loc.Span));
+            }
         }
+
+        return new SqlScript(statements).WithLocation(loc);
+
     }
 
     private BadStatement? ConsumeUntil(Func<SyntaxToken, bool> predicate)
@@ -816,7 +818,7 @@ public sealed partial class Parser
             {
                 var loc = location ?? _parser.Track();
                 _parser._diagnostics.Report(_diagnosticId, _diagnosticMessage, loc.Span.Start, 0);
-                throw new ParserLimitExcption(_diagnosticMessage);
+                throw new ParserLimitException(_diagnosticMessage);
             }
 
             return tracker;
