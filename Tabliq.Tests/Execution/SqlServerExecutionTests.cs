@@ -161,6 +161,16 @@ public class SqlServerExecutionTests
             SELECT o.Name FROM Other o
         """, Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
 
+        // all pushed down as a single statements!
+        Assert.Single(_provider.SqlExecuted);
+        Assert.Equal("""
+             SELECT d.Name
+             FROM Data d
+             UNION ALL
+             SELECT o.Name
+             FROM Other o
+             """,
+            _provider.LastSqlExecuted);
         Assert.Contains("UNION ALL", _provider.LastSqlExecuted, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("FROM Data", _provider.LastSqlExecuted, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("FROM Other", _provider.LastSqlExecuted, StringComparison.OrdinalIgnoreCase);
@@ -206,7 +216,7 @@ public class SqlServerExecutionTests
         var results = await _engine.ExecuteToDictionaryList("SELECT CUST_VALUE(NameTest) AS c FROM Data WHERE NameTest = 'Test'", Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
 
         Assert.Equal("""
-            SELECT NameTest
+            SELECT Data.NameTest AS [Data.NameTest]
             FROM Data
             WHERE NameTest = 'Test'
             """,
@@ -223,10 +233,11 @@ public class SqlServerExecutionTests
                     NameTest = "Test"
                 }
             });
+
         var results = await _engine.BuildPlanAndExecuteToDictionaryList("SELECT CUST_VALUE(NameTest) AS c FROM Data WHERE NameTest = 'Test' GROUP BY NameTest", Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
 
         Assert.Equal("""
-            SELECT NameTest
+            SELECT Data.NameTest AS [Data.NameTest]
             FROM Data
             WHERE NameTest = 'Test'
             GROUP BY NameTest
@@ -255,7 +266,7 @@ public class SqlServerExecutionTests
 
         var results = await _engine.BuildPlanAndExecuteToDictionaryList("SELECT CUST_VALUE(NameTest) AS c FROM Data WHERE NameTest = 'Test' GROUP BY NameTest", Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
 
-        Assert.Contains(results.Diagnostics, x => x.Message.Contains("unsupported function", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(results.Diagnostics, x => x.Message.Equals("Function CUST_VALUE is not supported for pushdown", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
