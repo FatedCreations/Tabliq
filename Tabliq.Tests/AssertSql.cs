@@ -337,7 +337,7 @@ public class DeepCloneRewiter : SqlRewiter
         => new DataType(node.Name, node.Length, node.Precision, node.Scale);
 
     protected override ParameterIdentifier Rewrite(ParameterIdentifier node)
-        => new ParameterIdentifier(node.ParamterName);
+        => new ParameterIdentifier(node.ParameterName);
 
     protected override StarIdentifierExpression Rewrite(StarIdentifierExpression node)
         => new StarIdentifierExpression([.. node.IdentifierParts]);

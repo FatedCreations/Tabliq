@@ -7,18 +7,15 @@ namespace Tabliq.Execution;
 public sealed class FilterExecutionPlanNode : ExecutionPlanNode
 {
     private readonly ExecutionPlanNode _input;
-    private readonly Condition? _condition;
     private readonly ConditionExecutionPlan _conditionPlan;
 
     public ExecutionPlanNode Input => _input;
-    public Condition? Condition => _condition;
     public ConditionExecutionPlan ConditionPlan => _conditionPlan;
 
-    public FilterExecutionPlanNode(ExecutionPlanNode input, ConditionExecutionPlan conditionPlan, Condition? condition = null)
+    public FilterExecutionPlanNode(ExecutionPlanNode input, ConditionExecutionPlan conditionPlan)
     {
         _input = input;
         _conditionPlan = conditionPlan;
-        _condition = condition;
     }
 
     public override IExecutionProvider? Provider => null;
@@ -32,7 +29,7 @@ public sealed class FilterExecutionPlanNode : ExecutionPlanNode
         var newInput = _input.TryRewrite(context) ?? _input;
         if (newInput != _input)
         {
-            currentNode = new FilterExecutionPlanNode(newInput, _conditionPlan, _condition);
+            currentNode = new FilterExecutionPlanNode(newInput, _conditionPlan);
         }
 
         currentNode = newInput.Provider?.TryRewrite(currentNode, context) ?? currentNode;
@@ -41,28 +38,33 @@ public sealed class FilterExecutionPlanNode : ExecutionPlanNode
     }
 
     public override async Task<IExecutionReader> ExecuteAsync(IEnumerable<ExecuterParameter>? parameters = null, CancellationToken cancellationToken = default)
+        => new FilteredExecutionReader(await _input.ExecuteAsync(parameters, cancellationToken), _conditionPlan);   
+
+    private class FilteredExecutionReader : BaseExecutionReader
     {
-        await using var reader = await _input.ExecuteAsync(parameters, cancellationToken);
-
-        async IAsyncEnumerable<object?[]> Filter()
+        private readonly IExecutionReader _reader;
+        private readonly ConditionExecutionPlan _conditionPlan;
+        public FilteredExecutionReader(IExecutionReader reader, ConditionExecutionPlan conditionPlan)
         {
-            var row = new object?[reader.GetFields().Length];
-
-            while (await reader.ReadAsync(cancellationToken))
+            _reader = reader;
+            _conditionPlan = conditionPlan;
+        }
+        public override ReadOnlySpan<string> GetFields() => _reader.GetFields();
+        public override  ReadOnlySpan<object?> GetValues() => _reader.GetValues();
+        public override async Task<bool> ReadAsync(CancellationToken cancellationToken)
+        {
+            while (await _reader.ReadAsync(cancellationToken))
             {
-                var fields = reader.GetFields();
-                var values = reader.GetValues();
-
-                values.CopyTo(row);
-
-                if (_conditionPlan.Execute(new RowAccessor(fields, values)))
+                if (_conditionPlan.Execute(GetRowAccessor()))
                 {
-                    yield return row;
+                    return true;
                 }
             }
+            return false;
         }
-
-        var keys = reader.GetFields();
-        return new AsyncEnumeratorExecutionReader(keys.ToArray(), Filter().GetAsyncEnumerator(cancellationToken), Array.Empty<IAsyncDisposable>());
+        public override async ValueTask DisposeAsync()
+        {
+            await _reader.DisposeAsync();
+        }
     }
 }

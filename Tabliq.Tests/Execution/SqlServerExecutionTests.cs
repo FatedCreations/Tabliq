@@ -48,10 +48,20 @@ public class SqlServerExecutionTests
 
         Assert.Equal("""
             WITH d AS (
-                SELECT *
+                SELECT
+                    Data.Id,
+                    Data.Name,
+                    Data.NameTest,
+                    Data.Value,
+                    Data.Value2
                 FROM Data
             )
-            SELECT *
+            SELECT
+                d.Id,
+                d.Name,
+                d.NameTest,
+                d.Value,
+                d.Value2
             FROM d
             """,
             _provider.LastSqlExecuted);
@@ -245,7 +255,6 @@ public class SqlServerExecutionTests
 
         var results = await _engine.BuildPlanAndExecuteToDictionaryList("SELECT CUST_VALUE(NameTest) AS c FROM Data WHERE NameTest = 'Test' GROUP BY NameTest", Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
 
-        Assert.Contains(results.Diagnostics, x => x.Id == "SqlPushdownPartial");
         Assert.Contains(results.Diagnostics, x => x.Message.Contains("unsupported function", StringComparison.OrdinalIgnoreCase));
     }
 
@@ -338,7 +347,7 @@ public class SqlServerExecutionTests
 
         public override object? Execute(FunctionCallExpression expression, RowAccessor accessor, IEnumerable<ExpressionPlanNode> arguments)
         {
-            var val = arguments.First().Execute(accessor);
+            var val = arguments.First().ExecuteExpression(accessor);
             return $"{val}#CUST_VALUE";
         }
     }

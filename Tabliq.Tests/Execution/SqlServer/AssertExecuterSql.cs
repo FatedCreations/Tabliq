@@ -1,12 +1,11 @@
 ﻿using Tabliq.Execution;
 using Tabliq.Execution.ExecutionReader;
 using Tabliq.Execution.Policies;
+using Tabliq.Execution.Providers;
 using Tabliq.Execution.SqlServer;
 using Tabliq.Sql.Ast;
 using Tabliq.Sql.Core;
 using Tabliq.Sql.Parsing;
-using Tabliq.Sql.Printer;
-using static Tabliq.Execution.Providers.RemoteSqlProviderBase;
 
 namespace Tabliq.Tests.Execution.SqlServer;
 

@@ -43,7 +43,7 @@ public abstract class AggregateFunctionState
 {
     public static AggregateFunctionState NullState { get; } = new NoOpState();
 
-    public abstract object? GetAggregateValue(CancellationToken cancellationToken);
+    public abstract object? GetAggregateValue();
 
     public static AggregateFunctionState FromResult(object? result) => new ResultAggregateFunctionState(result);
 
@@ -54,7 +54,7 @@ public abstract class AggregateFunctionState
         {
             _result = result;
         }
-        public override object? GetAggregateValue(CancellationToken cancellationToken)
+        public override object? GetAggregateValue()
         {
             return _result;
         }
@@ -62,7 +62,7 @@ public abstract class AggregateFunctionState
 
     private class NoOpState : AggregateFunctionState
     {
-        public override object? GetAggregateValue(CancellationToken cancellationToken)
+        public override object? GetAggregateValue()
         {
             return null;
         }

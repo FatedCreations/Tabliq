@@ -439,6 +439,29 @@ public class Binder
         }
     }
 
+    private void BindIdentifier(List<ColumnBinding> p, TableSymbol table, ColumnSymbol column)
+    {
+        var binding = new ColumnBinding(table, column, null);
+
+        var parentTable = table.GetState<TableSymbol>() ?? table;
+        var sharedState = parentTable.GetOrCreateState(() => new List<ColumnBinding>());
+        table.GetOrCreateState(() => sharedState);
+        sharedState.Add(binding);
+
+        p.Add(binding);
+    }
+
+    private void BindIdentifier(IdentifierExpression p, TableSymbol table, ColumnSymbol column)
+    {
+        var binding = new ColumnBinding(table, column, null);
+
+        var parentTable = table.GetState<TableSymbol>() ?? table;
+        var sharedState = parentTable.GetOrCreateState(() => new List<ColumnBinding>());
+        table.GetOrCreateState(() => sharedState);
+        sharedState.Add(binding);
+        p.Binding = binding;
+    }
+
     private void Bind(IdentifierExpression p)
     {
         Expression expressionToValidate = p;
@@ -464,7 +487,7 @@ public class Binder
                     return;
                 }
 
-                p.Binding = new ColumnBinding(table, col);
+                BindIdentifier(p, table, col);
                 return;
             }
             else if (p.IdentifierParts.Count > 2)
@@ -491,10 +514,7 @@ public class Binder
             }
 
             var (t, c) = cols[0];
-
-            var binding = new ColumnBinding(t, c, null);
-
-            p.Binding = binding;
+            BindIdentifier(p, t, c);
         }
         //if (Current.InsideGroupBy)
         //{
@@ -551,7 +571,7 @@ public class Binder
             {
                 foreach (var column in table.Columns)
                 {
-                    bindings.Add(new ColumnBinding(table, column));
+                    BindIdentifier(bindings, table, column);
                 }
             }
             p.Bindings = bindings;
@@ -569,7 +589,7 @@ public class Binder
             List<ColumnBinding> bindings = new List<ColumnBinding>();
             foreach (var column in table.Columns)
             {
-                bindings.Add(new ColumnBinding(table, column));
+                BindIdentifier(bindings, table, column);
             }
             p.Bindings = bindings;
         }
@@ -578,13 +598,14 @@ public class Binder
             Diagnostics.Report("UnsupportedStarIdentifier", "Only simple '*' or 'table.*' identifiers are supported for now", p.Span);
         }
     }
+
     private void Bind(ParameterIdentifier p)
     {
-        var symbol = Current.LookupParameter(p.ParamterName);
+        var symbol = Current.LookupParameter(p.ParameterName);
 
         if (symbol is null)
         {
-            Diagnostics.Report("ParameterNotFound", $"Parameter '@{p.ParamterName}' not provided", p.Span);
+            Diagnostics.Report("ParameterNotFound", $"Parameter '@{p.ParameterName}' not provided", p.Span);
         }
         else
         {
@@ -728,7 +749,7 @@ public class BindingScope
     {
         if (!string.IsNullOrEmpty(alias))
         {
-            table = new TableSymbol(alias, table.Columns);
+            table = new TableSymbol(alias, table.Columns).WithState(table);
             _tables[alias] = table;
         }
 

@@ -657,7 +657,7 @@ public class SqlWriter
     protected virtual void Write(ParameterIdentifier parameterIdentifier)
     {
         Write("@");
-        Write(parameterIdentifier.ParamterName);
+        Write(parameterIdentifier.ParameterName);
     }
     protected virtual void Write(GroupByClause groupByClause)
     {
@@ -986,7 +986,7 @@ public class SqlWriter
         for (int i = 0; i < name.Length; i++)
         {
             var c = name[i];
-            if (!(char.IsLetterOrDigit(c) || c == '_' || c == '.' || c == '@'))
+            if (!(char.IsLetterOrDigit(c) || c == '_'  || c == '@'))
             {
                 return true;
             }

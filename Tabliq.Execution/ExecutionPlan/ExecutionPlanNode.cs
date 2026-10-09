@@ -19,52 +19,157 @@ public abstract class ExecutionPlanNode
 
     internal static ExecutionPlanNode Create(SelectExpression select)
     {
-        var referencedColumns = CollectReferencedColumnsByAlias(select);
-        var source = select.From is null ? new EmptyExecutionPlanNode() : BuildFrom(select.From, referencedColumns);
+
+        // projection!
+        var projectionPlan = select.Projections
+        .SelectMany(ExpandProjection)
+        .ToArray();
+
+        var whereCondition = select.Where is null ? null : ConditionExecutionPlan.Create(select.Where.Condition);
+
+        var whereExpressions = whereCondition?.GetExpressions().SelectMany(AllExpressions) ?? [];
+        var projectionExpressions = projectionPlan.SelectMany(x => AllExpressions(x.Value));
+        IEnumerable<ExpressionPlanNode> allExpression = [.. projectionExpressions, .. whereExpressions];
+
+        var current = BuildFrom(select.From);
+
+        // filtering
+
+        // aggegate/grouping
+
+        // filter again / having filtering
+
+        // projection, this is where we calculate the final output values
+
+        // sorting
+
+        // limit / offset (top too)
+
 
         if (select.Where is not null)
         {
-            source = new FilterExecutionPlanNode(source, ConditionExecutionPlan.Create(select.Where.Condition), select.Where.Condition);
+            current = new FilterExecutionPlanNode(current, ConditionExecutionPlan.Create(select.Where.Condition));
         }
 
-        var projectionPlan = select.Projections
-            .SelectMany(ExpandProjection)
-            .ToArray();
+        var aggregates = allExpression.OfType<AggregateFunctionCallExpressionExecutionPlan>().ToList();
 
-        var projection = new ProjectionExecutionPlanNode(
-            source,
-            projectionPlan,
-            select.GroupBy?.Entries.Select(x => ExpressionPlanNode.Create(x)).ToArray() ?? Array.Empty<ExpressionPlanNode>(),
-            select.OrderBy?.Entries.Select(x => new OrderByExpressionPlan
+        if (select.GroupBy is not null || aggregates.Any())
+        {
+            var groupBys = select.GroupBy?.Entries.Select(x => ExpressionPlanNode.Create(x)).ToArray() ?? [];
+
+            current = new GroupByAggregateExecutionPlanNode(current, groupBys, aggregates);
+        }
+
+        if (select.OrderBy is not null)
+        {
+        }
+
+        if (select.OrderBy?.OffsetClause is not null || select.Top is not null)
+        {
+            // limit / offset (top too)
+        }
+
+        current = new ProjectionExecutionPlanNode(current, projectionPlan);
+
+        if (select.Distinctness == Distinctness.Distinct)
+        {
+            current = new DistinctExecutionPlanNode(current);
+        }
+
+        // unions
+
+        foreach(var u in select.UnionStatements)
+        {
+            var right = Create(u.Select);
+            current = new UnionAllExecutionPlanNode(current, right);
+            if (!u.IsAll)
             {
-                Value = ExpressionPlanNode.Create(x.Expression),
-                Direction = x.Direction
-            }).ToArray() ?? Array.Empty<OrderByExpressionPlan>(),
-            select.Top,
-            select.OrderBy?.OffsetClause is null ? null : new OffsetExpressionPlan
-            {
-                OffsetCount = select.OrderBy.OffsetClause.OffsetCount is null ? null : ExpressionPlanNode.Create(select.OrderBy.OffsetClause.OffsetCount),
-                FetchCount = select.OrderBy.OffsetClause.FetchCount is null ? null : ExpressionPlanNode.Create(select.OrderBy.OffsetClause.FetchCount)
-            },
-            select.Distinctness);
-
-        if (select.UnionStatements.Count == 0)
-        {
-            return projection;
+                current = new DistinctExecutionPlanNode(current);
+            }
         }
 
-        var operations = new List<(ExecutionPlanNode Input, bool IsAll)>
-        {
-            (projection, true)
-        };
 
-        foreach (var union in select.UnionStatements)
-        {
-            operations.Add((Create(union.Select), union.IsAll));
-        }
+        //    var projectionPlan = select.Projections
+        //    .SelectMany(ExpandProjection)
+        //    .ToArray();
 
-        return new UnionExecutionPlanNode(operations);
+        //var projection = new ProjectionExecutionPlanNode(
+        //    source,
+        //    projectionPlan,
+        //    select.GroupBy?.Entries.Select(x => ExpressionPlanNode.Create(x)).ToArray() ?? Array.Empty<ExpressionPlanNode>(),
+        //    select.OrderBy?.Entries.Select(x => new OrderByExpressionPlan
+        //    {
+        //        Value = ExpressionPlanNode.Create(x.Expression),
+        //        Direction = x.Direction
+        //    }).ToArray() ?? Array.Empty<OrderByExpressionPlan>(),
+        //    select.Top,
+        //    select.OrderBy?.OffsetClause is null ? null : new OffsetExpressionPlan
+        //    {
+        //        OffsetCount = select.OrderBy.OffsetClause.OffsetCount is null ? null : ExpressionPlanNode.Create(select.OrderBy.OffsetClause.OffsetCount),
+        //        FetchCount = select.OrderBy.OffsetClause.FetchCount is null ? null : ExpressionPlanNode.Create(select.OrderBy.OffsetClause.FetchCount)
+        //    },
+        //    select.Distinctness);
+
+        return current;
+        //var referencedColumns = CollectReferencedColumnsByAlias(select);
+        //var source = select.From is null ? new EmptyExecutionPlanNode() : BuildFrom(select.From, referencedColumns);
+
+        //if (select.Where is not null)
+        //{
+        //    source = new FilterExecutionPlanNode(source, ConditionExecutionPlan.Create(select.Where.Condition), select.Where.Condition);
+        //}
+
+        //var projectionPlan = select.Projections
+        //    .SelectMany(ExpandProjection)
+        //    .ToArray();
+
+        //var projection = new ProjectionExecutionPlanNode(
+        //    source,
+        //    projectionPlan,
+        //    select.GroupBy?.Entries.Select(x => ExpressionPlanNode.Create(x)).ToArray() ?? Array.Empty<ExpressionPlanNode>(),
+        //    select.OrderBy?.Entries.Select(x => new OrderByExpressionPlan
+        //    {
+        //        Value = ExpressionPlanNode.Create(x.Expression),
+        //        Direction = x.Direction
+        //    }).ToArray() ?? Array.Empty<OrderByExpressionPlan>(),
+        //    select.Top,
+        //    select.OrderBy?.OffsetClause is null ? null : new OffsetExpressionPlan
+        //    {
+        //        OffsetCount = select.OrderBy.OffsetClause.OffsetCount is null ? null : ExpressionPlanNode.Create(select.OrderBy.OffsetClause.OffsetCount),
+        //        FetchCount = select.OrderBy.OffsetClause.FetchCount is null ? null : ExpressionPlanNode.Create(select.OrderBy.OffsetClause.FetchCount)
+        //    },
+        //    select.Distinctness);
+
+        //if (select.UnionStatements.Count == 0)
+        //{
+        //    return projection;
+        //}
+
+        //var operations = new List<(ExecutionPlanNode Input, bool IsAll)>
+        //{
+        //    (projection, true)
+        //};
+
+        //foreach (var union in select.UnionStatements)
+        //{
+        //    operations.Add((Create(union.Select), union.IsAll));
+        //}
+
+        //return new UnionExecutionPlanNode(operations);
     }
+    private static IEnumerable<ExpressionPlanNode> AllExpressions(ExpressionPlanNode node)
+    {
+        yield return node;
+
+        foreach(var n in node.GetExpressions())
+        {
+            foreach(var e in AllExpressions(n))
+            {
+                yield return e;
+            }
+        }
+    }
+
     private static IEnumerable<ProjectionColumnPlan> ExpandProjection(SelectProjection projection)
     {
         if (projection.Expression is StarIdentifierExpression star && star.Bindings.Count > 0)
@@ -137,29 +242,33 @@ public abstract class ExecutionPlanNode
             WalkForColumnReferences(child, result);
     }
 
-    private static ExecutionPlanNode BuildFrom(FromClause fromClause, Dictionary<string, HashSet<string>> referencedColumns)
+    private static ExecutionPlanNode BuildFrom(FromClause? fromClause)
     {
+        if (fromClause is null)
+        {
+            return new EmptyExecutionPlanNode();
+        }
+
         ExecutionPlanNode? current = null;
 
         foreach (var tableReference in fromClause.TableReferences)
         {
-            var next = BuildTableReference(tableReference, referencedColumns);
-            current = current is null ? next : new JoinExecutionPlanNode(current, next, JoinType.Cross, null, null, JoinSide.Unspecified);
+            var next = BuildTableReference(tableReference);
+            current = current is null ? next : new JoinExecutionPlanNode(current, next, JoinType.Cross, null, JoinSide.Unspecified);
         }
 
         foreach (var join in fromClause.Joins)
         {
-            var next = BuildTableReference(join.TableReference, referencedColumns);
+            var next = BuildTableReference(join.TableReference);
             current = current is null ? next : new JoinExecutionPlanNode(current, next, join.JoinType,
                 join.OnCondition is null ? null : ConditionExecutionPlan.Create(join.OnCondition),
-                join.OnCondition,
                 join.JoinSide);
         }
 
         return current ?? new EmptyExecutionPlanNode();
     }
 
-    private static ExecutionPlanNode BuildTableReference(TableReference tableReference, Dictionary<string, HashSet<string>> referencedColumns)
+    private static ExecutionPlanNode BuildTableReference(TableReference tableReference)
     {
         if (tableReference is NamedTableReference namedTableReference)
         {
@@ -167,27 +276,28 @@ public abstract class ExecutionPlanNode
             if (table.GetState<CteTableMetadata>() is CteTableMetadata cte)
             {
                 var cteAlias = namedTableReference.Alias ?? cte.Alias;
-                return new SubqueryExecutionPlanNode(Create(cte.Body), cteAlias, cte.Alias, cte.Body, cte.DeclarationOrder);
+                return new SubqueryExecutionPlanNode(Create(cte.Body), cteAlias, cte.Alias);
             }
 
             var tableAlias = namedTableReference.Alias ?? table.TableName;
-            referencedColumns.TryGetValue(tableAlias, out var cols);
-            return CreateTableScan(table, tableAlias, cols);
+
+            return CreateTableScan(table, tableAlias);
         }
 
         if (tableReference is SelectTableReference subSelect)
         {
-            return new SubqueryExecutionPlanNode(Create(subSelect.Select), subSelect.Alias);
+            return new SubqueryExecutionPlanNode(Create(subSelect.Select), subSelect.Alias, null);
         }
 
         throw new NotSupportedException($"Unsupported table reference type: {tableReference.GetType().Name}");
     }
 
-    private static ExecutionPlanNode CreateTableScan(TableSymbol table, string alias, IReadOnlySet<string>? referencedColumns = null)
+    private static ExecutionPlanNode CreateTableScan(TableSymbol table, string alias)
     {
         var provider = ResolveProvider(table);
 
-        var cols = table.Columns.Where(x => referencedColumns?.Contains(x.Name, StringComparer.OrdinalIgnoreCase) ?? false).ToList();
+        var cols = table.GetState<List<ColumnBinding>>()?.Select(x => x.ColumnSymbol).ToList();
+        // var cols = table./.Where(x => referencedColumns?.Contains(x.Name, StringComparer.OrdinalIgnoreCase) ?? false).ToList();
         return new TableScanExecutionPlanNode(table, alias, provider, cols);
     }
 

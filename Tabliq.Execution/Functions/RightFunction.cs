@@ -12,8 +12,8 @@ public class RightFunction : ValueFunction
 
     public override object? Execute(FunctionCallExpression expression, RowAccessor accessor, IEnumerable<ExpressionPlanNode> arguments)
     {
-        var stringValue = arguments.ElementAt(0).Execute(accessor)?.ToString();
-        var countValue = Convert.ToInt32(arguments.ElementAt(1).Execute(accessor));
+        var stringValue = arguments.ElementAt(0).ExecuteExpression(accessor)?.ToString();
+        var countValue = Convert.ToInt32(arguments.ElementAt(1).ExecuteExpression(accessor));
 
         if (stringValue is not string)
         {

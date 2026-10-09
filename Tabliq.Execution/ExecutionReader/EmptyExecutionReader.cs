@@ -4,7 +4,7 @@ using System.Text;
 
 namespace Tabliq.Execution.ExecutionReader;
 
-public class EmptyExecutionReader : IExecutionReader
+public class EmptyExecutionReader : BaseExecutionReader
 {
     private readonly string[] _fields;
 
@@ -17,19 +17,16 @@ public class EmptyExecutionReader : IExecutionReader
         _fields = Array.Empty<string>();
     }
 
-    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 
-    public ReadOnlySpan<string> GetFields()
+    public override ReadOnlySpan<string> GetFields()
     {
         return _fields;
     }
 
-    public ReadOnlySpan<object?> GetValues()
+    public override ReadOnlySpan<object?> GetValues()
     {
         throw new NotImplementedException();
     }
-    public RowAccessor GetRowAccessor()
-        => new RowAccessor(GetFields(), GetValues());
 
-    public Task<bool> ReadAsync(CancellationToken cancellationToken) => Task.FromResult(false);
+    public override Task<bool> ReadAsync(CancellationToken cancellationToken) => Task.FromResult(false);
 }
