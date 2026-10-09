@@ -150,7 +150,11 @@ public abstract class RemoteSqlProviderBase : IExecutionProvider
         {
             if (TryConvert(col.Value, context, out var expression))
             {
-                boundProjections.Add(new SelectProjection(expression, expression is IdentifierExpression e && e.Column == col.Alias ? null : col.Alias));
+                var proj = new SelectProjection(expression, expression is IdentifierExpression e && e.Column == col.Alias ? null : col.Alias);
+                if (!boundProjections.Contains(proj))
+                {
+                    boundProjections.Add(proj);
+                }
             }
             else
             {
@@ -253,6 +257,16 @@ public abstract class RemoteSqlProviderBase : IExecutionProvider
             _ => throw new NotSupportedException($"Unsupported expression type: {node.GetType().Name}")
         };
 
+        if (expression is null && node is AggregateFunctionCallExpressionExecutionPlan p)
+        {
+            context?.Report("UnsupportedFunctionForPushdown", $"Function {p.Expression.FunctionName} is not supported for pushdown");
+        }
+
+        if (expression is null && node is ValueFunctionCallExpressionExecutionPlan v)
+        {
+            context?.Report("UnsupportedFunctionForPushdown", $"Function {v.Expression.FunctionName} is not supported for pushdown");
+        }
+
         return expression is not null;
     }
 
@@ -286,7 +300,7 @@ public abstract class RemoteSqlProviderBase : IExecutionProvider
             false,
             null,
             Distinctness.Unspecified,
-            node.Columns.Select(c => new SelectProjection(new IdentifierExpression(alias, c.Name)
+            node.Columns.Distinct().Select(c => new SelectProjection(new IdentifierExpression(alias, c.Name)
             {
                 Binding = new ColumnBinding(node.Table, c)
             }, $"{alias}.{c.Name}")).ToList(),
