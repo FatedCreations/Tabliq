@@ -19,8 +19,8 @@ public class PositionFunction : ValueFunction
             throw new ArgumentException("POSITION requires a single IN expression.", nameof(expression));
         }
 
-        var searchFor = subValueExpression.SubValue.Execute(accessor)?.ToString();
-        var searchIn = subValueExpression.Value.Execute(accessor)?.ToString();
+        var searchFor = subValueExpression.SubValue.ExecuteExpression(accessor)?.ToString();
+        var searchIn = subValueExpression.Value.ExecuteExpression(accessor)?.ToString();
 
         if (searchFor is null || searchIn is null)
         {

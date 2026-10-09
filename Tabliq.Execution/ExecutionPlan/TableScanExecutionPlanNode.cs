@@ -10,13 +10,14 @@ public sealed class TableScanExecutionPlanNode : ExecutionPlanNode
     private readonly TableSymbol _table;
     private readonly IExecutionProvider? _provider;
     private readonly string _alias;
+    private readonly IReadOnlyList<ColumnSymbol> _referencedColumns;
 
     public TableScanExecutionPlanNode(TableSymbol table, string alias, IExecutionProvider? provider, IReadOnlyList<ColumnSymbol>? referencedColumns = null)
     {
         _table = table;
         _provider = provider;
         _alias = alias;
-        ReferencedColumns = referencedColumns;
+        _referencedColumns = referencedColumns ?? Array.Empty<ColumnSymbol>();
     }
 
     public override IEnumerable<ExecutionPlanNode> GetInputs() => Enumerable.Empty<ExecutionPlanNode>();
@@ -28,12 +29,9 @@ public sealed class TableScanExecutionPlanNode : ExecutionPlanNode
 
     public TableSymbol Table => _table;
 
-    public IReadOnlyList<ColumnSymbol> Columns => _table.Columns;
+    public IReadOnlyList<ColumnSymbol> Columns => _referencedColumns ?? _table.Columns;
 
     public string Alias => _alias;
-
-    /// <summary>The set of columns referenced from this table in the query. Null means all columns are needed.</summary>
-    public IReadOnlyList<ColumnSymbol>? ReferencedColumns { get; }
 
     public override IExecutionProvider? Provider => _provider;
 

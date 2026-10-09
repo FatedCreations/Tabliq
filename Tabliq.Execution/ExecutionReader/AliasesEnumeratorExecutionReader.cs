@@ -1,6 +1,6 @@
 ﻿namespace Tabliq.Execution.ExecutionReader;
 
-public class AliasedExecutionReader : IExecutionReader
+public class AliasedExecutionReader : BaseExecutionReader
 {
     private string[]? _fields;
     private readonly IExecutionReader _executionReader;
@@ -12,9 +12,9 @@ public class AliasedExecutionReader : IExecutionReader
         _executionReader = executionReader;
     }
 
-    public ValueTask DisposeAsync() => _executionReader.DisposeAsync();
+    public override ValueTask DisposeAsync() => _executionReader.DisposeAsync();
 
-    public ReadOnlySpan<string> GetFields()
+    public override ReadOnlySpan<string> GetFields()
     {
         if (_fields is null)
         {
@@ -44,12 +44,9 @@ public class AliasedExecutionReader : IExecutionReader
         return _fields;
     }
 
-    public ReadOnlySpan<object?> GetValues()
+    public override ReadOnlySpan<object?> GetValues()
         => _executionReader.GetValues();
 
-    public RowAccessor GetRowAccessor()
-        => new RowAccessor(GetFields(), GetValues());
-
-    public Task<bool> ReadAsync(CancellationToken cancellationToken)
+    public override Task<bool> ReadAsync(CancellationToken cancellationToken)
         => _executionReader.ReadAsync(cancellationToken);
 }

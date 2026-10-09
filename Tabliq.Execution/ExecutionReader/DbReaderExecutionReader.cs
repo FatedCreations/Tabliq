@@ -2,7 +2,7 @@
 
 namespace Tabliq.Execution.ExecutionReader;
 
-public class DbReaderExecutionReader : IExecutionReader
+public class DbReaderExecutionReader : BaseExecutionReader
 {
     private string[]? _fields;
     private object?[]? _values;
@@ -15,7 +15,7 @@ public class DbReaderExecutionReader : IExecutionReader
         _disposables = disposables;
     }
 
-    public async ValueTask DisposeAsync()
+    public override async ValueTask DisposeAsync()
     {
         foreach (var disposable in _disposables)
         {
@@ -24,7 +24,7 @@ public class DbReaderExecutionReader : IExecutionReader
         await _dbDataReader.DisposeAsync().ConfigureAwait(false);
     }
 
-    public ReadOnlySpan<string> GetFields()
+    public override ReadOnlySpan<string> GetFields()
     {
         if (_fields is null)
         {
@@ -38,8 +38,7 @@ public class DbReaderExecutionReader : IExecutionReader
         return _fields;
     }
 
-
-    public ReadOnlySpan<object?> GetValues()
+    public override ReadOnlySpan<object?> GetValues()
     {
         _values ??= new object?[_dbDataReader.FieldCount];
 
@@ -57,10 +56,7 @@ public class DbReaderExecutionReader : IExecutionReader
         return _values;
     }
 
-    public RowAccessor GetRowAccessor()
-        => new RowAccessor(GetFields(), GetValues());
-
-    public Task<bool> ReadAsync(CancellationToken cancellationToken)
+    public override Task<bool> ReadAsync(CancellationToken cancellationToken)
     {
         return _dbDataReader.ReadAsync(cancellationToken);
     }

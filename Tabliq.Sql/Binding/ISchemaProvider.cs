@@ -32,6 +32,16 @@ public sealed class TableSymbol
     public IReadOnlyList<ColumnSymbol> Columns { get; }
     private Dictionary<Type, object?>? _state = null;
 
+    public T GetOrCreateState<T>(Func<T> create)
+    {
+        if (_state is null || !_state.TryGetValue(typeof(T), out var state))
+        {
+            state = create();
+            _state ??= new Dictionary<Type, object?>();
+            _state[typeof(T)] = state;
+        }
+        return (T)state!;
+    }
     public T? GetState<T>()
     {
         if (_state is null)

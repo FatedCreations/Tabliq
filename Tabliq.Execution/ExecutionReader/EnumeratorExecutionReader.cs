@@ -1,10 +1,11 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Text;
 
 namespace Tabliq.Execution.ExecutionReader;
 
-public class EnumeratorExecutionReader : IExecutionReader
+public class EnumeratorExecutionReader : BaseExecutionReader
 {
     private readonly IAsyncDisposable[] _disposables;
     private readonly string[] _fields;
@@ -17,7 +18,7 @@ public class EnumeratorExecutionReader : IExecutionReader
         _disposables = disposables.ToArray();
     }
 
-    public async ValueTask DisposeAsync()
+    public override async ValueTask DisposeAsync()
     {
         foreach (var disposable in _disposables)
         {
@@ -25,19 +26,17 @@ public class EnumeratorExecutionReader : IExecutionReader
         }
     }
 
-    public ReadOnlySpan<string> GetFields()
+    public override ReadOnlySpan<string> GetFields()
     {
         return _fields;
     }
 
-    public ReadOnlySpan<object?> GetValues()
+    public override ReadOnlySpan<object?> GetValues()
     {
         return _enumerator.Current;
     }
-    public RowAccessor GetRowAccessor()
-        => new RowAccessor(GetFields(), GetValues());
 
-    public Task<bool> ReadAsync(CancellationToken cancellationToken)
+    public override Task<bool> ReadAsync(CancellationToken cancellationToken)
     {
         var result = _enumerator.MoveNext();
         return Task.FromResult(result);

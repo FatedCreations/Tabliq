@@ -9,17 +9,15 @@ public sealed class JoinExecutionPlanNode : ExecutionPlanNode
     private readonly ExecutionPlanNode _left;
     private readonly ExecutionPlanNode _right;
     private readonly JoinType _joinType;
-    private readonly Condition? _onCondition;
     private readonly ConditionExecutionPlan? _onConditionPlan;
     private readonly JoinSide _joinSide;
 
-    public JoinExecutionPlanNode(ExecutionPlanNode left, ExecutionPlanNode right, JoinType joinType, ConditionExecutionPlan? onConditionPlan, Condition? onCondition, JoinSide joinSide)
+    public JoinExecutionPlanNode(ExecutionPlanNode left, ExecutionPlanNode right, JoinType joinType, ConditionExecutionPlan? onConditionPlan, JoinSide joinSide)
     {
         _left = left;
         _right = right;
         _joinType = joinType;
         _onConditionPlan = onConditionPlan;
-        _onCondition = onCondition;
         _joinSide = joinSide;
     }
 
@@ -27,7 +25,6 @@ public sealed class JoinExecutionPlanNode : ExecutionPlanNode
 
     public ExecutionPlanNode Right => _right;
     public JoinType JoinType => _joinType;
-    public Condition? Condition => _onCondition;
     public ConditionExecutionPlan? OnConditionPlan => _onConditionPlan;
     public JoinSide JoinSide => _joinSide;
     public override IExecutionProvider? Provider => null;
@@ -40,9 +37,10 @@ public sealed class JoinExecutionPlanNode : ExecutionPlanNode
         ExecutionPlanNode currentNode = this;
         var newLeft = _left.TryRewrite(context) ?? _left;
         var newRight = _right.TryRewrite(context) ?? _right;
-        if (newLeft != _left || newRight != _right)
+        var newOnConditionPlan = _onConditionPlan?.TryRewrite(context) ?? _onConditionPlan;
+        if (newLeft != _left || newRight != _right || newOnConditionPlan != _onConditionPlan)
         {
-            currentNode = new JoinExecutionPlanNode(newLeft, newRight, _joinType, _onConditionPlan, _onCondition, _joinSide);
+            currentNode = new JoinExecutionPlanNode(newLeft, newRight, _joinType, newOnConditionPlan, _joinSide);
         }
 
         var provider = newLeft.Provider ?? newRight.Provider;

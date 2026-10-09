@@ -439,6 +439,29 @@ public class Binder
         }
     }
 
+    private void BindIdentifier(List<ColumnBinding> p, TableSymbol table, ColumnSymbol column)
+    {
+        var binding = new ColumnBinding(table, column, null);
+
+        var parentTable = table.GetState<TableSymbol>() ?? table;
+        var sharedState = parentTable.GetOrCreateState(() => new List<ColumnBinding>());
+        table.GetOrCreateState(() => sharedState);
+        sharedState.Add(binding);
+
+        p.Add(binding);
+    }
+
+    private void BindIdentifier(IdentifierExpression p, TableSymbol table, ColumnSymbol column)
+    {
+        var binding = new ColumnBinding(table, column, null);
+
+        var parentTable = table.GetState<TableSymbol>() ?? table;
+        var sharedState = parentTable.GetOrCreateState(() => new List<ColumnBinding>());
+        table.GetOrCreateState(() => sharedState);
+        sharedState.Add(binding);
+        p.Binding = binding;
+    }
+
     private void Bind(IdentifierExpression p)
     {
         void ReportColumnNotFound(TableSymbol? tableSymbol, ColumnSymbol? columnSymbol, string? tableName, string? schemaName, string columnName, string? message = null, string id = "ColumnNotFound")
@@ -455,15 +478,16 @@ public class Binder
                     message = $"Column '{finalColumnName}' not found.";
                 }
                 else if (tableSymbol is null)
-                {
+                    {
                     message = $"Table '{finalTableName}' not found in the current scope.";
-                }
-                else
-                {
+                    }
+                    else
+                    {
                     message = $"Column '{finalColumnName}' not found in table '{finalTableName}'.";
+                    }
                 }
-            }
 
+                BindIdentifier(p, table, col);
             Diagnostics.Report(id, message, p.Span, new()
             {
                 ["TableName"] = finalTableName,
@@ -493,38 +517,35 @@ public class Binder
 
                     ReportColumnNotFound(table, col, tableName, schemaName, columnName);
 
-                    p.Binding = ColumnBinding.Missing;
-                    return;
-                }
+                p.Binding = ColumnBinding.Missing;
+                return;
+            }
 
                 p.Binding = new ColumnBinding(table, col);
                 return;
             }
             else
             {
-                // need to handle aliased columns too??
+            // need to handle aliased columns too??
                 var cols = Current.FindColumnsInScope(columnName).ToList();
-                if (cols.Count == 0)
-                {
+            if (cols.Count == 0)
+            {
                     ReportColumnNotFound(null, null, tableName, schemaName, columnName);
 
-                    p.Binding = ColumnBinding.Missing;
-                    return;
-                }
-                else if (cols.Count > 1)
-                {
-                    ReportColumnNotFound(null, null, tableName, schemaName, columnName, $"Column '{p}' is ambiguous.", "AmbiguousColumn");
-                    p.Binding = ColumnBinding.Missing;
-                    return;
-                }
-
-                var (t, c) = cols[0];
-
-                var binding = new ColumnBinding(t, c, null);
-
-                p.Binding = binding;
+                p.Binding = ColumnBinding.Missing;
+                return;
             }
+            else if (cols.Count > 1)
+            {
+                    ReportColumnNotFound(null, null, tableName, schemaName, columnName, $"Column '{p}' is ambiguous.", "AmbiguousColumn");
+                p.Binding = ColumnBinding.Missing;
+                return;
+            }
+
+            var (t, c) = cols[0];
+            BindIdentifier(p, t, c);
         }
+    }
     }
 
     private void Bind(StarIdentifierExpression p)
@@ -546,10 +567,10 @@ public class Binder
                 return;
             }
             List<ColumnBinding> bindings = new List<ColumnBinding>();
-            foreach (var column in table.Columns)
-            {
-                bindings.Add(new ColumnBinding(table, column));
-            }
+                foreach (var column in table.Columns)
+                {
+                    BindIdentifier(bindings, table, column);
+                }
             p.Bindings = bindings;
         }
         else if (schemaName is not null)
@@ -579,21 +600,22 @@ public class Binder
             List<ColumnBinding> bindings = new List<ColumnBinding>();
             foreach (var table in refs)
             {
-                foreach (var column in table.Columns)
-                {
-                    bindings.Add(new ColumnBinding(table, column));
-                }
+            foreach (var column in table.Columns)
+            {
+                BindIdentifier(bindings, table, column);
+            }
             }
             p.Bindings = bindings;
         }
-    }
+        }
+
     private void Bind(ParameterIdentifier p)
     {
-        var symbol = Current.LookupParameter(p.ParamterName);
+        var symbol = Current.LookupParameter(p.ParameterName);
 
         if (symbol is null)
         {
-            Diagnostics.Report("ParameterNotFound", $"Parameter '@{p.ParamterName}' not provided", p.Span);
+            Diagnostics.Report("ParameterNotFound", $"Parameter '@{p.ParameterName}' not provided", p.Span);
         }
         else
         {
@@ -737,10 +759,7 @@ public class BindingScope
     {
         if (!string.IsNullOrEmpty(alias))
         {
-            table = new TableSymbol(alias, table.Columns)
-            {
-                State = table
-            };
+            table = new TableSymbol(alias, table.Columns).WithState(table);
             _tables[alias] = table;
         }
 
@@ -771,7 +790,7 @@ public class BindingScope
             if (fullName.Equals(_tableName, StringComparison.OrdinalIgnoreCase))
                 return Build();
         }
-        else if (schemaName.Length > 0)
+        else if(schemaName.Length > 0)
         {
             fullName = $"{schemaName}.{name}";
         }

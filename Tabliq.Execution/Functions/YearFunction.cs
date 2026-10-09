@@ -12,7 +12,7 @@ public class YearFunction : ValueFunction
 
     public override object? Execute(FunctionCallExpression expression, RowAccessor accessor, IEnumerable<ExpressionPlanNode> arguments)
     {
-        var inputValue = arguments.ElementAt(0).Execute(accessor);
+        var inputValue = arguments.ElementAt(0).ExecuteExpression(accessor);
 
         if (inputValue is not DateTime dt)
         {

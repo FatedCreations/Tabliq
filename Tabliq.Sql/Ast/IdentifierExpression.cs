@@ -14,13 +14,13 @@ public class IdentifierExpression : Expression
         return new IdentifierExpression(tableSymbol.SchemaName, tableSymbol.TableName);
     }
 
-    public IdentifierExpression(IEnumerable<string> identifierParts)
+    public IdentifierExpression(IEnumerable<string?> identifierParts)
     {
-        IdentifierParts = identifierParts.ToList();
+        IdentifierParts = identifierParts.Where(x => !string.IsNullOrEmpty(x)).ToList()!;
     }
-    public IdentifierExpression(params string[] identifierParts)
+    public IdentifierExpression(params string?[] identifierParts)
     {
-        IdentifierParts = identifierParts.ToList();
+        IdentifierParts = identifierParts.Where(x=> !string.IsNullOrEmpty(x)).ToList()!;
     }
 
     public IReadOnlyList<string> IdentifierParts { get; }
@@ -64,7 +64,7 @@ public class IdentifierExpression : Expression
 
     public string Column => IdentifierParts.Last();
 
-    public ColumnBinding? Binding { get; internal set; }
+    public ColumnBinding? Binding { get; set; }
 
     public IdentifierExpression WithBinding(ColumnBinding binding)
     {

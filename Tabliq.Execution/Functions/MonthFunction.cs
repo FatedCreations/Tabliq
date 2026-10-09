@@ -13,7 +13,7 @@ public class MonthFunction : ValueFunction
 
     public override object? Execute(FunctionCallExpression expression, RowAccessor accessor, IEnumerable<ExpressionPlanNode> arguments)
     {
-        var inputValue = arguments.Single().Execute(accessor);
+        var inputValue = arguments.Single().ExecuteExpression(accessor);
 
         if (inputValue is not DateTime dt)
         {

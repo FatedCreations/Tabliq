@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Numerics;
 using System.Text;
 using Tabliq.Execution;
 using Tabliq.Execution.ExpressionPlan;
@@ -73,7 +74,7 @@ public class InMemoryExecutionTests
         var results = await _engine.ExecuteToDictionaryList("SELECT Value, Value + 1 as Calculated FROM Data", Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
 
         Assert.Equal(20, results.Count);
-        Assert.All(results, r => Assert.Equal((int)r["Value"] + 1, (int)r["Calculated"]));
+        Assert.All(results, r => Assert.Equal((double)r["Value"]+ 1, (double)r["Calculated"]));
     }
 
     [Fact]
@@ -85,7 +86,7 @@ public class InMemoryExecutionTests
         var first = results.First();
         Assert.Equal(6, first.Keys.Count);
         Assert.Equal("Test0", first["Name"]);
-        Assert.Equal(1, first["Calculated"]);
+        Assert.Equal(1, (double)first["Calculated"]);
     }
 
     [Fact]
@@ -113,6 +114,15 @@ public class InMemoryExecutionTests
 
         Assert.Equal(5, results.Count);
         Assert.All(results, row => Assert.Equal(CustomAggregateFunction.TestValue, row["c"]!));
+    }
+
+    [Fact]
+    public async Task GroupBy()
+    {
+        var results = await _engine.ExecuteToDictionaryList("SELECT NameTest as c FROM Data group by NameTest", Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
+
+        Assert.Equal(5, results.Count);
+        Assert.All(results, row => Assert.StartsWith("Test", row["c"]!.ToString()));
     }
 
     [Fact]
@@ -215,7 +225,7 @@ public class InMemoryExecutionTests
             """, Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
 
         var row = Assert.Single(results);
-        Assert.Equal(1, row["'1'"]);
+        Assert.Equal("1", row["'1'"]);
     }
 
     [Fact]
@@ -238,7 +248,7 @@ public class InMemoryExecutionTests
             """, Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
 
         var row = Assert.Single(results);
-        Assert.Equal(1, row["'1'"]);
+        Assert.Equal("1", row["'1'"]);
     }
 
 
@@ -262,7 +272,7 @@ public class InMemoryExecutionTests
             """, Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
 
         var row = Assert.Single(results);
-        Assert.Equal(1, row["'1'"]);
+        Assert.Equal("1", row["'1'"]);
     }
 
 

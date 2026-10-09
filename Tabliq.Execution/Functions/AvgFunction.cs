@@ -13,7 +13,7 @@ public class AvgFunction : AggregateFunction<AvgFunction.State>
     protected override State ProcessRow(FunctionCallExpression expression, RowAccessor accessor, IEnumerable<ExpressionPlanNode> arguments, State? state)
     {
         state ??= new State();
-        var val = arguments.Single().Execute(accessor);
+        var val = arguments.Single().ExecuteExpression(accessor);
         state.AddValue(val);
         return state;
     }
@@ -36,7 +36,7 @@ public class AvgFunction : AggregateFunction<AvgFunction.State>
             Count++;
         }
 
-        public override object? GetAggregateValue(CancellationToken cancellationToken)
+        public override object? GetAggregateValue()
         {
             if (Count > 0)
             {

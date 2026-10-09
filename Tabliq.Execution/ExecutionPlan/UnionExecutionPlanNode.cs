@@ -2,100 +2,48 @@ using System.Globalization;
 using System.Text;
 using Tabliq.Execution.ExecutionReader;
 using Tabliq.Execution.ExpressionPlan;
+using Tabliq.Sql.Ast;
 
 namespace Tabliq.Execution;
 
-public sealed class UnionExecutionPlanNode : ExecutionPlanNode
+public sealed class UnionAllExecutionPlanNode : ExecutionPlanNode
 {
-    private readonly IReadOnlyList<(ExecutionPlanNode Input, bool IsAll)> _operations;
+    private readonly ExecutionPlanNode _input1;
+    private readonly ExecutionPlanNode _input2;
+    private readonly bool _isAll;
+    public ExecutionPlanNode Input1 => _input1;
+    public ExecutionPlanNode Input2 => _input2;
 
-    public IReadOnlyList<(ExecutionPlanNode Input, bool IsAll)> Operations => _operations;
-
-    public UnionExecutionPlanNode(IEnumerable<(ExecutionPlanNode Input, bool IsAll)> operations)
+    public UnionAllExecutionPlanNode(ExecutionPlanNode Input1, ExecutionPlanNode Input2)
     {
-        _operations = operations.ToList();
+        _input1 = Input1;
+        _input2 = Input2;
     }
 
     public override IExecutionProvider? Provider => null;
 
-    public override IEnumerable<ExecutionPlanNode> GetInputs() => _operations.Select(x => x.Input);
+    public override IEnumerable<ExecutionPlanNode> GetInputs() => [_input1, _input2];
     public override IEnumerable<ExpressionPlanNode> GetExpressions() => GetInputs().SelectMany(x => x.GetExpressions());
 
     public override ExecutionPlanNode? TryRewrite(ExecutionRewriteContext? context = null)
     {
-        var rewritten = new List<(ExecutionPlanNode Input, bool IsAll)>();
-        var changed = false;
-
-        foreach (var operation in _operations)
+        ExecutionPlanNode currentNode = this;
+        var newLeft = _input1.TryRewrite(context) ?? _input1;
+        var newRight = _input2.TryRewrite(context) ?? _input2;
+        if (newLeft != _input1 || newRight != _input2)
         {
-            var rewrittenInput = operation.Input.TryRewrite(context) ?? operation.Input;
-            if (rewrittenInput != operation.Input)
-            {
-                changed = true;
-            }
-
-            rewritten.Add((rewrittenInput, operation.IsAll));
+            currentNode = new UnionAllExecutionPlanNode(newLeft, newRight);
         }
 
-        if (rewritten.Count > 0)
-        {
-            var unionWithRewrittenBranches = new UnionExecutionPlanNode(rewritten);
-            foreach (var operation in rewritten)
-            {
-                if (operation.Input.Provider is not null)
-                {
-                    var providerRewritten = operation.Input.Provider.TryRewrite(unionWithRewrittenBranches, context);
-                    if (providerRewritten is not null && providerRewritten != unionWithRewrittenBranches)
-                    {
-                        return providerRewritten;
-                    }
-                }
-            }
-        }
+        var provider = newLeft.Provider ?? newRight.Provider;
+        currentNode = provider?.TryRewrite(currentNode, context) ?? currentNode;
 
-        if (!changed)
-        {
-            return null;
-        }
-
-        return new UnionExecutionPlanNode(rewritten);
+        return currentNode;
     }
 
     public override async Task<IExecutionReader> ExecuteAsync(IEnumerable<ExecuterParameter>? parameters = null, CancellationToken cancellationToken = default)
     {
-        if (_operations.Count == 0)
-        {
-            return new EnumeratorExecutionReader(Array.Empty<string>(), ((IEnumerable<object?[]?>)Array.Empty<object?[]>()).GetEnumerator(), Array.Empty<IAsyncDisposable>());
-        }
-
-        var fieldNames = Array.Empty<string>();
-        var rows = new List<object?[]?>();
-        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-        foreach (var (input, isAll) in _operations)
-        {
-            await using var reader = await input.ExecuteAsync(parameters, cancellationToken);
-            if (fieldNames.Length == 0)
-            {
-                fieldNames = reader.GetFields().ToArray();
-            }
-
-            while (await reader.ReadAsync(cancellationToken))
-            {
-                var row = reader.GetValues().ToArray();
-                var rowKey = BuildRowKey(row);
-
-                if (!isAll && !seen.Add(rowKey))
-                {
-                    continue;
-                }
-
-                rows.Add(row);
-                seen.Add(rowKey);
-            }
-        }
-
-        return new EnumeratorExecutionReader(fieldNames, rows.GetEnumerator(), Array.Empty<IAsyncDisposable>());
+        return new UnionExecutionReader(await _input1.ExecuteAsync(parameters, cancellationToken), await _input2.ExecuteAsync(parameters, cancellationToken));
     }
 
     private static string BuildRowKey(object?[] row)
@@ -140,4 +88,161 @@ public sealed class UnionExecutionPlanNode : ExecutionPlanNode
 
         return builder.ToString();
     }
+
+    private class UnionExecutionReader : BaseExecutionReader
+    {
+        private readonly IExecutionReader _reader1;
+        private readonly IExecutionReader _reader2;
+        private bool _reader1Exhausted = false;
+
+        public UnionExecutionReader(IExecutionReader reader1, IExecutionReader reader2)
+        {
+            _reader1 = reader1;
+            _reader2 = reader2;
+        }
+
+        public override async ValueTask DisposeAsync()
+        {
+            await _reader1.DisposeAsync();
+            await _reader2.DisposeAsync();
+        }
+
+        bool validated = false;
+        public override ReadOnlySpan<string> GetFields()
+        {
+            if (!validated)
+            {
+                var fields1 = _reader1.GetFields();
+                var fields2 = _reader2.GetFields();
+                if (!fields1.SequenceEqual(fields2))
+                {
+                    throw new InvalidOperationException("Field names do not match.");
+                }
+                validated = true;
+
+                return fields1;
+            }
+
+            return _reader1.GetFields();
+        }
+
+        public override ReadOnlySpan<object?> GetValues()
+        {
+            if (!_reader1Exhausted)
+            {
+                return _reader1.GetValues();
+            }
+            return _reader2.GetValues();
+        }
+
+        public override async Task<bool> ReadAsync(CancellationToken cancellationToken)
+        {
+            if (!_reader1Exhausted)
+            {
+                var hasMore = await _reader1.ReadAsync(cancellationToken);
+                if (hasMore)
+                {
+                    return true;
+                }
+                _reader1Exhausted = true;
+            }
+
+            return await _reader2.ReadAsync(cancellationToken);
+        }
+    }
 }
+
+public sealed class DistinctExecutionPlanNode : ExecutionPlanNode
+{
+    private readonly ExecutionPlanNode _input;
+    public ExecutionPlanNode Input => _input;
+
+    public DistinctExecutionPlanNode(ExecutionPlanNode Input)
+    {
+        _input = Input;
+    }
+
+    public override IExecutionProvider? Provider => null;
+
+    public override IEnumerable<ExecutionPlanNode> GetInputs() => [_input];
+    public override IEnumerable<ExpressionPlanNode> GetExpressions() => GetInputs().SelectMany(x => x.GetExpressions());
+
+    public override ExecutionPlanNode? TryRewrite(ExecutionRewriteContext? context = null)
+    {
+        ExecutionPlanNode currentNode = this;
+        var newInput = _input.TryRewrite(context) ?? _input;
+        if (newInput != _input)
+        {
+            currentNode = new DistinctExecutionPlanNode(newInput);
+        }
+
+        var provider = newInput.Provider;
+        currentNode = provider?.TryRewrite(currentNode, context) ?? currentNode;
+
+        return currentNode;
+    }
+
+    public override async Task<IExecutionReader> ExecuteAsync(IEnumerable<ExecuterParameter>? parameters = null, CancellationToken cancellationToken = default)
+    {
+        return new DistinctExecutionReader(await _input.ExecuteAsync(parameters, cancellationToken));
+    }
+
+    private class DistinctExecutionReader : BaseExecutionReader
+    {
+        private readonly IExecutionReader _reader;
+
+        private List<int> _seenRowHashes = new List<int>();
+
+        public DistinctExecutionReader(IExecutionReader reader)
+        {
+            _reader = reader;
+        }
+
+        public override async ValueTask DisposeAsync()
+        {
+            await _reader.DisposeAsync();
+        }
+
+        public override ReadOnlySpan<string> GetFields()
+        {
+            return _reader.GetFields();
+        }
+
+        public override ReadOnlySpan<object?> GetValues()
+        {
+            return _reader.GetValues();
+        }
+
+        public int HashRow(ReadOnlySpan<object?> row)
+        {
+            var c = new HashCode();
+            for (var i = 0; i < row.Length; i++)
+            {
+                c.Add(row[i]);
+            }
+            return c.ToHashCode();
+        }
+
+        public override async Task<bool> ReadAsync(CancellationToken cancellationToken)
+        {
+            // get next row from reader, and check if we have seen it before, if so, keep reading until we find a new row or exhaust the reader
+            while (true)
+            {
+                var hasMore = await _reader.ReadAsync(cancellationToken);
+                if (!hasMore)
+                {
+                    return false;
+                }
+
+                var rowHash = HashRow(_reader.GetValues());
+                if (!_seenRowHashes.Contains(rowHash))
+                {
+                    _seenRowHashes.Add(rowHash);
+                    return true;
+                }
+            } 
+        }
+    }
+}
+
+

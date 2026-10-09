@@ -13,7 +13,7 @@ public class SumFunction : AggregateFunction<SumFunction.State>
     protected override State ProcessRow(FunctionCallExpression expression, RowAccessor accessor, IEnumerable<ExpressionPlanNode> arguments, State? state)
     {
         state ??= new State();
-        var val = arguments.ElementAt(0).Execute(accessor);
+        var val = arguments.ElementAt(0).ExecuteExpression(accessor);
         state.AddValue(val);
         return state;
     }
@@ -36,7 +36,7 @@ public class SumFunction : AggregateFunction<SumFunction.State>
             Any = true;
         }
 
-        public override object? GetAggregateValue(CancellationToken cancellationToken)
+        public override object? GetAggregateValue()
         {
             if (Any)
             {

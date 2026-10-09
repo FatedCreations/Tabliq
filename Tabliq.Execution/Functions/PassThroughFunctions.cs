@@ -53,7 +53,7 @@ public class PassThroughAggregateFunction : AggregateFunction<PassThroughAggrega
 
     protected override State ProcessRow(FunctionCallExpression expression, RowAccessor accessor, IEnumerable<ExpressionPlanNode> arguments, State state)
     {
-        state.LastValue = arguments.FirstOrDefault()?.Execute(accessor);
+        state.LastValue = arguments.FirstOrDefault()?.ExecuteExpression(accessor);
         return state;
     }
 
@@ -61,7 +61,7 @@ public class PassThroughAggregateFunction : AggregateFunction<PassThroughAggrega
     {
         public object? LastValue { get; set; }
 
-        public override object? GetAggregateValue(CancellationToken cancellationToken)
+        public override object? GetAggregateValue()
             => LastValue;
     }
 }

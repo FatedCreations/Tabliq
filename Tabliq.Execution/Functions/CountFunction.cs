@@ -27,7 +27,7 @@ public class CountFunction : AggregateFunction<CountFunction.CountFunctionState>
         {
             _count++;
         }
-        public override object? GetAggregateValue(CancellationToken cancellationToken)
+        public override object? GetAggregateValue()
         {
             return _count;
         }
