@@ -7,11 +7,12 @@ public sealed class IdentifierExpressionExecutionPlan : ExpressionPlanNode
 {
     public IdentifierExpressionExecutionPlan(IdentifierExpression identifier)
     {
-        var parts = identifier.GetColumnParts();
-        ColumnName = parts.ColumnName;
-        TableName = parts.TableName;
         TableSymbol = identifier.Binding?.TableSymbol;
         ColumnSymbol = identifier.Binding?.ColumnSymbol;
+
+        var parts = identifier.GetColumnParts();
+        ColumnName = ColumnSymbol?.Name ?? parts.ColumnName;
+        TableName = parts.TableName ?? TableSymbol?.TableName;
     }
 
     public override string Identifier => $"Identifier({TableSymbol?.TableName ?? TableName}.{ColumnSymbol?.Name ?? ColumnName})";
@@ -24,8 +25,8 @@ public sealed class IdentifierExpressionExecutionPlan : ExpressionPlanNode
 
     protected override object? Execute(RowAccessor row, IReadOnlyDictionary<FunctionCallExpression, object?>? aggregateValues = null)
     {
-        var tableName = TableSymbol?.TableName ?? TableName;
-        var column = ColumnSymbol?.Name ?? ColumnName;
+        var tableName = TableName;
+        var column = ColumnName;
         return GetValue(row, tableName, column) ?? GetValue(row, null, ColumnName);
     }
 

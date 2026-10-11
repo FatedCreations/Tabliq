@@ -56,7 +56,7 @@ public class SqlServerExecutionTests
                     Data.Value2
                 FROM Data
             )
-            SELECT
+            SELECT 
                 d.Id,
                 d.Name,
                 d.NameTest,
@@ -127,8 +127,8 @@ public class SqlServerExecutionTests
 
         Assert.Equal("""
             SELECT
-                Value,
-                Value + 1 AS Calculated
+                Data.Value,
+                Data.Value + 1 AS Calculated
             FROM Data
             """,
             _provider.LastSqlExecuted);
@@ -196,7 +196,7 @@ public class SqlServerExecutionTests
         Assert.Equal("""
             SELECT COUNT(*) AS c
             FROM Data
-            GROUP BY NameTest
+            GROUP BY Data.NameTest
             """,
             _provider.LastSqlExecuted);
     }
@@ -340,9 +340,8 @@ public class SqlServerExecutionTests
             SELECT
                 d.Name AS n,
                 o.Name AS oName
-            FROM
-                Data AS d,
-                Other AS o
+            FROM Data AS d
+            CROSS JOIN Other AS o
             """,
             _provider.LastSqlExecuted);
     }

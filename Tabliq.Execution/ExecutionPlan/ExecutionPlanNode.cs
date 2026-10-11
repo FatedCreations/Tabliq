@@ -19,6 +19,7 @@ public abstract class ExecutionPlanNode
 
     internal static ExecutionPlanNode Create(SelectExpression select)
     {
+        var referencedColumns = CollectReferencedColumns(select);
 
         // projection!
         var projectionPlan = select.Projections
@@ -31,7 +32,7 @@ public abstract class ExecutionPlanNode
         var projectionExpressions = projectionPlan.SelectMany(x => AllExpressions(x.Value));
         IEnumerable<ExpressionPlanNode> allExpression = [.. projectionExpressions, .. whereExpressions];
 
-        var current = BuildFrom(select.From);
+        var current = BuildFrom(select.From, referencedColumns);
 
         // filtering
 
@@ -203,9 +204,15 @@ public abstract class ExecutionPlanNode
         };
     }
 
-    private static Dictionary<string, HashSet<string>> CollectReferencedColumnsByAlias(SyntaxNode node)
+    //private static Dictionary<string, HashSet<string>> CollectReferencedColumnsByAlias(SyntaxNode node)
+    //{
+    //    var result = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
+    //    WalkForColumnReferences(node, result);
+    //    return result;
+    //}
+    private static Dictionary<TableSymbol, HashSet<ColumnSymbol>> CollectReferencedColumns(SyntaxNode node)
     {
-        var result = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
+        var result = new Dictionary<TableSymbol, HashSet<ColumnSymbol>>();
         WalkForColumnReferences(node, result);
         return result;
     }
@@ -242,7 +249,39 @@ public abstract class ExecutionPlanNode
             WalkForColumnReferences(child, result);
     }
 
-    private static ExecutionPlanNode BuildFrom(FromClause? fromClause)
+    private static void WalkForColumnReferences(SyntaxNode node, Dictionary<TableSymbol, HashSet<ColumnSymbol>> result)
+    {
+        if (node is IdentifierExpression identifier && identifier.Binding is { } binding)
+        {
+            var table = binding.TableSymbol;
+            var colName = binding.ColumnSymbol;
+            if (table is not null && colName is not null)
+            {
+                if (!result.TryGetValue(table, out var cols))
+                    result[table] = cols = new HashSet<ColumnSymbol>();
+                cols.Add(colName);
+            }
+        }
+        else if (node is StarIdentifierExpression star)
+        {
+            foreach (var starBinding in star.Bindings)
+            {
+                var table = starBinding.TableSymbol;
+                var colName = starBinding.ColumnSymbol;
+                if (table is not null && colName is not null)
+                {
+                    if (!result.TryGetValue(table, out var cols))
+                        result[table] = cols = new HashSet<ColumnSymbol>();
+                    cols.Add(colName);
+                }
+            }
+        }
+
+        foreach (var child in node.GetChildren())
+            WalkForColumnReferences(child, result);
+    }
+
+    private static ExecutionPlanNode BuildFrom(FromClause? fromClause, Dictionary<TableSymbol, HashSet<ColumnSymbol>> referencedColumns)
     {
         if (fromClause is null)
         {
@@ -251,15 +290,16 @@ public abstract class ExecutionPlanNode
 
         ExecutionPlanNode? current = null;
 
+        // CollectReferencedColumnsByAlias()
         foreach (var tableReference in fromClause.TableReferences)
         {
-            var next = BuildTableReference(tableReference);
+            var next = BuildTableReference(tableReference, referencedColumns);
             current = current is null ? next : new JoinExecutionPlanNode(current, next, JoinType.Cross, null, JoinSide.Unspecified);
         }
 
         foreach (var join in fromClause.Joins)
         {
-            var next = BuildTableReference(join.TableReference);
+            var next = BuildTableReference(join.TableReference, referencedColumns);
             current = current is null ? next : new JoinExecutionPlanNode(current, next, join.JoinType,
                 join.OnCondition is null ? null : ConditionExecutionPlan.Create(join.OnCondition),
                 join.JoinSide);
@@ -268,7 +308,7 @@ public abstract class ExecutionPlanNode
         return current ?? new EmptyExecutionPlanNode();
     }
 
-    private static ExecutionPlanNode BuildTableReference(TableReference tableReference)
+    private static ExecutionPlanNode BuildTableReference(TableReference tableReference, Dictionary<TableSymbol, HashSet<ColumnSymbol>> referencedColumns)
     {
         if (tableReference is NamedTableReference namedTableReference)
         {
@@ -281,7 +321,7 @@ public abstract class ExecutionPlanNode
 
             var tableAlias = namedTableReference.Alias ?? table.TableName;
 
-            return CreateTableScan(table, tableAlias);
+            return CreateTableScan(table, tableAlias, referencedColumns);
         }
 
         if (tableReference is SelectTableReference subSelect)
@@ -292,13 +332,15 @@ public abstract class ExecutionPlanNode
         throw new NotSupportedException($"Unsupported table reference type: {tableReference.GetType().Name}");
     }
 
-    private static ExecutionPlanNode CreateTableScan(TableSymbol table, string alias)
+    private static ExecutionPlanNode CreateTableScan(TableSymbol table, string alias, Dictionary<TableSymbol, HashSet<ColumnSymbol>> referencedColumns)
     {
         var provider = ResolveProvider(table);
 
-        var cols = table.GetState<List<ColumnBinding>>()?.Select(x => x.ColumnSymbol).ToList();
-        // var cols = table./.Where(x => referencedColumns?.Contains(x.Name, StringComparer.OrdinalIgnoreCase) ?? false).ToList();
-        return new TableScanExecutionPlanNode(table, alias, provider, cols);
+        if(referencedColumns.TryGetValue(table, out var colsSet))
+        {
+            return new TableScanExecutionPlanNode(table, alias, provider, colsSet.ToList());
+        }
+        return new TableScanExecutionPlanNode(table, alias, provider, table.Columns);
     }
 
     private static IExecutionProvider? ResolveProvider(TableSymbol table)

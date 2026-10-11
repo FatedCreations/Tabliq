@@ -17,13 +17,94 @@ public abstract class RemoteSqlProviderBase : IExecutionProvider
     public ExecutionPlanNode TryRewrite(ExecutionPlanNode node, ExecutionRewriteContext? context = null)
         => node switch
         {
+            JoinExecutionPlanNode p when p.Left is RemoteSqProviderSqlExecutionPlanNode s && s.Provider == this && p.Right is RemoteSqProviderSqlExecutionPlanNode r && r.Provider == this => JoinExecutionPlanNode(p, s, r, context),
             FilterExecutionPlanNode p when p.Input is RemoteSqProviderSqlExecutionPlanNode s && s.Provider == this => FilterExecutionPlanNode(p, s, context),
             SubqueryExecutionPlanNode p when p.Inner is RemoteSqProviderSqlExecutionPlanNode s && s.Provider == this => SubqueryExecutionPlanNode(p, s, context),
             GroupByAggregateExecutionPlanNode p when p.Input is RemoteSqProviderSqlExecutionPlanNode s && s.Provider == this => GroupByAggregateExecutionPlanNode(p, s, context),
             ProjectionExecutionPlanNode p when p.Input is RemoteSqProviderSqlExecutionPlanNode s && s.Provider == this => ProjectionExecutionPlanNode(p, s, context),
-            TableScanExecutionPlanNode t => RewriteTableScan(t, context),
+            TableScanExecutionPlanNode t => TableScanExecutionPlanNode(t, context),
             _ => node
         };
+
+    public ExecutionPlanNode TableScanExecutionPlanNode(TableScanExecutionPlanNode node, ExecutionRewriteContext? context = null)
+    {
+
+        var aliasName = node.TableName != node.Alias ? node.Alias : null;
+        var sql = new SelectStatement([]
+        , new SelectExpression(
+            false,
+            null,
+            Distinctness.Unspecified,
+            node.Columns.Distinct().Select(c => new SelectProjection(new IdentifierExpression(aliasName, c.Name)
+            {
+                Binding = new ColumnBinding(aliasName, node.Table, c)
+            }, c.Name)).ToList(),
+            new FromClause([new NamedTableReference(new IdentifierExpression(node.TableName), aliasName) {
+                Binding = node.Table
+            }], []), null, null, null, null, []));
+
+        return new RemoteSqProviderSqlExecutionPlanNode(this, sql, null)
+        {
+            TableScan = true,
+            Alias = node.Alias
+        };
+    }
+    public ExecutionPlanNode JoinExecutionPlanNode(JoinExecutionPlanNode node, RemoteSqProviderSqlExecutionPlanNode left, RemoteSqProviderSqlExecutionPlanNode right, ExecutionRewriteContext? context = null)
+    {
+        Condition? condition = null;
+
+        if (node.OnConditionPlan is not null && !TryConvert(node.OnConditionPlan, context, out condition))
+        {
+            return node;
+        }
+
+        var p = left.SqlStatement;
+
+        if (!right.TableScan)
+        {
+            return node; // we can't push down a join if the right side is not a table scan, we need to return the node as is
+        }
+
+        var tableRef = right.SqlStatement.SelectQuery.From?.TableReferences.FirstOrDefault() ?? throw new InvalidOperationException("Right side of join must have a table reference");
+
+        var joinClause = new JoinClause(
+            node.JoinSide,
+            node.JoinType,
+             tableRef,
+            condition);
+
+        var from = new FromClause(p.SelectQuery.From?.TableReferences ?? [],
+            [
+                ..p.SelectQuery.From?.Joins ?? [],
+                joinClause
+            ]);
+
+        var result = new SelectStatement(p.CommonTableExpressions, new SelectExpression(
+            false,
+            p.SelectQuery.Top,
+            p.SelectQuery.Distinctness,
+            p.SelectQuery.Projections,
+            from,
+            p.SelectQuery.Where,
+            p.SelectQuery.GroupBy,
+            p.SelectQuery.Having,
+            p.SelectQuery.OrderBy,
+            p.SelectQuery.UnionStatements));
+
+
+        List<ExecuterParameter>? parameters = null;
+        if (left.Parameters is not null)
+        {
+            parameters ??= [];
+            parameters.AddRange(left.Parameters);
+        }
+        if (right.Parameters is not null)
+        {
+            parameters ??= [];
+            parameters.AddRange(right.Parameters);
+        }
+        return new RemoteSqProviderSqlExecutionPlanNode(this, result, parameters?.Distinct());
+    }
 
     public ExecutionPlanNode FilterExecutionPlanNode(FilterExecutionPlanNode node, RemoteSqProviderSqlExecutionPlanNode parent, ExecutionRewriteContext? context = null)
     {
@@ -75,7 +156,10 @@ public abstract class RemoteSqlProviderBase : IExecutionProvider
                 null,
                 []));
 
-            return new RemoteSqProviderSqlExecutionPlanNode(this, selectStatement, parent.Parameters);
+            return new RemoteSqProviderSqlExecutionPlanNode(this, selectStatement, parent.Parameters)
+            {
+                TableScan = true
+            };
         }
         else
         {
@@ -91,7 +175,10 @@ public abstract class RemoteSqlProviderBase : IExecutionProvider
                 null,
                 []));
 
-            return new RemoteSqProviderSqlExecutionPlanNode(this, selectStatement, parent.Parameters);
+            return new RemoteSqProviderSqlExecutionPlanNode(this, selectStatement, parent.Parameters)
+            {
+                TableScan = true
+            };
         }
     }
     public ExecutionPlanNode GroupByAggregateExecutionPlanNode(GroupByAggregateExecutionPlanNode node, RemoteSqProviderSqlExecutionPlanNode parent, ExecutionRewriteContext? context = null)
@@ -289,27 +376,6 @@ public abstract class RemoteSqlProviderBase : IExecutionProvider
         return true;
     }
 
-    public ExecutionPlanNode RewriteTableScan(TableScanExecutionPlanNode node, ExecutionRewriteContext? context = null)
-    {
-        var alias = node.Alias ?? node.TableName;
-
-        var withAlias = alias == node.TableName ? null : alias;
-
-        var sql = new SelectStatement([]
-        , new SelectExpression(
-            false,
-            null,
-            Distinctness.Unspecified,
-            node.Columns.Distinct().Select(c => new SelectProjection(new IdentifierExpression(alias, c.Name)
-            {
-                Binding = new ColumnBinding(node.Table, c)
-            }, $"{alias}.{c.Name}")).ToList(),
-            new FromClause([new NamedTableReference(new IdentifierExpression(node.TableName), withAlias) {
-                Binding = node.Table
-            }], []), null, null, null, null, []));
-
-        return new RemoteSqProviderSqlExecutionPlanNode(this, sql, null);
-    }
 
     protected bool IsFunctionSupportedForPushdown(FunctionCallExpression functionCall)
     {
@@ -331,6 +397,11 @@ public class RemoteSqProviderSqlExecutionPlanNode : ExecutionPlanNode
     private readonly RemoteSqlProviderBase _remoteSqlProviderBase;
     private readonly SelectStatement _select;
     private readonly IEnumerable<ExecuterParameter>? _parameters;
+
+    public bool TableScan { get; init; }
+
+    public string? Alias { get; init; }
+
     public SelectStatement SqlStatement => _select;
 
     public IEnumerable<ExecuterParameter>? Parameters => _parameters;

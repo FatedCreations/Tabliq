@@ -27,6 +27,17 @@ public sealed class TableSymbol
     {
     }
 
+    public TableSymbol(TableSymbol tableSymbol)
+    {
+        this.SchemaName = tableSymbol.SchemaName;
+        this.TableName = tableSymbol.TableName;
+        this.Columns = tableSymbol.Columns.Select(x => new ColumnSymbol(x)).ToList();
+        if (tableSymbol._state is not null)
+        {
+            tableSymbol._state = new Dictionary<Type, object?>(tableSymbol._state);
+        }
+    }
+
     public string SchemaName { get; }
     public string TableName { get; }
     public IReadOnlyList<ColumnSymbol> Columns { get; }
@@ -81,6 +92,18 @@ public sealed record ColumnSymbol(
     string Name,
     string Type)
 {
+
+    public ColumnSymbol(ColumnSymbol symbol)
+    {
+        this.Name = symbol.Name;
+        this.Type = symbol.Type;
+        this.ExcludeFromStarExpansion = symbol.ExcludeFromStarExpansion;
+        if (symbol._state is not null)
+        {
+            symbol._state = new Dictionary<Type, object?>(symbol._state);
+        }
+    }
+
     public bool ExcludeFromStarExpansion { get; init; } = false;
 
     private Dictionary<Type, object?>? _state = null;

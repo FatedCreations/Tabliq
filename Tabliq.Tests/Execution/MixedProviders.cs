@@ -53,8 +53,8 @@ public class MixedProviderExecutionTests
         // this is falling down to the table scan for the Data table, and then the join is being done in memory with the Other table, which is an object provider
         Assert.Equal("""
             SELECT
-                d.Id AS [d.Id],
-                d.Name AS [d.Name]
+                d.Name AS Name,
+                d.Id AS Id
             FROM Data AS d
             """,
             _sqlProvider.LastSqlExecuted);
@@ -71,7 +71,7 @@ public class MixedProviderExecutionTests
 
         // this is falling down to the table scan for the Data table, and then the join is being done in memory with the Other table, which is an object provider
         Assert.Equal("""
-            SELECT d.Name AS [d.Name]
+            SELECT d.Name AS Name
             FROM Data AS d
             """,
             _sqlProvider.LastSqlExecuted);

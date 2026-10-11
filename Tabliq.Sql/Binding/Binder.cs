@@ -439,9 +439,9 @@ public class Binder
         }
     }
 
-    private void BindIdentifier(List<ColumnBinding> p, TableSymbol table, ColumnSymbol column)
+    private void BindIdentifier(string? tableAlias, List<ColumnBinding> p, TableSymbol table, ColumnSymbol column)
     {
-        var binding = new ColumnBinding(table, column, null);
+        var binding = new ColumnBinding(tableAlias, table, column, null);
 
         var parentTable = table.GetState<TableSymbol>() ?? table;
         var sharedState = parentTable.GetOrCreateState(() => new List<ColumnBinding>());
@@ -451,9 +451,9 @@ public class Binder
         p.Add(binding);
     }
 
-    private void BindIdentifier(IdentifierExpression p, TableSymbol table, ColumnSymbol column)
+    private void BindIdentifier(string? tableAlias, IdentifierExpression p, TableSymbol table, ColumnSymbol column)
     {
-        var binding = new ColumnBinding(table, column, null);
+        var binding = new ColumnBinding(tableAlias, table, column, null);
 
         var parentTable = table.GetState<TableSymbol>() ?? table;
         var sharedState = parentTable.GetOrCreateState(() => new List<ColumnBinding>());
@@ -462,41 +462,9 @@ public class Binder
         p.Binding = binding;
     }
 
+
     private void Bind(IdentifierExpression p)
     {
-        void ReportColumnNotFound(TableSymbol? tableSymbol, ColumnSymbol? columnSymbol, string? tableName, string? schemaName, string columnName, string? message = null, string id = "ColumnNotFound")
-        {
-            var finalTableAlias = tableSymbol?.TableName ?? tableName ?? string.Empty;
-            var finalTableName = tableSymbol?.State is TableSymbol ts ? ts.TableName : tableSymbol?.TableName ?? tableName ?? string.Empty;
-            var finalSchemaName = tableSymbol?.State is TableSymbol ss ? ss.SchemaName : tableSymbol?.SchemaName ?? schemaName ?? string.Empty;
-            var finalColumnName = columnSymbol?.Name ?? columnName;
-
-            if (message is null)
-            {
-                if (tableSymbol is null && columnSymbol is null)
-                {
-                    message = $"Column '{finalColumnName}' not found.";
-                }
-                else if (tableSymbol is null)
-                    {
-                    message = $"Table '{finalTableName}' not found in the current scope.";
-                    }
-                    else
-                    {
-                    message = $"Column '{finalColumnName}' not found in table '{finalTableName}'.";
-                    }
-                }
-
-                BindIdentifier(p, table, col);
-            Diagnostics.Report(id, message, p.Span, new()
-            {
-                ["TableName"] = finalTableName,
-                ["TableNameAlias"] = finalTableAlias ?? finalTableName,
-                ["SchemaName"] = finalSchemaName,
-                ["ColumnName"] = finalColumnName,
-            });
-        }
-
         Expression expressionToValidate = p;
         if (p.Binding is null)
         {
@@ -516,36 +484,67 @@ public class Binder
                 {
 
                     ReportColumnNotFound(table, col, tableName, schemaName, columnName);
+                    p.Binding = ColumnBinding.Missing;
+                    return;
+                }
 
-                p.Binding = ColumnBinding.Missing;
-                return;
-            }
-
-                p.Binding = new ColumnBinding(table, col);
+                p.Binding = new ColumnBinding(tableName, table, col);
                 return;
             }
             else
             {
-            // need to handle aliased columns too??
+                // need to handle aliased columns too??
                 var cols = Current.FindColumnsInScope(columnName).ToList();
-            if (cols.Count == 0)
-            {
+                if (cols.Count == 0)
+                {
                     ReportColumnNotFound(null, null, tableName, schemaName, columnName);
 
-                p.Binding = ColumnBinding.Missing;
-                return;
-            }
-            else if (cols.Count > 1)
-            {
+                    p.Binding = ColumnBinding.Missing;
+                    return;
+                }
+                else if (cols.Count > 1)
+                {
                     ReportColumnNotFound(null, null, tableName, schemaName, columnName, $"Column '{p}' is ambiguous.", "AmbiguousColumn");
-                p.Binding = ColumnBinding.Missing;
-                return;
+                    p.Binding = ColumnBinding.Missing;
+                    return;
+                }
+
+                var (t, c) = cols[0];
+                BindIdentifier(tableName, p, t, c);
+            }
+        }
+
+        void ReportColumnNotFound(TableSymbol? tableSymbol, ColumnSymbol? columnSymbol, string? tableName, string? schemaName, string columnName, string? message = null, string id = "ColumnNotFound")
+        {
+            var finalTableAlias = tableSymbol?.TableName ?? tableName ?? string.Empty;
+            var finalTableName = tableSymbol?.GetState<TableSymbol>() is TableSymbol ts ? ts.TableName : tableSymbol?.TableName ?? tableName ?? string.Empty;
+            var finalSchemaName = tableSymbol?.GetState<TableSymbol>() is TableSymbol ss ? ss.SchemaName : tableSymbol?.SchemaName ?? schemaName ?? string.Empty;
+            var finalColumnName = columnSymbol?.Name ?? columnName;
+
+            if (message is null)
+            {
+                if (tableSymbol is null && columnSymbol is null)
+                {
+                    message = $"Column '{finalColumnName}' not found.";
+                }
+                else if (tableSymbol is null)
+                {
+                    message = $"Table '{finalTableName}' not found in the current scope.";
+                }
+                else
+                {
+                    message = $"Column '{finalColumnName}' not found in table '{finalTableName}'.";
+                }
             }
 
-            var (t, c) = cols[0];
-            BindIdentifier(p, t, c);
+            Diagnostics.Report(id, message, p.Span, new()
+            {
+                ["TableName"] = finalTableName,
+                ["TableNameAlias"] = finalTableAlias ?? finalTableName,
+                ["SchemaName"] = finalSchemaName,
+                ["ColumnName"] = finalColumnName,
+            });
         }
-    }
     }
 
     private void Bind(StarIdentifierExpression p)
@@ -567,10 +566,10 @@ public class Binder
                 return;
             }
             List<ColumnBinding> bindings = new List<ColumnBinding>();
-                foreach (var column in table.Columns)
-                {
-                    BindIdentifier(bindings, table, column);
-                }
+            foreach (var column in table.Columns)
+            {
+                BindIdentifier(tableName, bindings, table, column);
+            }
             p.Bindings = bindings;
         }
         else if (schemaName is not null)
@@ -600,14 +599,14 @@ public class Binder
             List<ColumnBinding> bindings = new List<ColumnBinding>();
             foreach (var table in refs)
             {
-            foreach (var column in table.Columns)
-            {
-                BindIdentifier(bindings, table, column);
-            }
+                foreach (var column in table.Columns)
+                {
+                    BindIdentifier(tableName, bindings, table, column);
+                }
             }
             p.Bindings = bindings;
         }
-        }
+    }
 
     private void Bind(ParameterIdentifier p)
     {
@@ -713,6 +712,7 @@ public class BindingScope
     private readonly List<TableSymbol> _referencedTables = new();
     private readonly Dictionary<string, TableSymbol> _tables = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, TableSymbol> _tablesInCatalog = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, TableSymbol> _catalogCopy = new(StringComparer.OrdinalIgnoreCase);
     private readonly string _tableName;
     private readonly Dictionary<string, (ColumnSymbol column, Expression? expression)> _columns = new(StringComparer.OrdinalIgnoreCase);
 
@@ -753,13 +753,17 @@ public class BindingScope
     public void AddTableToCatalog(TableSymbol table)
     {
         _tablesInCatalog[table.ToString()] = table;
+
+        table.GetOrCreateState(() => new List<ColumnBinding>());
     }
 
     public void AddTableReference(TableSymbol table, string? alias = null)
     {
         if (!string.IsNullOrEmpty(alias))
         {
-            table = new TableSymbol(alias, table.Columns).WithState(table);
+            //table = new TableSymbol(alias, table.Columns)
+            //    .WithState(table)
+            //    .WithState(table.GetState<List<ColumnBinding>>());
             _tables[alias] = table;
         }
 
@@ -790,7 +794,7 @@ public class BindingScope
             if (fullName.Equals(_tableName, StringComparison.OrdinalIgnoreCase))
                 return Build();
         }
-        else if(schemaName.Length > 0)
+        else if (schemaName.Length > 0)
         {
             fullName = $"{schemaName}.{name}";
         }
@@ -805,7 +809,14 @@ public class BindingScope
         {
             return t;
         }
-        return _catalog?.GetTable(name, schemaName);
+
+        if (_catalogCopy.TryGetValue(fullName, out var catTable))
+        {
+            return catTable;
+        }
+
+        catTable = _catalog?.GetTable(name, schemaName);
+        return catTable;
     }
 
     public ParameterSymbol? LookupParameter(string name)
@@ -848,7 +859,7 @@ public class BindingScope
     {
         if (_columns.TryGetValue(colName, out var col))
         {
-            return new ColumnBinding(Build()!, col.column, col.expression);
+            return new ColumnBinding(null, Build()!, col.column, col.expression);
         }
 
         return null;
@@ -878,20 +889,33 @@ public class ParameterBinding
     public ParameterSymbol ParameterSymbol { get; }
 }
 
+
+public class TableBinding
+{
+    public TableBinding(string? alias, TableSymbol table)
+    {
+        TableSymbol = table;
+        Alias = alias;
+    }
+
+    public TableSymbol TableSymbol { get; }
+    public string? Alias { get; }
+}
+
 public class ColumnBinding
 {
-    public static ColumnBinding Missing = new ColumnBinding(new TableSymbol("", new List<ColumnSymbol>()), new ColumnSymbol("", string.Empty));
+    public static ColumnBinding Missing = new ColumnBinding(new TableBinding(null, new TableSymbol("", new List<ColumnSymbol>())), new ColumnSymbol("", string.Empty));
 
-    public ColumnBinding(TableSymbol tableSymbol, ColumnSymbol column, Expression? expression = null)
+    public ColumnBinding(TableBinding tableBinding, ColumnSymbol column, Expression? expression = null)
     {
-        TableSymbol = tableSymbol;
+        TableBinding = tableBinding;
         ColumnSymbol = column;
         Expression = expression;
     }
 
-    public Expression? Expression { get; }
+    public TableBinding? TableBinding { get; }
 
-    public TableSymbol TableSymbol { get; }
+    public Expression? Expression { get; }
 
     public ColumnSymbol ColumnSymbol { get; }
 }

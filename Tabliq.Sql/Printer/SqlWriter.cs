@@ -160,7 +160,7 @@ public class SqlWriter
                     }
                 });
             }
-            else
+            else if (selectExpression.Projections.Count > 0)
             {
                 Write(" ");
                 Write(selectExpression.Projections.First());
