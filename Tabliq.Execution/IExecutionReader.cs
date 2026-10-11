@@ -3,7 +3,7 @@ namespace Tabliq.Execution;
 
 public interface IExecutionReader : IAsyncDisposable, IAsyncEnumerable<ReadOnlySpan<object?>>
 {
-    public ReadOnlySpan<string> GetFields();
+    public ReadOnlySpan<string?> GetFields();
 
     public Task<bool> ReadAsync(CancellationToken cancellationToken);
 

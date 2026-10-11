@@ -22,7 +22,7 @@ public abstract class ConditionExecutionPlan
             LikeCondition like => new LikeConditionExecutionPlan(ExpressionPlanNode.Create(like.Left), ExpressionPlanNode.Create(like.Right), like.IsNot),
             BetweenCondition between => new BetweenConditionExecutionPlan(ExpressionPlanNode.Create(between.Left), ExpressionPlanNode.Create(between.From), ExpressionPlanNode.Create(between.To), between.IsNot),
             InListCondition inList => new InListConditionExecutionPlan(ExpressionPlanNode.Create(inList.Left), inList.Items.Select(ExpressionPlanNode.Create), inList.IsNot),
-            InSelectCondition inSelect => new InSelectConditionExecutionPlan(ExecutionPlanNode.Create(inSelect.Expression)),
+            InSelectCondition inSelect => new InSelectConditionExecutionPlan(ExecutionPlanNode.Create(inSelect.Expression), ExpressionPlanNode.Create(inSelect.Left), inSelect.IsNot),
             ExistsCondition exists => new ExistsConditionExecutionPlan(ExecutionPlanNode.Create(exists.SelectExpression)),
             _ => throw new NotSupportedException($"Unsupported condition type: {expression.GetType().Name}")
         };

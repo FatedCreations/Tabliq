@@ -53,7 +53,7 @@ public class InMemoryExecutionTests
     [Fact]
     public async Task SelectStarFromSingleTable()
     {
-        var results = await _engine.ExecuteToDictionaryList("SELECT * FROM Data", Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
+        var results = await _engine.ExecuteToList("SELECT * FROM Data", Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
 
         Assert.Equal(20, results.Count);
     }
@@ -61,48 +61,48 @@ public class InMemoryExecutionTests
     [Fact]
     public async Task SortedSimple()
     {
-        var results = await _engine.ExecuteToDictionaryList("SELECT Name FROM Data order by Id desc", Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
+        var results = await _engine.ExecuteToList("SELECT Name FROM Data order by Id desc", Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
 
         var row = results.FirstOrDefault();
-        Assert.Equal("Test19", row?["Name"]);
+        Assert.Equal("Test19", row["Name"]);
         Assert.Equal(20, results.Count);
     }
 
     [Fact]
     public async Task SortedSimpleAscendingDefault()
     {
-        var results = await _engine.ExecuteToDictionaryList("SELECT Name FROM Data order by Id", Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
+        var results = await _engine.ExecuteToList("SELECT Name FROM Data order by Id", Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
 
         var row = results.FirstOrDefault();
-        Assert.Equal("Test0", row?["Name"]);
+        Assert.Equal("Test0", row["Name"]);
         Assert.Equal(20, results.Count);
     }
 
     [Fact]
     public async Task SortedSimpleAscending()
     {
-        var results = await _engine.ExecuteToDictionaryList("SELECT Name FROM Data order by Id Asc", Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
+        var results = await _engine.ExecuteToList("SELECT Name FROM Data order by Id Asc", Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
 
         var row = results.FirstOrDefault();
-        Assert.Equal("Test0", row?["Name"]);
+        Assert.Equal("Test0", row["Name"]);
         Assert.Equal(20, results.Count);
     }
 
     [Fact]
     public async Task SelectProjection()
     {
-        var results = await _engine.ExecuteToDictionaryList("SELECT Name as n FROM Data", Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
+        var results = await _engine.ExecuteToList("SELECT Name as n FROM Data", Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
 
         Assert.Equal(20, results.Count);
         var first = results.First();
-        Assert.Single(first.Keys);
-        Assert.Contains("n", first.Keys);
+        Assert.Single(first.Columns);
+        Assert.Contains("n", first.Columns);
     }
 
     [Fact]
     public async Task CalculatedField()
     {
-        var results = await _engine.ExecuteToDictionaryList("SELECT Value, Value + 1 as Calculated FROM Data", Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
+        var results = await _engine.ExecuteToList("SELECT Value, Value + 1 as Calculated FROM Data", Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
 
         Assert.Equal(20, results.Count);
         Assert.All(results, r => Assert.Equal((double)r["Value"]+ 1, (double)r["Calculated"]));
@@ -111,11 +111,11 @@ public class InMemoryExecutionTests
     [Fact]
     public async Task StarProjectionColumnsAreResolvedBeforeStreaming()
     {
-        var results = await _engine.ExecuteToDictionaryList("SELECT *, Value + 1 as Calculated FROM Data", Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
+        var results = await _engine.ExecuteToList("SELECT *, Value + 1 as Calculated FROM Data", Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
 
         Assert.Equal(20, results.Count);
         var first = results.First();
-        Assert.Equal(6, first.Keys.Count);
+        Assert.Equal(6, first.Columns.Length);
         Assert.Equal("Test0", first["Name"]);
         Assert.Equal(1, (double)first["Calculated"]);
     }
@@ -123,7 +123,7 @@ public class InMemoryExecutionTests
     [Fact]
     public async Task CountAggregrate()
     {
-        var results = await _engine.ExecuteToDictionaryList("SELECT count(*) as c FROM Data", Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
+        var results = await _engine.ExecuteToList("SELECT count(*) as c FROM Data", Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
 
         var row = Assert.Single(results);
         Assert.Equal(20, (int)row["c"]!);
@@ -132,7 +132,7 @@ public class InMemoryExecutionTests
     [Fact]
     public async Task CustomAggregrate()
     {
-        var results = await _engine.ExecuteToDictionaryList("SELECT CUST_AGG(Id) as c FROM Data", Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
+        var results = await _engine.ExecuteToList("SELECT CUST_AGG(Id) as c FROM Data", Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
 
         var row = Assert.Single(results);
         Assert.Equal(CustomAggregateFunction.TestValue, row["c"]!);
@@ -141,7 +141,7 @@ public class InMemoryExecutionTests
     [Fact]
     public async Task CustomAggregrateWithGroupBy()
     {
-        var results = await _engine.ExecuteToDictionaryList("SELECT CUST_AGG(Id) as c FROM Data group by NameTest", Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
+        var results = await _engine.ExecuteToList("SELECT CUST_AGG(Id) as c FROM Data group by NameTest", Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
 
         Assert.Equal(5, results.Count);
         Assert.All(results, row => Assert.Equal(CustomAggregateFunction.TestValue, row["c"]!));
@@ -150,7 +150,7 @@ public class InMemoryExecutionTests
     [Fact]
     public async Task GroupBy()
     {
-        var results = await _engine.ExecuteToDictionaryList("SELECT NameTest as c FROM Data group by NameTest", Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
+        var results = await _engine.ExecuteToList("SELECT NameTest as c FROM Data group by NameTest", Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
 
         Assert.Equal(5, results.Count);
         Assert.All(results, row => Assert.StartsWith("Test", row["c"]!.ToString()));
@@ -159,7 +159,7 @@ public class InMemoryExecutionTests
     [Fact]
     public async Task CustomValue()
     {
-        var results = await _engine.ExecuteToDictionaryList("SELECT CUST_VALUE(Id) as c FROM Data", Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
+        var results = await _engine.ExecuteToList("SELECT CUST_VALUE(Id) as c FROM Data", Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
 
         Assert.Equal(20, results.Count);
         Assert.All(results, row => Assert.Equal(CustomValueFunction.TestValue, row["c"]!));
@@ -168,13 +168,13 @@ public class InMemoryExecutionTests
     [Fact]
     public async Task Join()
     {
-        var results = await _engine.ExecuteToDictionaryList("""
+        var results = await _engine.ExecuteToList("""
             SELECT d.Name as n, o.Name as oName FROM Data d LEFT JOIN Other o ON d.Id = o.Id
         """, Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
 
         Assert.Equal(20, results.Count);
         var first = results.First();
-        Assert.Equal(2, first.Keys.Count);
+        Assert.Equal(2, first.Columns.Length);
         Assert.Equal("Test0", first["n"]);
         Assert.Equal("Other0", first["oName"]);
     }
@@ -182,7 +182,7 @@ public class InMemoryExecutionTests
     [Fact]
     public async Task MultiTable()
     {
-        var results = await _engine.ExecuteToDictionaryList("""
+        var results = await _engine.ExecuteToList("""
             SELECT d.Name as n, o.Name as oName FROM Data d, Other o
         """, Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
 
@@ -192,7 +192,7 @@ public class InMemoryExecutionTests
     [Fact]
     public async Task Cte()
     {
-        var results = await _engine.ExecuteToDictionaryList("""
+        var results = await _engine.ExecuteToList("""
         with cte as (
             SELECT d.Name from Data d
             )
@@ -204,7 +204,7 @@ public class InMemoryExecutionTests
     [Fact]
     public async Task Union()
     {
-        var results = await _engine.ExecuteToDictionaryList("""
+        var results = await _engine.ExecuteToList("""
             SELECT d.Name from Data d
             UNION ALL
             SELECT d.Name from Other d
@@ -216,7 +216,7 @@ public class InMemoryExecutionTests
     [Fact]
     public async Task UnionDistinct()
     {
-        var results = await _engine.ExecuteToDictionaryList("""
+        var results = await _engine.ExecuteToList("""
             SELECT d.Name from Data d
             UNION
             SELECT d.Name from Data d
@@ -228,7 +228,7 @@ public class InMemoryExecutionTests
     [Fact]
     public async Task PositionIn()
     {
-        var results = await _engine.ExecuteToDictionaryList(
+        var results = await _engine.ExecuteToList(
             """
                 SELECT position('foo' in 'foobar') AS month
             """, Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
@@ -239,7 +239,7 @@ public class InMemoryExecutionTests
     [Fact]
     public async Task Issue4_Empty()
     {
-        var results = await _engine.ExecuteToDictionaryList(
+        var results = await _engine.ExecuteToList(
             """
                 SELECT '1' where 1 + 1 > 2
             """, Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
@@ -250,19 +250,19 @@ public class InMemoryExecutionTests
     [Fact]
     public async Task Issue4()
     {
-        var results = await _engine.ExecuteToDictionaryList(
+        var results = await _engine.ExecuteToList(
             """
                 SELECT '1' where 1 + 1 = 2
             """, Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
 
         var row = Assert.Single(results);
-        Assert.Equal("1", row["'1'"]);
+        Assert.Equal("1", row[0]);
     }
 
     [Fact]
     public async Task Issue5_Empty()
     {
-        var results = await _engine.ExecuteToDictionaryList(
+        var results = await _engine.ExecuteToList(
             """
             SELECT '1' where 1 + 1 > 2 + 2
             """, Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
@@ -273,20 +273,20 @@ public class InMemoryExecutionTests
     [Fact]
     public async Task Issue5()
     {
-        var results = await _engine.ExecuteToDictionaryList(
+        var results = await _engine.ExecuteToList(
             """
             SELECT '1' where 1 + 1 <> 2 + 2
             """, Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
 
         var row = Assert.Single(results);
-        Assert.Equal("1", row["'1'"]);
+        Assert.Equal("1", row[0]);
     }
 
 
     [Fact]
     public async Task Issue6_Empty()
     {
-        var results = await _engine.ExecuteToDictionaryList(
+        var results = await _engine.ExecuteToList(
             """
             SELECT '1' where 1 > 2
             """, Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
@@ -297,13 +297,25 @@ public class InMemoryExecutionTests
     [Fact]
     public async Task Issue6()
     {
-        var results = await _engine.ExecuteToDictionaryList(
+        var results = await _engine.ExecuteToList(
             """
             SELECT '1' where 1 < 2
             """, Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
 
         var row = Assert.Single(results);
-        Assert.Equal("1", row["'1'"]);
+        Assert.Equal("1", row[0]);
+    }
+
+    [Fact]
+    public async Task SelectScaler()
+    {
+        var results = await _engine.ExecuteToList(
+            """
+            SELECT (SELECT '1' ) AS s where 1 < 2
+            """, Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
+
+        var row = Assert.Single(results);
+        Assert.Equal("1", row["s"]);
     }
 
 

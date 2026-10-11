@@ -116,12 +116,15 @@ public class AssertExecuterSql
                     var ex = new ExecutionEngine([provider])
                     {
                         Policies = [
-                            new SingleProviderPolicy(provider)
+                            // new SingleProviderPolicy(provider)
                         ]
                     };
 
                     var plan = ex.BuildPlan(underTest.Replace("\r\n", "\n"), _parameters);
 
+                    plan.Diagnostics.ToList().ForEach(d => Console.WriteLine($"DIAGNOSTIC: {d.Id}: {d.Message}"));
+
+                    Assert.IsType<RemoteSqProviderSqlExecutionPlanNode>(plan.RootNode);
 
                     Console.WriteLine("--- ASSERTSQL DIAGNOSTIC START ---");
                     if (plan.Diagnostics.Any(x=>x.Level > ExecutionRewriteDiagnosticLevel.Info))

@@ -71,9 +71,27 @@ public abstract class ExecutionPlanNode
             }).ToArray());
         }
 
-        if (select.OrderBy?.OffsetClause is not null || select.Top is not null)
+
+        ExpressionPlanNode? fetchExpression = null;
+        if (select.OrderBy?.OffsetClause?.FetchCount is not null)
+        {
+            fetchExpression = ExpressionPlanNode.Create(select.OrderBy.OffsetClause.FetchCount);
+        }
+        else if (select.Top is not null)
+        {
+            fetchExpression = new LiteralExpressionExecutionPlan(select.Top.Value);
+        }
+        ExpressionPlanNode? offsetExression = null;
+        if (select.OrderBy?.OffsetClause?.OffsetCount is not null)
+        {
+            offsetExression = ExpressionPlanNode.Create(select.OrderBy.OffsetClause.OffsetCount);
+        }
+
+        if (offsetExression is not null || fetchExpression is not null)
         {
             // limit / offset (top too)
+
+            current = new OffsetFetchExecutionPlanNode(current, fetchExpression, offsetExression);
         }
 
         current = new ProjectionExecutionPlanNode(current, projectionPlan);
@@ -204,7 +222,7 @@ public abstract class ExecutionPlanNode
         yield return new ProjectionColumnPlan
         {
             Value = ExpressionPlanNode.Create(projection.Expression),
-            Alias = projection.Alias ?? projection.Expression.ToString()
+            Alias = projection.Alias
         };
     }
 

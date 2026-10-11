@@ -1,4 +1,5 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿using System.Collections;
+using System.Diagnostics.CodeAnalysis;
 using Tabliq.Execution.ExpressionPlan;
 using Tabliq.Execution.Functions;
 using Tabliq.Sql.Ast;
@@ -17,6 +18,7 @@ public abstract class RemoteSqlProviderBase : IExecutionProvider
     public ExecutionPlanNode TryRewrite(ExecutionPlanNode node, ExecutionRewriteContext? context = null)
         => node switch
         {
+            OffsetFetchExecutionPlanNode p when p.Input is RemoteSqProviderSqlExecutionPlanNode s && s.Provider == this => OffsetFetchExecutionPlanNode(p, s, context),
             SortedeExecutionPlanNode p when p.Input is RemoteSqProviderSqlExecutionPlanNode s && s.Provider == this => SortedeExecutionPlanNode(p, s, context),
             UnionAllExecutionPlanNode p when p.Input1 is RemoteSqProviderSqlExecutionPlanNode s && s.Provider == this && p.Input2 is RemoteSqProviderSqlExecutionPlanNode r && r.Provider == this => UnionAllExecutionPlanNode(p, s, r, context),
             JoinExecutionPlanNode p when p.Left is RemoteSqProviderSqlExecutionPlanNode s && s.Provider == this && p.Right is RemoteSqProviderSqlExecutionPlanNode r && r.Provider == this => JoinExecutionPlanNode(p, s, r, context),
@@ -51,7 +53,51 @@ public abstract class RemoteSqlProviderBase : IExecutionProvider
         };
     }
 
+    public ExecutionPlanNode OffsetFetchExecutionPlanNode(OffsetFetchExecutionPlanNode node, RemoteSqProviderSqlExecutionPlanNode parent, ExecutionRewriteContext? context = null)
+    {
+        var p = parent.SqlStatement;
 
+        // we are already in an ordered context user fetch and offset, we can just add the new order bys to the existing order bys and add the new offset and fetch to the existing offset and fetch
+        long? top = p.SelectQuery.Top;
+        OrderByClause? order = p.SelectQuery.OrderBy;
+        if (node.Offset is null && p.SelectQuery.OrderBy is null && node.Fetch is LiteralExpressionExecutionPlan lit && lit.Value is long t)
+        {
+            top = t;
+        }
+        else
+        {
+            Expression? offset = null;
+            Expression? fetch = null;
+
+            if (node.Offset is not null && !TryConvert(node.Offset, context, out offset))
+            {
+                context?.Report("UnsupportedExpressionForPushdown", $"Expression {node.Offset} is not supported for pushdown");
+                return node;
+            }
+
+            if (node.Fetch is not null && !TryConvert(node.Fetch, context, out fetch))
+            {
+                context?.Report("UnsupportedExpressionForPushdown", $"Expression {node.Fetch} is not supported for pushdown");
+                return node;
+            }
+
+            order = new OrderByClause(p.SelectQuery.OrderBy?.Entries ?? [], new OffsetClause(offset, fetch));
+        }
+
+        var newSelect = new SelectStatement(p.CommonTableExpressions, new SelectExpression(
+            false,
+            top,
+            p.SelectQuery.Distinctness,
+            p.SelectQuery.Projections,
+            p.SelectQuery.From,
+            p.SelectQuery.Where,
+            p.SelectQuery.GroupBy,
+            p.SelectQuery.Having,
+            order,
+            p.SelectQuery.UnionStatements));
+
+        return new RemoteSqProviderSqlExecutionPlanNode(this, newSelect, parent.Parameters);
+    }
     public ExecutionPlanNode SortedeExecutionPlanNode(SortedeExecutionPlanNode node, RemoteSqProviderSqlExecutionPlanNode parent, ExecutionRewriteContext? context = null)
     {
         var p = parent.SqlStatement;
@@ -80,7 +126,7 @@ public abstract class RemoteSqlProviderBase : IExecutionProvider
             p.SelectQuery.Where,
             p.SelectQuery.GroupBy,
             p.SelectQuery.Having,
-            new OrderByClause([.. p.SelectQuery.OrderBy?.Entries ?? [], ..entries], p.SelectQuery.OrderBy?.OffsetClause),
+            new OrderByClause([.. p.SelectQuery.OrderBy?.Entries ?? [], .. entries], p.SelectQuery.OrderBy?.OffsetClause),
             p.SelectQuery.UnionStatements));
 
         return new RemoteSqProviderSqlExecutionPlanNode(this, newSelect, parent.Parameters);
@@ -126,6 +172,7 @@ public abstract class RemoteSqlProviderBase : IExecutionProvider
 
         if (node.OnConditionPlan is not null && !TryConvert(node.OnConditionPlan, context, out condition))
         {
+            context?.Report("UnsupportedExpressionForPushdown", $"Expression {node.OnConditionPlan} is not supported for pushdown");
             return node;
         }
 
@@ -150,7 +197,7 @@ public abstract class RemoteSqlProviderBase : IExecutionProvider
                 joinClause
             ]);
 
-        var result = new SelectStatement(p.CommonTableExpressions, new SelectExpression(
+        var result = new SelectStatement([..p.CommonTableExpressions, ..right.SqlStatement.CommonTableExpressions], new SelectExpression(
             false,
             p.SelectQuery.Top,
             p.SelectQuery.Distinctness,
@@ -181,6 +228,7 @@ public abstract class RemoteSqlProviderBase : IExecutionProvider
     {
         if (!TryConvert(node.ConditionPlan, context, out var condition))
         {
+            context?.Report("UnsupportedExpressionForPushdown", $"Expression {node.ConditionPlan} is not supported for pushdown");
             return node;
         }
 
@@ -332,6 +380,7 @@ public abstract class RemoteSqlProviderBase : IExecutionProvider
             }
             else
             {
+                context?.Report("UnsupportedExpressionForPushdown", $"Expression {col.Value} is not supported for pushdown");
                 missedProjections.Add(col);
             }
         }
@@ -343,6 +392,7 @@ public abstract class RemoteSqlProviderBase : IExecutionProvider
 
         if (missedProjections.Any())
         {
+            return node; // we can't push down any projections, so we need to return the node as is
             throw new NotImplementedException("Need to create a new ProjectNode wrapping the remote sql node with passthru or missing projections included");
         }
 
@@ -369,34 +419,41 @@ public abstract class RemoteSqlProviderBase : IExecutionProvider
         {
             LogicalConditionExecutionPlan logical => TryConvert(logical.Left, context, out var left) && TryConvert(logical.Right, context, out var right) ? new LogicalCondition(left, logical.Operator, right) : null,
             BinaryComparisonConditionExecutionPlan logical => TryConvert(logical.Left, context, out var left) && TryConvert(logical.Right, context, out var right) ? new BinaryComparisonCondition(left, logical.Operator, right) : null,
-
-            _ => null
+            BracketedConditionExecutionPlan bracketed => TryConvert(bracketed.Bracketed, context, out var con) ? new BracketedCondition (con) : null,
+            UnaryConditionExecutionPlan unary => TryConvert(unary.Unary, context, out var con) ? new UnaryCondition(unary.Operator, con) : null,
+            IsNullConditionExecutionPlan isNull => TryConvert(isNull.Expression, context, out var con) ? new IsNullCondition(isNull.IsNot, con) : null,
+            LikeConditionExecutionPlan like => TryConvert(like.Left, context, out var left) && TryConvert(like.Right, context, out var right) ? new LikeCondition(like.IsNot, left, right) : null,
+            BetweenConditionExecutionPlan between => TryConvert(between.Value, context, out var left) && TryConvert(between.From, context, out var from) && TryConvert(between.To, context, out var to) ? new BetweenCondition(between.IsNot, left, from, to) : null,
+            InListConditionExecutionPlan inList => TryConvert(inList.Left, context, out var left) && TryConvertCollection(inList.Items, context, out var items) ? new InListCondition(inList.IsNot, left, items) : null,
+            InSelectConditionExecutionPlan inSelect => TryConvertSelect(inSelect.ExecutionPlanNode, context, out var sel) && TryConvert(inSelect.Value, context, out var value) ?   new InSelectCondition(inSelect.IsNot, value, sel) : null,
+            ExistsConditionExecutionPlan exists => TryConvertSelect(exists.ExecutionPlanNode, context, out var sel) ? new ExistsCondition(sel) : null,
+            _ => throw new NotSupportedException($"Unsupported condition type: {node.GetType().Name}")
         };
-        // todo reverse process
 
         return condition != null;
     }
 
+
+    public bool TryConvertSelect(ExecutionPlanNode node, ExecutionRewriteContext? context, [NotNullWhen(true)] out SelectExpression? expression)
+    {
+        if (node.Provider == this)
+        {
+            var plan = TryRewrite(node, context);
+
+            if (plan is RemoteSqProviderSqlExecutionPlanNode remotePlan && remotePlan.Provider == this)
+            {
+                expression = new SelectExpression(true, remotePlan.SqlStatement.SelectQuery);
+                return true;
+            }
+        }
+        expression = null;
+        return false;
+    }
     public bool TryConvert(ExpressionPlanNode node, ExecutionRewriteContext? context, [NotNullWhen(true)] out Expression? expression)
     {
-        if (node is ScalarSubqueryExpressionExecutionPlan select)
-        {
-            if (select.Select.Provider == this)
-            {
-                var plan = TryRewrite(select.Select, context);
-
-                if (plan is RemoteSqProviderSqlExecutionPlanNode remotePlan && remotePlan.Provider == this)
-                {
-                    expression = new SelectExpression(true, remotePlan.SqlStatement.SelectQuery);
-                    return true;
-                }
-            }
-            expression = null;
-            return false;
-        }
-
         expression = node switch
         {
+            ScalarSubqueryExpressionExecutionPlan select => TryConvertSelect(select.Select, context, out var selExpression) ? selExpression : null,
             LiteralExpressionExecutionPlan nullLiteral when nullLiteral.Value is null => new NullValue(),
             LiteralExpressionExecutionPlan literal => new LiteralExpression(literal.Value),
             IdentifierExpressionExecutionPlan identifier => new IdentifierExpression(identifier.TableName, identifier.ColumnName)

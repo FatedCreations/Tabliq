@@ -40,7 +40,7 @@ public class SqlServerExecutionTests
     [Fact]
     public async Task Cte()
     {
-        var results = await _engine.ExecuteToDictionaryList("""
+        var results = await _engine.ExecuteToList("""
             with d as (SELECT *
             FROM Data)
             SELECT * FROM d
@@ -70,7 +70,7 @@ public class SqlServerExecutionTests
     [Fact]
     public async Task RecursiveCteAreResolvedBeforePushdown()
     {
-        var results = await _engine.ExecuteToDictionaryList("""
+        var results = await _engine.ExecuteToList("""
             WITH d AS (SELECT * FROM Data),
                  e AS (SELECT * FROM d)
             SELECT * FROM e
@@ -109,7 +109,7 @@ public class SqlServerExecutionTests
     [Fact]
     public async Task SelectStarFromSingleTable()
     {
-        var results = await _engine.ExecuteToDictionaryList("SELECT * FROM Data", Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
+        var results = await _engine.ExecuteToList("SELECT * FROM Data", Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
 
         Assert.Equal("""
             SELECT
@@ -126,7 +126,7 @@ public class SqlServerExecutionTests
     [Fact]
     public async Task SelectProjection()
     {
-        var results = await _engine.ExecuteToDictionaryList("SELECT Name as n FROM Data", Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
+        var results = await _engine.ExecuteToList("SELECT Name as n FROM Data", Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
 
         Assert.Equal("""
             SELECT Data.Name AS n
@@ -138,7 +138,7 @@ public class SqlServerExecutionTests
     [Fact]
     public async Task CalculatedField()
     {
-        var results = await _engine.ExecuteToDictionaryList("SELECT Value, Value + 1 as Calculated FROM Data", Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
+        var results = await _engine.ExecuteToList("SELECT Value, Value + 1 as Calculated FROM Data", Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
 
         Assert.Equal("""
             SELECT
@@ -152,7 +152,7 @@ public class SqlServerExecutionTests
     [Fact]
     public async Task Join()
     {
-        var results = await _engine.ExecuteToDictionaryList("""
+        var results = await _engine.ExecuteToList("""
             SELECT d.Name as n, o.Name as oName FROM Data d LEFT JOIN Other o ON d.Id = o.Id
         """, Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
 
@@ -170,7 +170,7 @@ public class SqlServerExecutionTests
     [Fact]
     public async Task UnionPushesDownToSqlProvider()
     {
-        var results = await _engine.ExecuteToDictionaryList("""
+        var results = await _engine.ExecuteToList("""
             SELECT d.Name FROM Data d
             UNION ALL
             SELECT o.Name FROM Other o
@@ -193,7 +193,7 @@ public class SqlServerExecutionTests
     [Fact]
     public async Task CountAggregatePassesThroughToSqlProvider()
     {
-        var results = await _engine.ExecuteToDictionaryList("SELECT COUNT(*) AS c FROM Data", Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
+        var results = await _engine.ExecuteToList("SELECT COUNT(*) AS c FROM Data", Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
 
         Assert.Equal("""
             SELECT COUNT(*) AS c
@@ -205,7 +205,7 @@ public class SqlServerExecutionTests
     [Fact]
     public async Task CountAggregatePassesThroughToSqlProviderWithGroupBy()
     {
-        var results = await _engine.ExecuteToDictionaryList("SELECT COUNT(*) AS c FROM Data Group By NameTest", Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
+        var results = await _engine.ExecuteToList("SELECT COUNT(*) AS c FROM Data Group By NameTest", Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
 
         Assert.Equal("""
             SELECT COUNT(*) AS c
@@ -227,7 +227,7 @@ public class SqlServerExecutionTests
     [Fact]
     public async Task UnrecognisedCustomValueTriggersAFilterdTableScan()
     {
-        var results = await _engine.ExecuteToDictionaryList("SELECT CUST_VALUE(NameTest) AS c FROM Data WHERE NameTest = 'Test'", Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
+        var results = await _engine.ExecuteToList("SELECT CUST_VALUE(NameTest) AS c FROM Data WHERE NameTest = 'Test'", Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
 
         Assert.Equal("""
             SELECT NameTest AS NameTest
@@ -248,7 +248,7 @@ public class SqlServerExecutionTests
                 }
             });
 
-        var results = await _engine.BuildPlanAndExecuteToDictionaryList("SELECT CUST_VALUE(NameTest) AS c FROM Data WHERE NameTest = 'Test' GROUP BY NameTest", Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
+        var results = await _engine.BuildPlanAndExecuteToList("SELECT CUST_VALUE(NameTest) AS c FROM Data WHERE NameTest = 'Test' GROUP BY NameTest", Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
 
         Assert.Equal("""
             SELECT NameTest AS NameTest
@@ -278,7 +278,7 @@ public class SqlServerExecutionTests
                 }
             });
 
-        var results = await _engine.BuildPlanAndExecuteToDictionaryList("SELECT CUST_VALUE(NameTest) AS c FROM Data WHERE NameTest = 'Test' GROUP BY NameTest", Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
+        var results = await _engine.BuildPlanAndExecuteToList("SELECT CUST_VALUE(NameTest) AS c FROM Data WHERE NameTest = 'Test' GROUP BY NameTest", Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
 
         Assert.Contains(results.Diagnostics, x => x.Message.Equals("Function CUST_VALUE is not supported for pushdown", StringComparison.OrdinalIgnoreCase));
     }
@@ -293,7 +293,7 @@ public class SqlServerExecutionTests
                     NameTest = "Test"
                 }
             });
-        var results = await _engine.BuildPlanAndExecuteToDictionaryList("SELECT Left(d.NameTest, 10) AS c FROM (SELECT NameTest FROM Data) as d WHERE NameTest = 'Test' GROUP BY NameTest", Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
+        var results = await _engine.BuildPlanAndExecuteToList("SELECT Left(d.NameTest, 10) AS c FROM (SELECT NameTest FROM Data) as d WHERE NameTest = 'Test' GROUP BY NameTest", Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
 
         Assert.IsType<RemoteSqProviderSqlExecutionPlanNode>(results.Plan);
 
@@ -322,7 +322,7 @@ public class SqlServerExecutionTests
                     NameTest = "Test"
                 }
             });
-        var results = await _engine.BuildPlanAndExecuteToDictionaryList("SELECT CUST_VALUE(d.NameTest) AS c FROM (SELECT NameTest FROM Data) as d WHERE NameTest = 'Test' GROUP BY NameTest", Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
+        var results = await _engine.BuildPlanAndExecuteToList("SELECT CUST_VALUE(d.NameTest) AS c FROM (SELECT NameTest FROM Data) as d WHERE NameTest = 'Test' GROUP BY NameTest", Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
 
         Assert.Equal("""
             SELECT d.NameTest
@@ -346,7 +346,7 @@ public class SqlServerExecutionTests
     [Fact]
     public async Task MultiTable()
     {
-        var results = await _engine.ExecuteToDictionaryList("""
+        var results = await _engine.ExecuteToList("""
             SELECT d.Name as n, o.Name as oName FROM Data d, Other o
         """, Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
 

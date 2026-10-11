@@ -46,7 +46,7 @@ public class MixedProviderExecutionTests
     [Fact]
     public async Task Join()
     {
-        var results = await _engine.ExecuteToDictionaryList("""
+        var results = await _engine.ExecuteToList("""
             SELECT d.Name as n, o.Name as oName FROM Data d LEFT JOIN Other o ON d.Id = o.Id
         """, Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
 
@@ -65,7 +65,7 @@ public class MixedProviderExecutionTests
     [Fact]
     public async Task MultiTable()
     {
-        var results = await _engine.ExecuteToDictionaryList("""
+        var results = await _engine.ExecuteToList("""
             SELECT d.Name as n, o.Name as oName FROM Data d, Other o
         """, Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
 
@@ -82,7 +82,7 @@ public class MixedProviderExecutionTests
     [Fact]
     public async Task CountAggregateOnSqlProviderPassesThrough()
     {
-        var results = await _engine.ExecuteToDictionaryList("SELECT COUNT(*) AS c FROM Data", Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
+        var results = await _engine.ExecuteToList("SELECT COUNT(*) AS c FROM Data", Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
 
         Assert.Equal("""
             SELECT COUNT(*) AS c
@@ -94,7 +94,7 @@ public class MixedProviderExecutionTests
     [Fact]
     public async Task CountAggregateOnObjectProviderFallsBackToInMemory()
     {
-        var results = await _engine.ExecuteToDictionaryList("SELECT COUNT(*) AS c FROM Other", Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
+        var results = await _engine.ExecuteToList("SELECT COUNT(*) AS c FROM Other", Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
 
         var row = Assert.Single(results);
         Assert.Equal(20, (int)row["c"]!);

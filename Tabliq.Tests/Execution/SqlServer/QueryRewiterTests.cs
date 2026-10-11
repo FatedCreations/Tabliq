@@ -29,7 +29,7 @@ public class QueryRewiterTests
                 COUNT(*) AS count
             FROM landscapeQuery_strategy_A.SE AS [TAC SRs]
             GROUP BY CAST([TAC SRs].SE_CRE AS DATE)
-            ORDER BY [date]
+            ORDER BY [date] ASC
             """);
 
     [Fact]
@@ -360,7 +360,7 @@ public class QueryRewiterTests
             UNION ALL
             SELECT
                 'Other' AS [Assigned Product Family],
-                SUM(SR_Count)
+                SUM(Others.SR_Count)
             FROM (
                 SELECT COUNT(*) AS SR_Count
                 FROM landscapeQuery_strategy_A.SE AS [TAC SRs]
@@ -599,8 +599,8 @@ public class QueryRewiterTests
                 YEAR([Device History].EV_FRO),
                 MONTH([Device History].EV_FRO)
             ORDER BY
-                YEAR([Device History].EV_FRO),
-                MONTH([Device History].EV_FRO)
+                YEAR([Device History].EV_FRO) ASC,
+                MONTH([Device History].EV_FRO) ASC
             """);
     [Fact]
     public void Issue21()
@@ -872,12 +872,11 @@ public class QueryRewiterTests
         SELECT
             before.before_avg,
             after.after_avg
-        FROM
-            before,
-            after
+        FROM before as before
+        CROSS JOIN after AS after
     )
-    SELECT ROUND((1 - after_avg / before_avg) * 100, 1) AS disruptions_reduction_pct
-    FROM calc
+    SELECT ROUND((1 - calc.after_avg / calc.before_avg) * 100, 1) AS disruptions_reduction_pct
+    FROM calc as calc
     """);
 
     [Fact]

@@ -11,7 +11,7 @@ public sealed class ProjectionColumnPlan
 {
     public required ExpressionPlanNode Value { get; init; }
 
-    public required string Alias { get; init; }
+    public required string? Alias { get; init; }
 }
 
 public sealed class ProjectionExecutionPlanNode : ExecutionPlanNode
@@ -96,7 +96,7 @@ public sealed class ProjectionExecutionPlanNode : ExecutionPlanNode
             for (var i = 0; i < _fieldCount; i++)
             {
                 var projection = _projections[i];
-                var fieldName = projection.Alias ?? throw new Exception("name should already be defined!");// GetFieldName(projection.Value);
+                var fieldName = projection.Alias;
                 _outputFields[i] = fieldName;
             }
 
