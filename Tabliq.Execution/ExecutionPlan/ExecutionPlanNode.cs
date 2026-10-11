@@ -182,9 +182,7 @@ public abstract class ExecutionPlanNode
                     continue;
                 }
 
-                var identifier = string.IsNullOrEmpty(binding.TableSymbol.SchemaName)
-                    ? new IdentifierExpression(binding.TableSymbol.TableName, binding.ColumnSymbol.Name)
-                    : new IdentifierExpression(binding.TableSymbol.SchemaName, binding.TableSymbol.TableName, binding.ColumnSymbol.Name);
+                var identifier = new IdentifierExpression(binding.TableBinding.Alias, binding.ColumnSymbol.Name);
                 identifier.WithBinding(binding);
 
                 yield return new ProjectionColumnPlan
@@ -221,7 +219,7 @@ public abstract class ExecutionPlanNode
     {
         if (node is IdentifierExpression identifier && identifier.Binding is { } binding)
         {
-            var tableName = binding.TableSymbol.TableName;
+            var tableName = binding.TableBinding.TableSymbol.TableName;
             var colName = binding.ColumnSymbol.Name;
             if (!string.IsNullOrEmpty(tableName) && !string.IsNullOrEmpty(colName))
             {
@@ -234,7 +232,7 @@ public abstract class ExecutionPlanNode
         {
             foreach (var starBinding in star.Bindings)
             {
-                var tableName = starBinding.TableSymbol.TableName;
+                var tableName = starBinding.TableBinding.TableSymbol.TableName;
                 var colName = starBinding.ColumnSymbol.Name;
                 if (!string.IsNullOrEmpty(tableName) && !string.IsNullOrEmpty(colName))
                 {
@@ -253,7 +251,7 @@ public abstract class ExecutionPlanNode
     {
         if (node is IdentifierExpression identifier && identifier.Binding is { } binding)
         {
-            var table = binding.TableSymbol;
+            var table = binding.TableBinding.TableSymbol;
             var colName = binding.ColumnSymbol;
             if (table is not null && colName is not null)
             {
@@ -266,7 +264,7 @@ public abstract class ExecutionPlanNode
         {
             foreach (var starBinding in star.Bindings)
             {
-                var table = starBinding.TableSymbol;
+                var table = starBinding.TableBinding.TableSymbol;
                 var colName = starBinding.ColumnSymbol;
                 if (table is not null && colName is not null)
                 {

@@ -56,13 +56,13 @@ public class SqlServerExecutionTests
                     Data.Value2
                 FROM Data
             )
-            SELECT 
+            SELECT
                 d.Id,
                 d.Name,
                 d.NameTest,
                 d.Value,
                 d.Value2
-            FROM d
+            FROM d AS d
             """,
             _provider.LastSqlExecuted);
     }
@@ -78,15 +78,30 @@ public class SqlServerExecutionTests
 
         Assert.Equal("""
             WITH d AS (
-                SELECT *
+                SELECT
+                    Data.Id,
+                    Data.Name,
+                    Data.NameTest,
+                    Data.Value,
+                    Data.Value2
                 FROM Data
             ), 
             e AS (
-                SELECT *
-                FROM d
+                SELECT
+                    d.Id,
+                    d.Name,
+                    d.NameTest,
+                    d.Value,
+                    d.Value2
+                FROM d AS d
             )
-            SELECT *
-            FROM e
+            SELECT
+                e.Id,
+                e.Name,
+                e.NameTest,
+                e.Value,
+                e.Value2
+            FROM e AS e
             """,
             _provider.LastSqlExecuted);
     }
@@ -114,7 +129,7 @@ public class SqlServerExecutionTests
         var results = await _engine.ExecuteToDictionaryList("SELECT Name as n FROM Data", Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
 
         Assert.Equal("""
-            SELECT Name AS n
+            SELECT Data.Name AS n
             FROM Data
             """,
             _provider.LastSqlExecuted);
@@ -161,19 +176,18 @@ public class SqlServerExecutionTests
             SELECT o.Name FROM Other o
         """, Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
 
+
+        Assert.Equal("""
+                SELECT d.Name
+                FROM Data AS d
+                UNION ALL
+                SELECT o.Name
+                FROM Other AS o
+                """,
+            _provider.LastSqlExecuted);
+
         // all pushed down as a single statements!
         Assert.Single(_provider.SqlExecuted);
-        Assert.Equal("""
-             SELECT d.Name
-             FROM Data d
-             UNION ALL
-             SELECT o.Name
-             FROM Other o
-             """,
-            _provider.LastSqlExecuted);
-        Assert.Contains("UNION ALL", _provider.LastSqlExecuted, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("FROM Data", _provider.LastSqlExecuted, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("FROM Other", _provider.LastSqlExecuted, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -216,9 +230,9 @@ public class SqlServerExecutionTests
         var results = await _engine.ExecuteToDictionaryList("SELECT CUST_VALUE(NameTest) AS c FROM Data WHERE NameTest = 'Test'", Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
 
         Assert.Equal("""
-            SELECT Data.NameTest AS [Data.NameTest]
+            SELECT NameTest AS NameTest
             FROM Data
-            WHERE NameTest = 'Test'
+            WHERE Data.NameTest = 'Test'
             """,
             _provider.LastSqlExecuted);
     }
@@ -237,10 +251,10 @@ public class SqlServerExecutionTests
         var results = await _engine.BuildPlanAndExecuteToDictionaryList("SELECT CUST_VALUE(NameTest) AS c FROM Data WHERE NameTest = 'Test' GROUP BY NameTest", Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
 
         Assert.Equal("""
-            SELECT Data.NameTest AS [Data.NameTest]
+            SELECT NameTest AS NameTest
             FROM Data
-            WHERE NameTest = 'Test'
-            GROUP BY NameTest
+            WHERE Data.NameTest = 'Test'
+            GROUP BY Data.NameTest
             """,
             _provider.LastSqlExecuted);
 
@@ -286,11 +300,11 @@ public class SqlServerExecutionTests
         Assert.Equal("""
             SELECT LEFT(d.NameTest, 10) AS c
             FROM (
-                SELECT NameTest
+                SELECT Data.NameTest
                 FROM Data
             ) AS d
-            WHERE NameTest = 'Test'
-            GROUP BY NameTest
+            WHERE d.NameTest = 'Test'
+            GROUP BY d.NameTest
             """,
             _provider.LastSqlExecuted);
 
@@ -313,11 +327,11 @@ public class SqlServerExecutionTests
         Assert.Equal("""
             SELECT d.NameTest
             FROM (
-                SELECT NameTest
+                SELECT Data.NameTest
                 FROM Data
             ) AS d
-            WHERE NameTest = 'Test'
-            GROUP BY NameTest
+            WHERE d.NameTest = 'Test'
+            GROUP BY d.NameTest
             """,
             _provider.LastSqlExecuted);
 

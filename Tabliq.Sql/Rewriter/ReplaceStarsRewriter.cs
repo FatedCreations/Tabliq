@@ -52,7 +52,7 @@ namespace Tabliq.Sql.Rewriter
                         {
                             foreach (var b in starIdentifier.Bindings)
                             {
-                                var tableSymbol = b.TableSymbol;
+                                var tableSymbol = b.TableBinding.TableSymbol;
                                 var columnSymbol = b.ColumnSymbol;
                                 if (tableSymbol is null || columnSymbol is null)
                                 {
@@ -68,7 +68,7 @@ namespace Tabliq.Sql.Rewriter
 
                                 // TODO: fetch addtional metadata about the column to see if we should include it in the projection list
                                 var newProjection = new SelectProjection(
-                                    Create(b.TableAlias, tableSymbol, columnSymbol, b).WithLocation(starIdentifier.Span),
+                                    Create(b).WithLocation(starIdentifier.Span),
                                     columnSymbol.Name,
                                     true
                                 ).WithLocation(starIdentifier.Span);
@@ -104,23 +104,14 @@ namespace Tabliq.Sql.Rewriter
             return base.Rewrite(node);
         }
 
-        private IdentifierExpression Create(string? tableAlias, TableSymbol tableSymbol, ColumnSymbol columnSymbol, ColumnBinding? columnBinding = null)
+        private IdentifierExpression Create(ColumnBinding columnBinding)
         {
-            columnBinding ??= new ColumnBinding(tableAlias, tableSymbol, columnSymbol);
-            if (string.IsNullOrEmpty(tableSymbol.SchemaName))
+            var tableSymbol = columnBinding.TableBinding.TableSymbol;
+            var columnSymbol = columnBinding.ColumnSymbol;
+            return new IdentifierExpression(tableSymbol.SchemaName, tableSymbol.TableName, columnSymbol.Name)
             {
-                return new IdentifierExpression(tableSymbol.TableName, columnSymbol.Name)
-                {
-                    Binding = columnBinding
-                };
-            }
-            else
-            {
-                return new IdentifierExpression(tableSymbol.SchemaName, tableSymbol.TableName, columnSymbol.Name)
-                {
-                    Binding = columnBinding
-                };
-            }
+                Binding = columnBinding
+            };
         }
     }
 }

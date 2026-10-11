@@ -7,19 +7,18 @@ public sealed class IdentifierExpressionExecutionPlan : ExpressionPlanNode
 {
     public IdentifierExpressionExecutionPlan(IdentifierExpression identifier)
     {
-        TableSymbol = identifier.Binding?.TableSymbol;
-        ColumnSymbol = identifier.Binding?.ColumnSymbol;
+        ColumnBinding = identifier.Binding;
+        var TableSymbol = identifier.Binding?.TableBinding.TableSymbol;
+        var ColumnSymbol = identifier.Binding?.ColumnSymbol;
 
         var parts = identifier.GetColumnParts();
         ColumnName = ColumnSymbol?.Name ?? parts.ColumnName;
-        TableName = parts.TableName ?? TableSymbol?.TableName;
+        TableName = identifier.Binding?.TableBinding.Alias ?? parts.TableName ?? TableSymbol?.TableName;
     }
 
-    public override string Identifier => $"Identifier({TableSymbol?.TableName ?? TableName}.{ColumnSymbol?.Name ?? ColumnName})";
+    public override string Identifier => $"Identifier({ColumnBinding})";
 
-    public TableSymbol? TableSymbol { get; }
-
-    public ColumnSymbol? ColumnSymbol { get; }
+    public ColumnBinding? ColumnBinding { get; }
     public string ColumnName { get; }
     public string? TableName { get; }
 

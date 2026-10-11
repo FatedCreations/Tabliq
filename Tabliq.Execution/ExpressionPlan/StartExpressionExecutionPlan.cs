@@ -1,12 +1,16 @@
 using Tabliq.Sql.Ast;
+using Tabliq.Sql.Binding;
 
 namespace Tabliq.Execution.ExpressionPlan;
 
 public sealed class StartExpressionExecutionPlan : ExpressionPlanNode
 {
-    public StartExpressionExecutionPlan()
+    public StartExpressionExecutionPlan(IReadOnlyList<ColumnBinding> bindings)
     {
+        Bindings = bindings;
     }
+
+    public IReadOnlyList<ColumnBinding> Bindings { get; }
 
     public override string Identifier => $"*";
 

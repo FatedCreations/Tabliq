@@ -35,7 +35,7 @@ public abstract class ExpressionPlanNode
         {
             LiteralExpression literal => new LiteralExpressionExecutionPlan(literal.Value),
             IdentifierExpression identifier => new IdentifierExpressionExecutionPlan(identifier),
-            StarIdentifierExpression => new StartExpressionExecutionPlan(), // count(1) ?? 
+            StarIdentifierExpression d => new StartExpressionExecutionPlan(d.Bindings), // count(1) ?? 
             ParameterIdentifier parameter => new ParameterExpressionExecutionPlan(parameter),
             BracketedExpression bracketed => new BracketedExpressionExecutionPlan(Create(bracketed.Expression)),
             InExpression inExpression => new SubValueInExpressionExecutionPlan(Create(inExpression.Expression), Create(inExpression.SubValue)),

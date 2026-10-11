@@ -12,14 +12,6 @@ public sealed class ProjectionColumnPlan
     public required ExpressionPlanNode Value { get; init; }
 
     public required string Alias { get; init; }
-
-    public TableSymbol? TableSymbol => Value is IdentifierExpressionExecutionPlan identifierPlan
-        ? identifierPlan.TableSymbol
-        : null;
-
-    public ColumnSymbol? ColumnSymbol => Value is IdentifierExpressionExecutionPlan identifierPlan
-        ? identifierPlan.ColumnSymbol
-        : null;
 }
 
 public sealed class ProjectionExecutionPlanNode : ExecutionPlanNode

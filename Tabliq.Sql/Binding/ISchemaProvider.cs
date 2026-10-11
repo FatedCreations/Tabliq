@@ -128,6 +128,9 @@ public sealed record ColumnSymbol(
         _state[typeof(T)] = state;
         return this;
     }
+
+    public override string ToString()
+        => Name;
 }
 
 public sealed record ParameterSymbol(string Name, string Type, bool IsLocal = false)
