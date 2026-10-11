@@ -63,6 +63,12 @@ public abstract class ExecutionPlanNode
 
         if (select.OrderBy is not null)
         {
+            current = new SortedeExecutionPlanNode(current, select.OrderBy.Entries.Select(x =>
+            new SortedPlanColumn
+            {
+                Expression = ExpressionPlanNode.Create(x.Expression),
+                Ascending = x.Direction != OrderByDirection.Descending
+            }).ToArray());
         }
 
         if (select.OrderBy?.OffsetClause is not null || select.Top is not null)
@@ -79,7 +85,7 @@ public abstract class ExecutionPlanNode
 
         // unions
 
-        foreach(var u in select.UnionStatements)
+        foreach (var u in select.UnionStatements)
         {
             var right = Create(u.Select);
             current = new UnionAllExecutionPlanNode(current, right);
@@ -162,9 +168,9 @@ public abstract class ExecutionPlanNode
     {
         yield return node;
 
-        foreach(var n in node.GetExpressions())
+        foreach (var n in node.GetExpressions())
         {
-            foreach(var e in AllExpressions(n))
+            foreach (var e in AllExpressions(n))
             {
                 yield return e;
             }
@@ -334,7 +340,7 @@ public abstract class ExecutionPlanNode
     {
         var provider = ResolveProvider(table);
 
-        if(referencedColumns.TryGetValue(table, out var colsSet))
+        if (referencedColumns.TryGetValue(table, out var colsSet))
         {
             return new TableScanExecutionPlanNode(table, alias, provider, colsSet.ToList());
         }

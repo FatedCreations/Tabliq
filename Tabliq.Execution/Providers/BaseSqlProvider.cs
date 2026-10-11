@@ -17,6 +17,7 @@ public abstract class RemoteSqlProviderBase : IExecutionProvider
     public ExecutionPlanNode TryRewrite(ExecutionPlanNode node, ExecutionRewriteContext? context = null)
         => node switch
         {
+            SortedeExecutionPlanNode p when p.Input is RemoteSqProviderSqlExecutionPlanNode s && s.Provider == this => SortedeExecutionPlanNode(p, s, context),
             UnionAllExecutionPlanNode p when p.Input1 is RemoteSqProviderSqlExecutionPlanNode s && s.Provider == this && p.Input2 is RemoteSqProviderSqlExecutionPlanNode r && r.Provider == this => UnionAllExecutionPlanNode(p, s, r, context),
             JoinExecutionPlanNode p when p.Left is RemoteSqProviderSqlExecutionPlanNode s && s.Provider == this && p.Right is RemoteSqProviderSqlExecutionPlanNode r && r.Provider == this => JoinExecutionPlanNode(p, s, r, context),
             FilterExecutionPlanNode p when p.Input is RemoteSqProviderSqlExecutionPlanNode s && s.Provider == this => FilterExecutionPlanNode(p, s, context),
@@ -48,6 +49,41 @@ public abstract class RemoteSqlProviderBase : IExecutionProvider
             TableScan = true,
             Alias = node.Alias
         };
+    }
+
+
+    public ExecutionPlanNode SortedeExecutionPlanNode(SortedeExecutionPlanNode node, RemoteSqProviderSqlExecutionPlanNode parent, ExecutionRewriteContext? context = null)
+    {
+        var p = parent.SqlStatement;
+
+        List<OrderByEntry> entries = new List<OrderByEntry>();
+
+        foreach (var col in node.Columns)
+        {
+            if (TryConvert(col.Expression, context, out var expression))
+            {
+                entries.Add(new OrderByEntry(expression, col.Ascending ? OrderByDirection.Ascending : OrderByDirection.Descending));
+            }
+            else
+            {
+                context?.Report("UnsupportedExpressionForPushdown", $"Expression {col.Expression} is not supported for pushdown");
+                return node;
+            }
+        }
+
+        var newSelect = new SelectStatement(parent.SqlStatement.CommonTableExpressions, new SelectExpression(
+            false,
+            p.SelectQuery.Top,
+            p.SelectQuery.Distinctness,
+            p.SelectQuery.Projections,
+            p.SelectQuery.From,
+            p.SelectQuery.Where,
+            p.SelectQuery.GroupBy,
+            p.SelectQuery.Having,
+            new OrderByClause([.. p.SelectQuery.OrderBy?.Entries ?? [], ..entries], p.SelectQuery.OrderBy?.OffsetClause),
+            p.SelectQuery.UnionStatements));
+
+        return new RemoteSqProviderSqlExecutionPlanNode(this, newSelect, parent.Parameters);
     }
 
     public ExecutionPlanNode UnionAllExecutionPlanNode(UnionAllExecutionPlanNode node, RemoteSqProviderSqlExecutionPlanNode left, RemoteSqProviderSqlExecutionPlanNode right, ExecutionRewriteContext? context = null)
@@ -363,7 +399,8 @@ public abstract class RemoteSqlProviderBase : IExecutionProvider
         {
             LiteralExpressionExecutionPlan nullLiteral when nullLiteral.Value is null => new NullValue(),
             LiteralExpressionExecutionPlan literal => new LiteralExpression(literal.Value),
-            IdentifierExpressionExecutionPlan identifier => new IdentifierExpression(identifier.TableName, identifier.ColumnName) { 
+            IdentifierExpressionExecutionPlan identifier => new IdentifierExpression(identifier.TableName, identifier.ColumnName)
+            {
                 Binding = identifier.ColumnBinding
             },
             StartExpressionExecutionPlan star => new StarIdentifierExpression()

@@ -57,6 +57,37 @@ public class InMemoryExecutionTests
 
         Assert.Equal(20, results.Count);
     }
+
+    [Fact]
+    public async Task SortedSimple()
+    {
+        var results = await _engine.ExecuteToDictionaryList("SELECT Name FROM Data order by Id desc", Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
+
+        var row = results.FirstOrDefault();
+        Assert.Equal("Test19", row?["Name"]);
+        Assert.Equal(20, results.Count);
+    }
+
+    [Fact]
+    public async Task SortedSimpleAscendingDefault()
+    {
+        var results = await _engine.ExecuteToDictionaryList("SELECT Name FROM Data order by Id", Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
+
+        var row = results.FirstOrDefault();
+        Assert.Equal("Test0", row?["Name"]);
+        Assert.Equal(20, results.Count);
+    }
+
+    [Fact]
+    public async Task SortedSimpleAscending()
+    {
+        var results = await _engine.ExecuteToDictionaryList("SELECT Name FROM Data order by Id Asc", Enumerable.Empty<ExecuterParameter>(), CancellationToken.None);
+
+        var row = results.FirstOrDefault();
+        Assert.Equal("Test0", row?["Name"]);
+        Assert.Equal(20, results.Count);
+    }
+
     [Fact]
     public async Task SelectProjection()
     {

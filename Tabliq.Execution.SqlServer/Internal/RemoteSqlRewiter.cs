@@ -15,7 +15,14 @@ internal class RemoteSqlRewiter : ReplaceStarsRewriter
         {
             if (node.Binding.ColumnSymbol.GetState<VirtualColumn>() is VirtualColumn vt)
             {
-                node = new IdentifierExpression(node.Binding.TableBinding.TableSymbol.SchemaName, node.Binding.TableBinding.TableSymbol.TableName, vt.RemoteColumnName);
+                if (string.IsNullOrEmpty(node.Binding.TableBinding.Alias))
+                {
+                    node = new IdentifierExpression(node.Binding.TableBinding.TableSymbol.SchemaName, node.Binding.TableBinding.TableSymbol.TableName, vt.RemoteColumnName);
+                }
+                else
+                {
+                    node = new IdentifierExpression(node.Binding.TableBinding.Alias, vt.RemoteColumnName);
+                }
             }
         }
 

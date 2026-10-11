@@ -458,7 +458,7 @@ public class Binder
 
         if (!columnRegistered && Current.RequireNamedColumns)
         {
-            _diagnostics.Report("UnnamedColumn", "All subquery/cte result columns must have a unique name", p);
+            // _diagnostics.Report("UnnamedColumn", "All subquery/cte result columns must have a unique name", p);
         }
     }
 
@@ -495,7 +495,7 @@ public class Binder
             if (schemaName is not null)
             {
                 var (table, col) = Current.FindColumn(tableName ?? string.Empty, columnName);
-                ReportColumnNotFound(table?.TableSymbol, col, tableName, schemaName, columnName, "Only simple '[col]' or 'table.[col]' identifiers are supported for now.");
+                ReportColumnNotFound(table, col, tableName, schemaName, columnName, "Only simple '[col]' or 'table.[col]' identifiers are supported for now.");
                 p.Binding = ColumnBinding.Missing;
                 return;
             }
@@ -505,7 +505,7 @@ public class Binder
                 if (table is null || col is null)
                 {
 
-                    ReportColumnNotFound(table?.TableSymbol, col, tableName, schemaName, columnName);
+                    ReportColumnNotFound(table, col, tableName, schemaName, columnName);
                     p.Binding = ColumnBinding.Missing;
                     return;
                 }
@@ -538,11 +538,11 @@ public class Binder
             }
         }
 
-        void ReportColumnNotFound(TableSymbol? tableSymbol, ColumnSymbol? columnSymbol, string? tableName, string? schemaName, string columnName, string? message = null, string id = "ColumnNotFound")
+        void ReportColumnNotFound(TableBinding? tableSymbol, ColumnSymbol? columnSymbol, string? tableName, string? schemaName, string columnName, string? message = null, string id = "ColumnNotFound")
         {
-            var finalTableAlias = tableSymbol?.TableName ?? tableName ?? string.Empty;
-            var finalTableName = tableSymbol?.GetState<TableSymbol>() is TableSymbol ts ? ts.TableName : tableSymbol?.TableName ?? tableName ?? string.Empty;
-            var finalSchemaName = tableSymbol?.GetState<TableSymbol>() is TableSymbol ss ? ss.SchemaName : tableSymbol?.SchemaName ?? schemaName ?? string.Empty;
+            var finalTableAlias = tableSymbol?.Alias ?? tableSymbol?.TableSymbol.TableName ?? tableName ?? string.Empty;
+            var finalTableName = tableSymbol?.TableSymbol.TableName ?? tableName ?? string.Empty;
+            var finalSchemaName = tableSymbol?.TableSymbol.SchemaName ?? schemaName ?? string.Empty;
             var finalColumnName = columnSymbol?.Name ?? columnName;
 
             if (message is null)
