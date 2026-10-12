@@ -17,7 +17,7 @@ public abstract class BaseExecutionReader : IExecutionReader
 {
     public virtual ValueTask DisposeAsync() => ValueTask.CompletedTask;
 
-    public abstract ReadOnlySpan<string> GetFields();
+    public abstract ReadOnlySpan<string?> GetFields();
 
     public virtual RowAccessor GetRowAccessor() => new RowAccessor(GetFields(), GetValues());
 

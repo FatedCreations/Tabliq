@@ -8,6 +8,8 @@ public sealed class BinaryComparisonConditionExecutionPlan : ConditionExecutionP
     public BinaryCompararisonOperator Operator { get; }
     public ExpressionPlanNode Right { get; }
 
+    public override string Identifier => $"BinaryComparisonCondition({Left.Identifier} {Operator} {Right.Identifier})";
+
     public BinaryComparisonConditionExecutionPlan(ExpressionPlanNode left, BinaryCompararisonOperator @operator, ExpressionPlanNode right)
     {
         Left = left;

@@ -19,7 +19,7 @@ public abstract class RemoteSqlProviderBase : IExecutionProvider
         => node switch
         {
             OffsetFetchExecutionPlanNode p when p.Input is RemoteSqProviderSqlExecutionPlanNode s && s.Provider == this => OffsetFetchExecutionPlanNode(p, s, context),
-            SortedeExecutionPlanNode p when p.Input is RemoteSqProviderSqlExecutionPlanNode s && s.Provider == this => SortedeExecutionPlanNode(p, s, context),
+            SortedExecutionPlanNode p when p.Input is RemoteSqProviderSqlExecutionPlanNode s && s.Provider == this => SortedeExecutionPlanNode(p, s, context),
             UnionAllExecutionPlanNode p when p.Input1 is RemoteSqProviderSqlExecutionPlanNode s && s.Provider == this && p.Input2 is RemoteSqProviderSqlExecutionPlanNode r && r.Provider == this => UnionAllExecutionPlanNode(p, s, r, context),
             JoinExecutionPlanNode p when p.Left is RemoteSqProviderSqlExecutionPlanNode s && s.Provider == this && p.Right is RemoteSqProviderSqlExecutionPlanNode r && r.Provider == this => JoinExecutionPlanNode(p, s, r, context),
             FilterExecutionPlanNode p when p.Input is RemoteSqProviderSqlExecutionPlanNode s && s.Provider == this => FilterExecutionPlanNode(p, s, context),
@@ -98,7 +98,7 @@ public abstract class RemoteSqlProviderBase : IExecutionProvider
 
         return new RemoteSqProviderSqlExecutionPlanNode(this, newSelect, parent.Parameters);
     }
-    public ExecutionPlanNode SortedeExecutionPlanNode(SortedeExecutionPlanNode node, RemoteSqProviderSqlExecutionPlanNode parent, ExecutionRewriteContext? context = null)
+    public ExecutionPlanNode SortedeExecutionPlanNode(SortedExecutionPlanNode node, RemoteSqProviderSqlExecutionPlanNode parent, ExecutionRewriteContext? context = null)
     {
         var p = parent.SqlStatement;
 
@@ -449,6 +449,16 @@ public abstract class RemoteSqlProviderBase : IExecutionProvider
         expression = null;
         return false;
     }
+    public bool TryConvertNullable(ExpressionPlanNode? node, ExecutionRewriteContext? context, out Expression? expression)
+    {
+        if (node is null)
+        {
+            expression = null;
+            return true;
+        }
+        return TryConvert(node, context, out expression);
+    }
+
     public bool TryConvert(ExpressionPlanNode node, ExecutionRewriteContext? context, [NotNullWhen(true)] out Expression? expression)
     {
         expression = node switch
@@ -475,7 +485,15 @@ public abstract class RemoteSqlProviderBase : IExecutionProvider
             ValuePartExpressionPlanNode valueFromExpression => TryConvert(valueFromExpression.Value, context, out var valExp) ? new ValueFromExpression(valueFromExpression.Part, valExp) : null,
             BinaryOperatorExpressionExecutionPlan binary => TryConvert(binary.Left, context, out var l) && TryConvert(binary.Right, context, out var r) ? new BinaryOperatorExpression(l, binary.Operator, r) : null,
             UnaryOperatorExpressionExecutionPlan unary => TryConvert(unary.Inner, context, out var l) ? new UnaryOperatorExpression(l, unary.Operator) : null,
-            // CaseExpressionExecutionPlan caseExpression => new CaseExpression(caseExpression),
+
+            SimpleCaseExpressionExecutionPlan exists => TryConvert(exists.Value, context, out var val) &&
+                                                        TryConvertNullable(exists.ElseValue, context, out var e) &&
+                                                        TryConvertSimpleCases(exists.Cases, context, out var c) ?
+                                                        new CaseExpression(val, c, e) : null,
+            CaseExpressionExecutionPlan exists =>       TryConvertNullable(exists.ElseValue, context, out var e) &&
+                                                        TryConvertCases(exists.Cases, context, out var c) ?
+                                                        new CaseExpression(null, c, e) : null,
+
             DistinctValueExpressionExecutionPlan distinctValue => TryConvert(distinctValue.Expression, context, out var valExp) ? new DistinctValueExpression(distinctValue.Distinctness, valExp) : null,
             CurrentDateExpressionExecutionPlan => new CurrentDate(),
             CurrentTimeExpressionExecutionPlan => new CurrentTime(),
@@ -505,6 +523,44 @@ public abstract class RemoteSqlProviderBase : IExecutionProvider
         }
 
         return expression is not null;
+
+        bool TryConvertSimpleCases(IEnumerable<SimpleCaseExpressionEntryPlan> clauses, ExecutionRewriteContext? context, [NotNullWhen(true)] out IEnumerable<CaseWhenClause>? result)
+        {
+            var res = new List<CaseWhenClause>();
+            foreach (var clause in clauses)
+            {
+                if (TryConvert(clause.Target, context, out var target) && TryConvert(clause.Result, context, out var resultExpr))
+                {
+                    res.Add(new CaseWhenClause(target, resultExpr));
+                }
+                else
+                {
+                    result = null;
+                    return false;
+                }
+            }
+            result = res;
+            return true;
+        }
+
+        bool TryConvertCases(IEnumerable<CaseExpressionEntryPlan> clauses, ExecutionRewriteContext? context, [NotNullWhen(true)] out IEnumerable<CaseWhenClause>? result)
+        {
+            var res = new List<CaseWhenClause>();
+            foreach (var clause in clauses)
+            {
+                if (TryConvert(clause.Condition, context, out var target) && TryConvert(clause.Result, context, out var resultExpr))
+                {
+                    res.Add(new CaseWhenClause(target, resultExpr));
+                }
+                else
+                {
+                    result = null;
+                    return false;
+                }
+            }
+            result = res;
+            return true;
+        }
     }
 
     public bool TryConvertCollection(IEnumerable<ExpressionPlanNode> nodes, ExecutionRewriteContext? context, [NotNullWhen(true)] out IEnumerable<Expression>? expressions)

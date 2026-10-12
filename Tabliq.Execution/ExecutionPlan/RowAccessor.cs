@@ -2,13 +2,13 @@ namespace Tabliq.Execution;
 
 public ref struct RowAccessor
 {
-    public static RowAccessor Empty => new RowAccessor(ReadOnlySpan<string>.Empty, ReadOnlySpan<object?>.Empty);
+    public static RowAccessor Empty => new RowAccessor(ReadOnlySpan<string?>.Empty, ReadOnlySpan<object?>.Empty);
 
-    private readonly ReadOnlySpan<string> _columns;
+    private readonly ReadOnlySpan<string?> _columns;
 
     private readonly ReadOnlySpan<object?> _row;
 
-    public RowAccessor(ReadOnlySpan<string> columns, ReadOnlySpan<object?> row)
+    public RowAccessor(ReadOnlySpan<string?> columns, ReadOnlySpan<object?> row)
     {
         _columns = columns;
         _row = row;
@@ -20,7 +20,7 @@ public ref struct RowAccessor
         _row = rowDict.Values.ToArray();
     }
 
-    public ReadOnlySpan<string> Columns => _columns;
+    public ReadOnlySpan<string?> Columns => _columns;
 
     public ReadOnlySpan<object?> Values => _row;
 

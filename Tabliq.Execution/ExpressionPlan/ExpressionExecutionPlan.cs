@@ -43,7 +43,24 @@ public abstract class ExpressionPlanNode
             ValueFromExpression valueFromExpression => new ValuePartExpressionPlanNode(Create(valueFromExpression.Expression), valueFromExpression.Part),
             BinaryOperatorExpression binary => new BinaryOperatorExpressionExecutionPlan(Create(binary.Left), binary.Operator, Create(binary.Right)),
             UnaryOperatorExpression unary => new UnaryOperatorExpressionExecutionPlan(Create(unary.Expression), unary.Operator),
-            // CaseExpression caseExpression => new CaseExpressionExecutionPlan(caseExpression),
+
+            CaseExpression caseExpression when caseExpression.Expression is null => new CaseExpressionExecutionPlan(
+                    caseExpression.WhenClauses.Select(w => new CaseExpressionEntryPlan
+                    {
+                        Condition = ConditionExecutionPlan.Create((Condition)w.Expression),
+                        Result = Create(w.Result)
+                    }),
+                    caseExpression.ElseResult is not null ? Create(caseExpression.ElseResult) : null),
+
+            CaseExpression caseExpression when caseExpression.Expression is not null => new SimpleCaseExpressionExecutionPlan(
+                    Create(caseExpression.Expression),
+                    caseExpression.WhenClauses.Select(w => new SimpleCaseExpressionEntryPlan
+                    {
+                        Target = Create(caseExpression.Expression),
+                        Result = Create(w.Result)
+                    }),
+                    caseExpression.ElseResult is not null ? Create(caseExpression.ElseResult) : null),
+
             DistinctValueExpression distinctValue => new DistinctValueExpressionExecutionPlan(distinctValue.Distinctness, Create(distinctValue.Expression)),
             CurrentDate => new CurrentDateExpressionExecutionPlan(),
             CurrentTime => new CurrentTimeExpressionExecutionPlan(),

@@ -7,6 +7,10 @@ namespace Tabliq.Execution;
 
 public abstract class ExecutionPlanNode
 {
+    private readonly string _identifier = Guid.NewGuid().ToString();
+
+    public string Identifier => $"{this.GetType().Name}({_identifier})";
+
     public abstract IExecutionProvider? Provider { get; }
 
     public abstract IEnumerable<ExecutionPlanNode> GetInputs();
@@ -63,7 +67,7 @@ public abstract class ExecutionPlanNode
 
         if (select.OrderBy is not null)
         {
-            current = new SortedeExecutionPlanNode(current, select.OrderBy.Entries.Select(x =>
+            current = new SortedExecutionPlanNode(current, select.OrderBy.Entries.Select(x =>
             new SortedPlanColumn
             {
                 Expression = ExpressionPlanNode.Create(x.Expression),
@@ -182,6 +186,7 @@ public abstract class ExecutionPlanNode
 
         //return new UnionExecutionPlanNode(operations);
     }
+
     private static IEnumerable<ExpressionPlanNode> AllExpressions(ExpressionPlanNode node)
     {
         yield return node;
@@ -226,12 +231,6 @@ public abstract class ExecutionPlanNode
         };
     }
 
-    //private static Dictionary<string, HashSet<string>> CollectReferencedColumnsByAlias(SyntaxNode node)
-    //{
-    //    var result = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
-    //    WalkForColumnReferences(node, result);
-    //    return result;
-    //}
     private static Dictionary<TableSymbol, HashSet<ColumnSymbol>> CollectReferencedColumns(SyntaxNode node)
     {
         var result = new Dictionary<TableSymbol, HashSet<ColumnSymbol>>();

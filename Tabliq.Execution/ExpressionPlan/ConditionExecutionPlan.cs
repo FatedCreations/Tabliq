@@ -4,6 +4,8 @@ namespace Tabliq.Execution.ExpressionPlan;
 
 public abstract class ConditionExecutionPlan
 {
+    public abstract string Identifier { get; }
+
     public abstract bool Execute(RowAccessor row);
 
     public virtual ConditionExecutionPlan TryRewrite(ExecutionRewriteContext? context = null)

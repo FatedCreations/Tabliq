@@ -6,6 +6,8 @@ public sealed class InSelectConditionExecutionPlan : ConditionExecutionPlan
     public ExpressionPlanNode Value { get; }
     public bool IsNot { get; }
 
+    public override string Identifier => throw new Exception("TODO handle ExecutionPlanNode identity");// $"InSelectCondition({Value.Identifier} {(IsNot ? "NOT " : "")}IN ({ExecutionPlanNode.Identifier}))";
+
     public override IEnumerable<ExpressionPlanNode> GetExpressions() => [.. ExecutionPlanNode.GetExpressions()];
     public InSelectConditionExecutionPlan(ExecutionPlanNode executionPlanNode, ExpressionPlanNode value, bool isNot)
     {

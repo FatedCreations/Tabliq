@@ -106,6 +106,14 @@ namespace Tabliq.Sql.Rewriter
 
         private IdentifierExpression Create(ColumnBinding columnBinding)
         {
+            if (!string.IsNullOrEmpty(columnBinding.TableBinding.Alias))
+            {
+                return new IdentifierExpression(columnBinding.TableBinding.Alias, columnBinding.ColumnSymbol.Name)
+                {
+                    Binding = columnBinding
+                };
+            }
+
             var tableSymbol = columnBinding.TableBinding.TableSymbol;
             var columnSymbol = columnBinding.ColumnSymbol;
             return new IdentifierExpression(tableSymbol.SchemaName, tableSymbol.TableName, columnSymbol.Name)

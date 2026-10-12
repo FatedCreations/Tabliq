@@ -10,6 +10,8 @@ public sealed class UnaryConditionExecutionPlan : ConditionExecutionPlan
         Operator = @operator;
     }
 
+    public override string Identifier => $"UnaryCondition({Unary.Identifier} {Operator})";
+
     public ConditionExecutionPlan Unary { get; }
     public UnaryCompararisonOperator Operator { get; }
 

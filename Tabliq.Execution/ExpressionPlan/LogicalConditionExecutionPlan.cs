@@ -10,6 +10,7 @@ public sealed class LogicalConditionExecutionPlan : ConditionExecutionPlan
         Operator = @operator;
         Right = right;
     }
+    public override string Identifier => $"LogicalCondition({Left.Identifier} {Operator} {Right.Identifier})";
 
     public ConditionExecutionPlan Left { get; }
 

@@ -1,6 +1,5 @@
 using System.Buffers;
 using Tabliq.Execution.ExpressionPlan;
-using Tabliq.Execution.Functions;
 
 namespace Tabliq.Execution;
 
@@ -10,7 +9,7 @@ public sealed record SortedPlanColumn
     public required bool Ascending { get; init; }
 }
 
-public sealed class SortedeExecutionPlanNode : ExecutionPlanNode
+public sealed class SortedExecutionPlanNode : ExecutionPlanNode
 {
     private readonly ExecutionPlanNode _input;
     private readonly IReadOnlyList<SortedPlanColumn> _columns;
@@ -24,7 +23,7 @@ public sealed class SortedeExecutionPlanNode : ExecutionPlanNode
         _input.GetExpressions()
             .Concat(_columns.Select(c => c.Expression));
 
-    public SortedeExecutionPlanNode(ExecutionPlanNode input, IReadOnlyList<SortedPlanColumn> columns)
+    public SortedExecutionPlanNode(ExecutionPlanNode input, IReadOnlyList<SortedPlanColumn> columns)
     {
         _input = input;
         _columns = columns;
@@ -55,7 +54,7 @@ public sealed class SortedeExecutionPlanNode : ExecutionPlanNode
         }
         if (newInput != _input || hasNewProjections)
         {
-            currentNode = new SortedeExecutionPlanNode(newInput, newProjections);
+            currentNode = new SortedExecutionPlanNode(newInput, newProjections);
         }
 
         currentNode = newInput.Provider?.TryRewrite(currentNode, context) ?? currentNode;
@@ -66,9 +65,8 @@ public sealed class SortedeExecutionPlanNode : ExecutionPlanNode
     public override async Task<IExecutionReader> ExecuteAsync(IEnumerable<ExecuterParameter>? parameters = null, CancellationToken cancellationToken = default)
     {
         // we need to determine all the column (outside of aggregates) referneced in the projection.
-        return new SortedExecutionReader(await _input.ExecuteAsync(parameters, cancellationToken), _columns);
+        return new SortedExecutionReader(await _input.ExecuteWithSubqueriesAsync(_columns.Select(x=>x.Expression), parameters, cancellationToken), _columns);
     }
-
 
     private class SortedExecutionReader : BaseExecutionReader
     {

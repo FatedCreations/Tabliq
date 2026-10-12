@@ -1,8 +1,12 @@
+using System.Net.Security;
+
 namespace Tabliq.Execution.ExpressionPlan;
 
 public sealed class ExistsConditionExecutionPlan : ConditionExecutionPlan
 {
     public ExecutionPlanNode ExecutionPlanNode { get; }
+
+    public override string Identifier => throw new NotImplementedException("Need to decide on how identity needs to work for execution plans nodes");// $"ExistsCondition({ExecutionPlanNode.Identifier})";
 
     public ExistsConditionExecutionPlan(ExecutionPlanNode executionPlanNode)
     {

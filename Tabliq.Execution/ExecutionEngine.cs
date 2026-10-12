@@ -49,6 +49,7 @@ public class ExecutionEngine
         }
 
         var rewriteContext = new ExecutionRewriteContext();
+
         var node = ExecutionPlanNode.Create(statement.SelectQuery);
 
         node = node.TryRewrite(rewriteContext) ?? node;

@@ -9,6 +9,7 @@ public sealed class LikeConditionExecutionPlan : ConditionExecutionPlan
         IsNot = isNot;
     }
 
+    public override string Identifier => $"LikeCondition({Left.Identifier} {(IsNot ? "NOT LIKE" : "LIKE")} {Right.Identifier})";
     public ExpressionPlanNode Left { get; }
     public ExpressionPlanNode Right { get; }
     public bool IsNot { get; }

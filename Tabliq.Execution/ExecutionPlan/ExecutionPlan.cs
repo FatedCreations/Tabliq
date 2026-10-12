@@ -14,4 +14,6 @@ public class ExecutionPlan
 
     public Task<IExecutionReader> ExecuteAsync(IEnumerable<ExecuterParameter>? parameters = null, CancellationToken cancellationToken = default)
         => RootNode.ExecuteAsync(parameters, cancellationToken);
+
+    // this should own an identity lookup for all nodes in the plan?
 }

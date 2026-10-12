@@ -8,6 +8,7 @@ public sealed class IsNullConditionExecutionPlan: ConditionExecutionPlan
         IsNot = isNot;
     }
 
+    public override string Identifier => $"IsNullCondition({Expression.Identifier} {(IsNot ? "IS NOT NULL" : "IS NULL")})";
     public ExpressionPlanNode Expression { get; }
     public bool IsNot { get; }
 

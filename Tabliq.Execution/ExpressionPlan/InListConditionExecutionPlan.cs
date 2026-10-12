@@ -13,6 +13,8 @@ public sealed class InListConditionExecutionPlan: ConditionExecutionPlan
     public IEnumerable<ExpressionPlanNode> Items { get; }
     public bool IsNot { get; }
 
+    public override string Identifier => $"InListCondition({Left.Identifier} {(IsNot ? "NOT " : "")}IN ({string.Join(", ", Items.Select(i => i.Identifier))}))";
+
     public override IEnumerable<ExpressionPlanNode> GetExpressions() => [Left, ..Items];
     public override bool Execute(RowAccessor row)
     {

@@ -7,6 +7,8 @@ public sealed class BracketedConditionExecutionPlan : ConditionExecutionPlan
         Bracketed = bracketed;
     }
 
+    public override string Identifier => $"BracketedCondition({Bracketed.Identifier})";
+
     public ConditionExecutionPlan Bracketed { get; }
 
     public override bool Execute(RowAccessor row)
