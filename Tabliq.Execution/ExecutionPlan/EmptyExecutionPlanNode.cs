@@ -1,0 +1,17 @@
+using Tabliq.Execution.ExecutionReader;
+using Tabliq.Execution.ExpressionPlan;
+
+namespace Tabliq.Execution;
+
+public sealed class EmptyExecutionPlanNode : ExecutionPlanNode
+{
+    public override Task<IExecutionReader> ExecuteAsync(IEnumerable<ExecuterParameter>? parameters = null, CancellationToken cancellationToken = default)
+        => Task.FromResult<IExecutionReader>(new NullRowExecutionReader());
+
+    public override IExecutionProvider? Provider => null;
+    public override IEnumerable<ExecutionPlanNode> GetInputs() => [];
+    public override IEnumerable<ExpressionPlanNode> GetExpressions() => [];
+
+    public override ExecutionPlanNode? TryRewrite(ExecutionRewriteContext? context = null)
+        => null;
+}

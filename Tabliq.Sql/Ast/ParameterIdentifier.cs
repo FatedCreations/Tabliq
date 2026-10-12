@@ -7,10 +7,10 @@ public class ParameterIdentifier : Expression
 {
     public ParameterIdentifier(string paramterName)
     {
-        ParamterName = paramterName;
+        ParameterName = paramterName;
     }
 
-    public string ParamterName { get; }
+    public string ParameterName { get; }
 
     public ParameterBinding? Binding { get; set; }
 
@@ -20,6 +20,6 @@ public class ParameterIdentifier : Expression
     }
     public override bool Equals(SyntaxNode? other)
     {
-        return other is ParameterIdentifier otherParameter && Equals(ParamterName, otherParameter.ParamterName);
+        return other is ParameterIdentifier otherParameter && Equals(ParameterName, otherParameter.ParameterName);
     }
 }

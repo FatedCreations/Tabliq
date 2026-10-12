@@ -5,13 +5,22 @@ namespace Tabliq.Sql.Ast;
 
 public class IdentifierExpression : Expression
 {
-    public IdentifierExpression(IEnumerable<string> identifierParts)
+    public static IdentifierExpression FromTableSymbol(TableSymbol tableSymbol)
     {
-        IdentifierParts = identifierParts.ToList();
+        if (string.IsNullOrEmpty(tableSymbol.SchemaName))
+        {
+            return new IdentifierExpression(tableSymbol.TableName);
+        }
+        return new IdentifierExpression(tableSymbol.SchemaName, tableSymbol.TableName);
     }
-    public IdentifierExpression(params string[] identifierParts)
+
+    public IdentifierExpression(IEnumerable<string?> identifierParts)
     {
-        IdentifierParts = identifierParts.ToList();
+        IdentifierParts = identifierParts.Where(x => !string.IsNullOrEmpty(x)).ToList()!;
+    }
+    public IdentifierExpression(params string?[] identifierParts)
+    {
+        IdentifierParts = identifierParts.Where(x=> !string.IsNullOrEmpty(x)).ToList()!;
     }
 
     public IReadOnlyList<string> IdentifierParts { get; }
@@ -55,7 +64,13 @@ public class IdentifierExpression : Expression
 
     public string Column => IdentifierParts.Last();
 
-    public ColumnBinding? Binding { get; internal set; }
+    public ColumnBinding? Binding { get; set; }
+
+    public IdentifierExpression WithBinding(ColumnBinding binding)
+    {
+        Binding = binding;
+        return this;
+    }
 
     public override IEnumerable<SyntaxNode> GetChildren()
     {

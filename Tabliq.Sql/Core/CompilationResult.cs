@@ -5,29 +5,43 @@ using Tabliq.Sql.Printer;
 
 namespace Tabliq.Sql.Core;
 
-public sealed class CompilationResult
+public sealed class CompilationResult : CompilationResult<SqlScript>
+{
+    internal CompilationResult(string text, SqlScript root, IReadOnlyList<SyntaxToken> tokens, IReadOnlyList<Diagnostic> diagnostics)
+        :base(text, root, tokens, diagnostics)
+    {
+    }
+
+    internal CompilationResult(SqlScript root, IReadOnlyList<Diagnostic> diagnostics)
+        : base(root,diagnostics)
+    {
+    }
+}
+
+public  class CompilationResult<T>
+    where T : SyntaxNode
 {
     private string? _text;
     public string Text => _text ??= new SqlWriter().ToSql(Script);
-    public SqlScript Script { get; }
+    public T Script { get; }
     public IReadOnlyList<Diagnostic> Diagnostics { get; }
     public IReadOnlyList<SyntaxToken> Tokens { get; }
 
-    internal CompilationResult(string text, SqlScript root, IReadOnlyList<SyntaxToken> tokens, IReadOnlyList<Diagnostic> diagnostics)
+    internal CompilationResult(string text, T root, IReadOnlyList<SyntaxToken> tokens, IReadOnlyList<Diagnostic> diagnostics)
     {
         _text = text;
         Script = root;
         Diagnostics = diagnostics;
         Tokens = tokens;
     }
-
-    public CompilationResult(SqlScript root, IReadOnlyList<Diagnostic> diagnostics)
+    internal CompilationResult(T root, IReadOnlyList<Diagnostic> diagnostics)
     {
         _text = null;
         Script = root;
         Diagnostics = diagnostics;
         Tokens = [];
     }
+
 
     public void ThrowIfInvalid()
     {

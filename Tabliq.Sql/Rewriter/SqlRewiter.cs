@@ -41,6 +41,19 @@ namespace Tabliq.Sql.Rewriter
             return new CompilationResult(script, diags);
         }
 
+        public CompilationResult<SyntaxNode> Execute(SyntaxNode node)
+        {
+            _diagnostics = new DiagnosticBag();
+            var diags = new List<Diagnostic>();
+
+            diags.AddRange(_diagnostics.Diagnostics);
+
+            var newTree = Rewrite(node);
+
+            // Binding logic will go here
+            return new CompilationResult<SyntaxNode>(newTree ?? node, diags);
+        }
+
         protected virtual SyntaxNode Rewrite(SyntaxNode node)
         {
             SyntaxNode resultSyntaxNode = node switch

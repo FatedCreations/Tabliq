@@ -1,0 +1,1763 @@
+[
+  {
+    "Name": "filter_Table",
+    "RemoteTableSql": "SELECT AAA, BBB, CCC FROM FOO WHERE AAA = 'test'",
+    "Description": "Best Practice Rules",
+    "Columns": [
+      {
+        "Name": "Col1",
+        "DataType": "bigint",
+        "RemoteColumnSql": "AAA",
+        "Description": ""
+      },
+      {
+        "Name": "Col2",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "BBB",
+        "Description": "BP Rule ID"
+      },
+      {
+        "Name": "Col3",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "CC",
+        "Description": "BP Rule ID"
+      }
+    ]
+  },
+  {
+    "Name": "BE",
+    "RemoteTableSql": "[landscapeQuery_strategy_A].[BE]",
+    "Description": "Best Practice Rules",
+    "Columns": [
+      {
+        "Name": "BEId",
+        "DataType": "bigint",
+        "RemoteColumnSql": "BEId",
+        "Description": ""
+      },
+      {
+        "Name": "BE_BPR_Alias",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "BE_BPR",
+        "Description": "BP Rule ID"
+      },
+      {
+        "Name": "BE_BPR",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "BE_BPR",
+        "Description": "BP Rule ID"
+      },
+      {
+        "Name": "BE_CAV",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "BE_CAV",
+        "Description": "Caveat"
+      },
+      {
+        "Name": "BE_COR",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "BE_COR",
+        "Description": "Corrective Action"
+      },
+      {
+        "Name": "BE_CRE",
+        "DataType": "datetime2(7)",
+        "RemoteColumnSql": "BE_CRE",
+        "Description": "Created Date"
+      },
+      {
+        "Name": "BE_DES",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "BE_DES",
+        "Description": "Description"
+      },
+      {
+        "Name": "BE_OST",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "BE_OST",
+        "Description": "OS Type"
+      },
+      {
+        "Name": "BE_PRI",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "BE_PRI",
+        "Description": "Primary Technology"
+      },
+      {
+        "Name": "BE_REC",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "BE_REC",
+        "Description": "Recommendation"
+      },
+      {
+        "Name": "BE_RIS",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "BE_RIS",
+        "Description": "Risk"
+      },
+      {
+        "Name": "BE_RUL",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "BE_RUL",
+        "Description": "Rule Title"
+      },
+      {
+        "Name": "BE_SEC",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "BE_SEC",
+        "Description": "Secondary Technology"
+      }
+    ]
+  },
+  {
+    "Name": "BE_ES",
+    "RemoteTableSql": "landscapeQuery_strategy_A.BE_ES",
+    "Description": "",
+    "Columns": [
+      {
+        "Name": "BEId",
+        "DataType": "bigint",
+        "RemoteColumnSql": "BEId",
+        "Description": ""
+      },
+      {
+        "Name": "ESId",
+        "DataType": "bigint",
+        "RemoteColumnSql": "ESId",
+        "Description": ""
+      }
+    ]
+  },
+  {
+    "Name": "CO",
+    "RemoteTableSql": "[landscapeQuery_strategy_A].[CO]",
+    "Description": "Contract List",
+    "Columns": [
+      {
+        "Name": "COId",
+        "DataType": "bigint",
+        "RemoteColumnSql": "COId",
+        "Description": ""
+      },
+      {
+        "Name": "CO_ONT",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "CO_ONT",
+        "Description": "Contract Number"
+      }
+    ]
+  },
+  {
+    "Name": "CO_PH",
+    "RemoteTableSql": "[landscapeQuery_strategy_A].[CO_PH]",
+    "Description": "",
+    "Columns": [
+      {
+        "Name": "COId",
+        "DataType": "bigint",
+        "RemoteColumnSql": "COId",
+        "Description": ""
+      },
+      {
+        "Name": "PHId",
+        "DataType": "bigint",
+        "RemoteColumnSql": "PHId",
+        "Description": ""
+      }
+    ]
+  },
+  {
+    "Name": "CO_SE",
+    "RemoteTableSql": "[landscapeQuery_strategy_A].[CO_SE]",
+    "Description": "",
+    "Columns": [
+      {
+        "Name": "COId",
+        "DataType": "bigint",
+        "RemoteColumnSql": "COId",
+        "Description": ""
+      },
+      {
+        "Name": "SEId",
+        "DataType": "bigint",
+        "RemoteColumnSql": "SEId",
+        "Description": ""
+      }
+    ]
+  },
+  {
+    "Name": "DE",
+    "RemoteTableSql": "[landscapeQuery_strategy_A].[DE]",
+    "Description": "Defects",
+    "Columns": [
+      {
+        "Name": "DEId",
+        "DataType": "bigint",
+        "RemoteColumnSql": "DEId",
+        "Description": ""
+      },
+      {
+        "Name": "DE_CTF",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "DE_CTF",
+        "Description": "Defect Fixed Version"
+      },
+      {
+        "Name": "DE_DEF",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "DE_DEF",
+        "Description": "Defect Number"
+      },
+      {
+        "Name": "DE_ECT",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "DE_ECT",
+        "Description": "Defect Reported Version"
+      },
+      {
+        "Name": "DE_EFE",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "DE_EFE",
+        "Description": "Defect Title"
+      },
+      {
+        "Name": "DE_FEC",
+        "DataType": "datetime2(7)",
+        "RemoteColumnSql": "DE_FEC",
+        "Description": "Defect Submitted On"
+      }
+    ]
+  },
+  {
+    "Name": "DE_SE",
+    "RemoteTableSql": "landscapeQuery_strategy_A.DE_SE",
+    "Description": "",
+    "Columns": [
+      {
+        "Name": "DEId",
+        "DataType": "bigint",
+        "RemoteColumnSql": "DEId",
+        "Description": ""
+      },
+      {
+        "Name": "SEId",
+        "DataType": "bigint",
+        "RemoteColumnSql": "SEId",
+        "Description": ""
+      }
+    ]
+  },
+  {
+    "Name": "EC",
+    "RemoteTableSql": "[landscapeQuery_strategy_A].[EC]",
+    "Description": "Technologies",
+    "Columns": [
+      {
+        "Name": "ECId",
+        "DataType": "bigint",
+        "RemoteColumnSql": "ECId",
+        "Description": ""
+      },
+      {
+        "Name": "EC_DIS",
+        "DataType": "float(53)",
+        "RemoteColumnSql": "EC_DIS",
+        "Description": "Disruption Index"
+      },
+      {
+        "Name": "EC_TEC",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "EC_TEC",
+        "Description": "Technology Name"
+      }
+    ]
+  },
+  {
+    "Name": "EC_PH",
+    "RemoteTableSql": "landscapeQuery_strategy_A.EC_PH",
+    "Description": "",
+    "Columns": [
+      {
+        "Name": "ECId",
+        "DataType": "bigint",
+        "RemoteColumnSql": "ECId",
+        "Description": ""
+      },
+      {
+        "Name": "PHId",
+        "DataType": "bigint",
+        "RemoteColumnSql": "PHId",
+        "Description": ""
+      }
+    ]
+  },
+  {
+    "Name": "ES",
+    "RemoteTableSql": "[landscapeQuery_strategy_A].[ES]",
+    "Description": "Best Practice Exceptions",
+    "Columns": [
+      {
+        "Name": "ESId",
+        "DataType": "bigint",
+        "RemoteColumnSql": "ESId",
+        "Description": ""
+      },
+      {
+        "Name": "ES_BPR",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "ES_BPR",
+        "Description": "bpRuleID"
+      },
+      {
+        "Name": "ES_DEV",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "ES_DEV",
+        "Description": "Device ID"
+      },
+      {
+        "Name": "ES_UNI",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "ES_UNI",
+        "Description": "Unique ID"
+      }
+    ]
+  },
+  {
+    "Name": "ES_PH",
+    "RemoteTableSql": "landscapeQuery_strategy_A.ES_PH",
+    "Description": "",
+    "Columns": [
+      {
+        "Name": "ESId",
+        "DataType": "bigint",
+        "RemoteColumnSql": "ESId",
+        "Description": ""
+      },
+      {
+        "Name": "PHId",
+        "DataType": "bigint",
+        "RemoteColumnSql": "PHId",
+        "Description": ""
+      }
+    ]
+  },
+  {
+    "Name": "EV",
+    "RemoteTableSql": "[landscapeQuery_strategy_A].[EV]",
+    "Description": "Device History",
+    "Columns": [
+      {
+        "Name": "EVId",
+        "DataType": "bigint",
+        "RemoteColumnSql": "EVId",
+        "Description": ""
+      },
+      {
+        "Name": "EV_EOX",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "EV_EOX",
+        "Description": "EOX Milestone"
+      },
+      {
+        "Name": "EV_FRO",
+        "DataType": "datetime2(7)",
+        "RemoteColumnSql": "EV_FRO",
+        "Description": "Historic Month"
+      },
+      {
+        "Name": "EV_OPE",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "EV_OPE",
+        "Description": "Operational Status"
+      },
+      {
+        "Name": "EV_PSI",
+        "DataType": "int",
+        "RemoteColumnSql": "EV_PSI",
+        "Description": "PSIRT Count"
+      },
+      {
+        "Name": "EV_SHI",
+        "DataType": "datetime2(7)",
+        "RemoteColumnSql": "EV_SHI",
+        "Description": "Shipped Date"
+      },
+      {
+        "Name": "EV_SRS",
+        "DataType": "float(53)",
+        "RemoteColumnSql": "EV_SRS",
+        "Description": "SRs as % of IB"
+      },
+      {
+        "Name": "EV_SWC",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "EV_SWC",
+        "Description": "SW Conformance"
+      },
+      {
+        "Name": "EV_TOT",
+        "DataType": "int",
+        "RemoteColumnSql": "EV_TOT",
+        "Description": "Total SRs on active Devices"
+      },
+      {
+        "Name": "EV_UID",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "EV_UID",
+        "Description": "Unique Key"
+      }
+    ]
+  },
+  {
+    "Name": "EV_PH",
+    "RemoteTableSql": "landscapeQuery_strategy_A.EV_PH",
+    "Description": "",
+    "Columns": [
+      {
+        "Name": "EVId",
+        "DataType": "bigint",
+        "RemoteColumnSql": "EVId",
+        "Description": ""
+      },
+      {
+        "Name": "PHId",
+        "DataType": "bigint",
+        "RemoteColumnSql": "PHId",
+        "Description": ""
+      }
+    ]
+  },
+  {
+    "Name": "JP",
+    "RemoteTableSql": "[landscapeQuery_strategy_A].[JP]",
+    "Description": "Business Unit",
+    "Columns": [
+      {
+        "Name": "JPId",
+        "DataType": "bigint",
+        "RemoteColumnSql": "JPId",
+        "Description": ""
+      },
+      {
+        "Name": "JP_DIS",
+        "DataType": "float(53)",
+        "RemoteColumnSql": "JP_DIS",
+        "Description": "Disruption Index"
+      },
+      {
+        "Name": "JP_SER",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "JP_SER",
+        "Description": "Unit Name"
+      }
+    ]
+  },
+  {
+    "Name": "JP_PH",
+    "RemoteTableSql": "landscapeQuery_strategy_A.JP_PH",
+    "Description": "",
+    "Columns": [
+      {
+        "Name": "JPId",
+        "DataType": "bigint",
+        "RemoteColumnSql": "JPId",
+        "Description": ""
+      },
+      {
+        "Name": "PHId",
+        "DataType": "bigint",
+        "RemoteColumnSql": "PHId",
+        "Description": ""
+      }
+    ]
+  },
+  {
+    "Name": "MA",
+    "RemoteTableSql": "[landscapeQuery_strategy_A].[MA]",
+    "Description": "Shipments \u0026 Returns",
+    "Columns": [
+      {
+        "Name": "MAId",
+        "DataType": "bigint",
+        "RemoteColumnSql": "MAId",
+        "Description": ""
+      },
+      {
+        "Name": "MA_BOO",
+        "DataType": "int",
+        "RemoteColumnSql": "MA_BOO",
+        "Description": "Boomerang Line Flag"
+      },
+      {
+        "Name": "MA_HIP",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "MA_HIP",
+        "Description": "Ship-To Contact Name"
+      },
+      {
+        "Name": "MA_INE",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "MA_INE",
+        "Description": "Line ID"
+      },
+      {
+        "Name": "MA_LAB",
+        "DataType": "bit",
+        "RemoteColumnSql": "MA_LAB",
+        "Description": "Labor RMA"
+      },
+      {
+        "Name": "MA_OTA",
+        "DataType": "float(53)",
+        "RemoteColumnSql": "MA_OTA",
+        "Description": "Total Shipped \u002B Received"
+      },
+      {
+        "Name": "MA_PRO",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "MA_PRO",
+        "Description": "Product ID"
+      },
+      {
+        "Name": "MA_REC",
+        "DataType": "int",
+        "RemoteColumnSql": "MA_REC",
+        "Description": "Received Quantity"
+      },
+      {
+        "Name": "MA_RET",
+        "DataType": "bit",
+        "RemoteColumnSql": "MA_RET",
+        "Description": "Returned RMA"
+      },
+      {
+        "Name": "MA_RMA",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "MA_RMA",
+        "Description": "RMA Line Status"
+      },
+      {
+        "Name": "MA_SER",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "MA_SER",
+        "Description": "Serial Number"
+      },
+      {
+        "Name": "MA_SHI",
+        "DataType": "int",
+        "RemoteColumnSql": "MA_SHI",
+        "Description": "Shipped Quantity"
+      }
+    ]
+  },
+  {
+    "Name": "MA_OD",
+    "RemoteTableSql": "landscapeQuery_strategy_A.MA_OD",
+    "Description": "",
+    "Columns": [
+      {
+        "Name": "MAId",
+        "DataType": "bigint",
+        "RemoteColumnSql": "MAId",
+        "Description": ""
+      },
+      {
+        "Name": "ODId",
+        "DataType": "bigint",
+        "RemoteColumnSql": "ODId",
+        "Description": ""
+      }
+    ]
+  },
+  {
+    "Name": "MA_RM",
+    "RemoteTableSql": "landscapeQuery_strategy_A.MA_RM",
+    "Description": "",
+    "Columns": [
+      {
+        "Name": "MAId",
+        "DataType": "bigint",
+        "RemoteColumnSql": "MAId",
+        "Description": ""
+      },
+      {
+        "Name": "RMId",
+        "DataType": "bigint",
+        "RemoteColumnSql": "RMId",
+        "Description": ""
+      }
+    ]
+  },
+  {
+    "Name": "NE",
+    "RemoteTableSql": "[landscapeQuery_strategy_A].[NE]",
+    "Description": "Initiatives*",
+    "Columns": [
+      {
+        "Name": "NEId",
+        "DataType": "bigint",
+        "RemoteColumnSql": "NEId",
+        "Description": ""
+      },
+      {
+        "Name": "NE_INI",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "NE_INI",
+        "Description": "Initiative ID"
+      }
+    ]
+  },
+  {
+    "Name": "OD",
+    "RemoteTableSql": "[landscapeQuery_strategy_A].[OD]",
+    "Description": "Product IDs",
+    "Columns": [
+      {
+        "Name": "ODId",
+        "DataType": "bigint",
+        "RemoteColumnSql": "ODId",
+        "Description": ""
+      },
+      {
+        "Name": "OD_MOD",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "OD_MOD",
+        "Description": "Model Name"
+      },
+      {
+        "Name": "OD_SKU",
+        "DataType": "float(53)",
+        "RemoteColumnSql": "OD_SKU",
+        "Description": "SKU List Price"
+      }
+    ]
+  },
+  {
+    "Name": "OD_PH",
+    "RemoteTableSql": "landscapeQuery_strategy_A.OD_PH",
+    "Description": "",
+    "Columns": [
+      {
+        "Name": "ODId",
+        "DataType": "bigint",
+        "RemoteColumnSql": "ODId",
+        "Description": ""
+      },
+      {
+        "Name": "PHId",
+        "DataType": "bigint",
+        "RemoteColumnSql": "PHId",
+        "Description": ""
+      }
+    ]
+  },
+  {
+    "Name": "OD_PR",
+    "RemoteTableSql": "landscapeQuery_strategy_A.OD_PR",
+    "Description": "",
+    "Columns": [
+      {
+        "Name": "ODId",
+        "DataType": "bigint",
+        "RemoteColumnSql": "ODId",
+        "Description": ""
+      },
+      {
+        "Name": "PRId",
+        "DataType": "bigint",
+        "RemoteColumnSql": "PRId",
+        "Description": ""
+      }
+    ]
+  },
+  {
+    "Name": "OF",
+    "RemoteTableSql": "[landscapeQuery_strategy_A].[OF]",
+    "Description": "Installed Software",
+    "Columns": [
+      {
+        "Name": "OFId",
+        "DataType": "bigint",
+        "RemoteColumnSql": "OFId",
+        "Description": ""
+      },
+      {
+        "Name": "OF_CUR",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "OF_CUR",
+        "Description": "Version History"
+      },
+      {
+        "Name": "OF_DOF",
+        "DataType": "datetime2(7)",
+        "RemoteColumnSql": "OF_DOF",
+        "Description": "End of Vulnerability / Security Support (EoVSS)"
+      },
+      {
+        "Name": "OF_ECO",
+        "DataType": "datetime2(7)",
+        "RemoteColumnSql": "OF_ECO",
+        "Description": "Recommendation Created"
+      },
+      {
+        "Name": "OF_END",
+        "DataType": "datetime2(7)",
+        "RemoteColumnSql": "OF_END",
+        "Description": "End of Software Maintenance (EoSWM)"
+      },
+      {
+        "Name": "OF_LAS",
+        "DataType": "datetime2(7)",
+        "RemoteColumnSql": "OF_LAS",
+        "Description": "SW  LDOS"
+      },
+      {
+        "Name": "OF_NDO",
+        "DataType": "datetime2(7)",
+        "RemoteColumnSql": "OF_NDO",
+        "Description": "End of Sale (EoSale)"
+      },
+      {
+        "Name": "OF_OFT",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "OF_OFT",
+        "Description": "Installation Software Compliance"
+      },
+      {
+        "Name": "OF_REC",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "OF_REC",
+        "Description": "Recommended SW Version"
+      },
+      {
+        "Name": "OF_SWI",
+        "DataType": "datetime2(7)",
+        "RemoteColumnSql": "OF_SWI",
+        "Description": "SW Installation Date"
+      },
+      {
+        "Name": "OF_SWR",
+        "DataType": "datetime2(7)",
+        "RemoteColumnSql": "OF_SWR",
+        "Description": "SW Replaced Date"
+      },
+      {
+        "Name": "OF_SWT",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "OF_SWT",
+        "Description": "SW Track"
+      },
+      {
+        "Name": "OF_TRA",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "OF_TRA",
+        "Description": "Track Description"
+      },
+      {
+        "Name": "OF_UID",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "OF_UID",
+        "Description": "Unique Key"
+      },
+      {
+        "Name": "OF_URR",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "OF_URR",
+        "Description": "Current SW EOX Milestone"
+      }
+    ]
+  },
+  {
+    "Name": "OF_PH",
+    "RemoteTableSql": "landscapeQuery_strategy_A.OF_PH",
+    "Description": "",
+    "Columns": [
+      {
+        "Name": "OFId",
+        "DataType": "bigint",
+        "RemoteColumnSql": "OFId",
+        "Description": ""
+      },
+      {
+        "Name": "PHId",
+        "DataType": "bigint",
+        "RemoteColumnSql": "PHId",
+        "Description": ""
+      }
+    ]
+  },
+  {
+    "Name": "OF_SO",
+    "RemoteTableSql": "landscapeQuery_strategy_A.OF_SO",
+    "Description": "",
+    "Columns": [
+      {
+        "Name": "OFId",
+        "DataType": "bigint",
+        "RemoteColumnSql": "OFId",
+        "Description": ""
+      },
+      {
+        "Name": "SOId",
+        "DataType": "bigint",
+        "RemoteColumnSql": "SOId",
+        "Description": ""
+      }
+    ]
+  },
+  {
+    "Name": "PH",
+    "RemoteTableSql": "[landscapeQuery_strategy_A].[PH]",
+    "Description": "All Components",
+    "Columns": [
+      {
+        "Name": "PHId",
+        "DataType": "bigint",
+        "RemoteColumnSql": "PHId",
+        "Description": ""
+      },
+      {
+        "Name": "PH_ACT",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "PH_ACT",
+        "Description": "Active Status"
+      },
+      {
+        "Name": "PH_CUR",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "PH_CUR",
+        "Description": "Current EOX Milestone"
+      },
+      {
+        "Name": "PH_DAT",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "PH_DAT",
+        "Description": "Device Found in Data Source(s)"
+      },
+      {
+        "Name": "PH_DEC",
+        "DataType": "datetime2(7)",
+        "RemoteColumnSql": "PH_DEC",
+        "Description": "Decommissioned Date"
+      },
+      {
+        "Name": "PH_DEV",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "PH_DEV",
+        "Description": "Device SubType"
+      },
+      {
+        "Name": "PH_HOS",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "PH_HOS",
+        "Description": "Host Name"
+      },
+      {
+        "Name": "PH_INS",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "PH_INS",
+        "Description": "Instance ID (C3)"
+      },
+      {
+        "Name": "PH_IPA",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "PH_IPA",
+        "Description": "IP Address"
+      },
+      {
+        "Name": "PH_LDO",
+        "DataType": "datetime2(7)",
+        "RemoteColumnSql": "PH_LDO",
+        "Description": "HW LDOS"
+      },
+      {
+        "Name": "PH_LOG",
+        "DataType": "bit",
+        "RemoteColumnSql": "PH_LOG",
+        "Description": "Parent Chassis (NEN)"
+      },
+      {
+        "Name": "PH_NEW",
+        "DataType": "float(53)",
+        "RemoteColumnSql": "PH_NEW",
+        "Description": "Cost of Device"
+      },
+      {
+        "Name": "PH_ONT",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "PH_ONT",
+        "Description": "Contract Number"
+      },
+      {
+        "Name": "PH_REC",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "PH_REC",
+        "Description": "Recommended PID (EoL)"
+      },
+      {
+        "Name": "PH_SER",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "PH_SER",
+        "Description": "Serial Number"
+      },
+      {
+        "Name": "PH_SHI",
+        "DataType": "datetime2(7)",
+        "RemoteColumnSql": "PH_SHI",
+        "Description": "Shipped Date"
+      },
+      {
+        "Name": "PH_UID",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "PH_UID",
+        "Description": "Unique Key"
+      }
+    ]
+  },
+  {
+    "Name": "PH_SE",
+    "RemoteTableSql": "landscapeQuery_strategy_A.PH_SE",
+    "Description": "",
+    "Columns": [
+      {
+        "Name": "PHId",
+        "DataType": "bigint",
+        "RemoteColumnSql": "PHId",
+        "Description": ""
+      },
+      {
+        "Name": "SEId",
+        "DataType": "bigint",
+        "RemoteColumnSql": "SEId",
+        "Description": ""
+      }
+    ]
+  },
+  {
+    "Name": "PH_SI",
+    "RemoteTableSql": "landscapeQuery_strategy_A.PH_SI",
+    "Description": "",
+    "Columns": [
+      {
+        "Name": "PHId",
+        "DataType": "bigint",
+        "RemoteColumnSql": "PHId",
+        "Description": ""
+      },
+      {
+        "Name": "SIId",
+        "DataType": "bigint",
+        "RemoteColumnSql": "SIId",
+        "Description": ""
+      }
+    ]
+  },
+  {
+    "Name": "PH_VI",
+    "RemoteTableSql": "landscapeQuery_strategy_A.PH_VI",
+    "Description": "",
+    "Columns": [
+      {
+        "Name": "PHId",
+        "DataType": "bigint",
+        "RemoteColumnSql": "PHId",
+        "Description": ""
+      },
+      {
+        "Name": "VIId",
+        "DataType": "bigint",
+        "RemoteColumnSql": "VIId",
+        "Description": ""
+      }
+    ]
+  },
+  {
+    "Name": "PR",
+    "RemoteTableSql": "[landscapeQuery_strategy_A].[PR]",
+    "Description": "Product Families",
+    "Columns": [
+      {
+        "Name": "PRId",
+        "DataType": "bigint",
+        "RemoteColumnSql": "PRId",
+        "Description": ""
+      },
+      {
+        "Name": "PR_DIS",
+        "DataType": "float(53)",
+        "RemoteColumnSql": "PR_DIS",
+        "Description": "Disruption Index"
+      },
+      {
+        "Name": "PR_FAM",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "PR_FAM",
+        "Description": "Family Name"
+      }
+    ]
+  },
+  {
+    "Name": "PS",
+    "RemoteTableSql": "[landscapeQuery_strategy_A].[PS]",
+    "Description": "PSIRTs",
+    "Columns": [
+      {
+        "Name": "PSId",
+        "DataType": "bigint",
+        "RemoteColumnSql": "PSId",
+        "Description": ""
+      },
+      {
+        "Name": "PS_BUL",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "PS_BUL",
+        "Description": "Bulletin Title"
+      },
+      {
+        "Name": "PS_CVE",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "PS_CVE",
+        "Description": "CVE ID"
+      },
+      {
+        "Name": "PS_CVS",
+        "DataType": "float(53)",
+        "RemoteColumnSql": "PS_CVS",
+        "Description": "CVSS Base Score"
+      },
+      {
+        "Name": "PS_LLE",
+        "DataType": "datetime2(7)",
+        "RemoteColumnSql": "PS_LLE",
+        "Description": "Bulletin Last Updated"
+      },
+      {
+        "Name": "PS_POT",
+        "DataType": "int",
+        "RemoteColumnSql": "PS_POT",
+        "Description": "Total Potentially Vulnerable Devices"
+      },
+      {
+        "Name": "PS_PSI",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "PS_PSI",
+        "Description": "PSIRT ID"
+      },
+      {
+        "Name": "PS_SEC",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "PS_SEC",
+        "Description": "Security Impact Rating"
+      },
+      {
+        "Name": "PS_TOT",
+        "DataType": "int",
+        "RemoteColumnSql": "PS_TOT",
+        "Description": "Total Vulnerable Devices"
+      },
+      {
+        "Name": "PS_ULL",
+        "DataType": "datetime2(7)",
+        "RemoteColumnSql": "PS_ULL",
+        "Description": "Bulletin First Published"
+      }
+    ]
+  },
+  {
+    "Name": "PS_VI",
+    "RemoteTableSql": "landscapeQuery_strategy_A.PS_VI",
+    "Description": "",
+    "Columns": [
+      {
+        "Name": "PSId",
+        "DataType": "bigint",
+        "RemoteColumnSql": "PSId",
+        "Description": ""
+      },
+      {
+        "Name": "VIId",
+        "DataType": "bigint",
+        "RemoteColumnSql": "VIId",
+        "Description": ""
+      }
+    ]
+  },
+  {
+    "Name": "RM",
+    "RemoteTableSql": "[landscapeQuery_strategy_A].[RM]",
+    "Description": "RMAs",
+    "Columns": [
+      {
+        "Name": "RMId",
+        "DataType": "bigint",
+        "RemoteColumnSql": "RMId",
+        "Description": ""
+      },
+      {
+        "Name": "RM_AIL",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "RM_AIL",
+        "Description": "Failure Code Name"
+      },
+      {
+        "Name": "RM_CIT",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "RM_CIT",
+        "Description": "City"
+      },
+      {
+        "Name": "RM_COU",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "RM_COU",
+        "Description": "Country"
+      },
+      {
+        "Name": "RM_FAI",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "RM_FAI",
+        "Description": "Failure Code"
+      },
+      {
+        "Name": "RM_HEA",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "RM_HEA",
+        "Description": "Header ID"
+      },
+      {
+        "Name": "RM_MAC",
+        "DataType": "datetime2(7)",
+        "RemoteColumnSql": "RM_MAC",
+        "Description": "RMA Close Date"
+      },
+      {
+        "Name": "RM_ONT",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "RM_ONT",
+        "Description": "Contractual Service Level Key"
+      },
+      {
+        "Name": "RM_ORD",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "RM_ORD",
+        "Description": "Order Number"
+      },
+      {
+        "Name": "RM_OTA",
+        "DataType": "float(53)",
+        "RemoteColumnSql": "RM_OTA",
+        "Description": "Total Boomerang Lines within Header"
+      },
+      {
+        "Name": "RM_QUE",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "RM_QUE",
+        "Description": "Requested Service Level Description"
+      },
+      {
+        "Name": "RM_REQ",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "RM_REQ",
+        "Description": "Requested Service Level Key"
+      },
+      {
+        "Name": "RM_RMA",
+        "DataType": "datetime2(7)",
+        "RemoteColumnSql": "RM_RMA",
+        "Description": "RMA Creation Date"
+      },
+      {
+        "Name": "RM_STA",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "RM_STA",
+        "Description": "State"
+      },
+      {
+        "Name": "RM_TRA",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "RM_TRA",
+        "Description": "Contractual Service Level Description"
+      },
+      {
+        "Name": "RM_UPL",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "RM_UPL",
+        "Description": "Uplift Requested"
+      }
+    ]
+  },
+  {
+    "Name": "RM_SE",
+    "RemoteTableSql": "landscapeQuery_strategy_A.RM_SE",
+    "Description": "",
+    "Columns": [
+      {
+        "Name": "RMId",
+        "DataType": "bigint",
+        "RemoteColumnSql": "RMId",
+        "Description": ""
+      },
+      {
+        "Name": "SEId",
+        "DataType": "bigint",
+        "RemoteColumnSql": "SEId",
+        "Description": ""
+      }
+    ]
+  },
+  {
+    "Name": "RO",
+    "RemoteTableSql": "[landscapeQuery_strategy_A].[RO]",
+    "Description": "Deliverables",
+    "Columns": [
+      {
+        "Name": "ROId",
+        "DataType": "bigint",
+        "RemoteColumnSql": "ROId",
+        "Description": ""
+      },
+      {
+        "Name": "RO_ASS",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "RO_ASS",
+        "Description": "Assignee"
+      },
+      {
+        "Name": "RO_CLI",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "RO_CLI",
+        "Description": "Client Contact"
+      },
+      {
+        "Name": "RO_CRE",
+        "DataType": "datetime2(7)",
+        "RemoteColumnSql": "RO_CRE",
+        "Description": "Created"
+      },
+      {
+        "Name": "RO_DES",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "RO_DES",
+        "Description": "Description"
+      },
+      {
+        "Name": "RO_DUE",
+        "DataType": "datetime2(7)",
+        "RemoteColumnSql": "RO_DUE",
+        "Description": "Due"
+      },
+      {
+        "Name": "RO_EPI",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "RO_EPI",
+        "Description": "Epic Link"
+      },
+      {
+        "Name": "RO_LAB",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "RO_LAB",
+        "Description": "labels"
+      },
+      {
+        "Name": "RO_OMM",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "RO_OMM",
+        "Description": "Comment History"
+      },
+      {
+        "Name": "RO_OMP",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "RO_OMP",
+        "Description": "Components"
+      },
+      {
+        "Name": "RO_PRI",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "RO_PRI",
+        "Description": "Priority"
+      },
+      {
+        "Name": "RO_PRO",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "RO_PRO",
+        "Description": "Project ID"
+      },
+      {
+        "Name": "RO_REC",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "RO_REC",
+        "Description": "Recent Comment"
+      },
+      {
+        "Name": "RO_REP",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "RO_REP",
+        "Description": "Reporter"
+      },
+      {
+        "Name": "RO_RES",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "RO_RES",
+        "Description": "Resolution"
+      },
+      {
+        "Name": "RO_STA",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "RO_STA",
+        "Description": "Status"
+      },
+      {
+        "Name": "RO_TYP",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "RO_TYP",
+        "Description": "Type"
+      },
+      {
+        "Name": "RO_UPD",
+        "DataType": "datetime2(7)",
+        "RemoteColumnSql": "RO_UPD",
+        "Description": "Updated"
+      }
+    ]
+  },
+  {
+    "Name": "SE",
+    "RemoteTableSql": "[landscapeQuery_strategy_A].[SE]",
+    "Description": "TAC SRs",
+    "Columns": [
+      {
+        "Name": "SEId",
+        "DataType": "bigint",
+        "RemoteColumnSql": "SEId",
+        "Description": "",
+        "ExcludeFromStarExpansion": true
+      },
+      {
+        "Name": "SE_ASS",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "SE_ASS",
+        "Description": "Assigned Technology"
+      },
+      {
+        "Name": "SE_AST",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "SE_AST",
+        "Description": "Last Update By"
+      },
+      {
+        "Name": "SE_CLO",
+        "DataType": "datetime2(7)",
+        "RemoteColumnSql": "SE_CLO",
+        "Description": "Close Date"
+      },
+      {
+        "Name": "SE_CRE",
+        "DataType": "datetime2(7)",
+        "RemoteColumnSql": "SE_CRE",
+        "Description": "Creation Date"
+      },
+      {
+        "Name": "SE_CUS",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "SE_CUS",
+        "Description": "Customer Incident Number"
+      },
+      {
+        "Name": "SE_ENG",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "SE_ENG",
+        "Description": "Engineer Email"
+      },
+      {
+        "Name": "SE_FSO",
+        "DataType": "float(53)",
+        "RemoteColumnSql": "SE_FSO",
+        "Description": "FResolution Time (h)"
+      },
+      {
+        "Name": "SE_IGN",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "SE_IGN",
+        "Description": "Assigned Product Family"
+      },
+      {
+        "Name": "SE_INC",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "SE_INC",
+        "Description": "SR Number"
+      },
+      {
+        "Name": "SE_ISO",
+        "DataType": "float(53)",
+        "RemoteColumnSql": "SE_ISO",
+        "Description": "ISolution Time (h)"
+      },
+      {
+        "Name": "SE_ITI",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "SE_ITI",
+        "Description": "Initial Sev."
+      },
+      {
+        "Name": "SE_LAS",
+        "DataType": "datetime2(7)",
+        "RemoteColumnSql": "SE_LAS",
+        "Description": "Last Updated"
+      },
+      {
+        "Name": "SE_NCI",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "SE_NCI",
+        "Description": "Incident Status"
+      },
+      {
+        "Name": "SE_NIT",
+        "DataType": "float(53)",
+        "RemoteColumnSql": "SE_NIT",
+        "Description": "Initial Response Time (m)"
+      },
+      {
+        "Name": "SE_NTR",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "SE_NTR",
+        "Description": "Contract Number"
+      },
+      {
+        "Name": "SE_ONT",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "SE_ONT",
+        "Description": "Contact Name"
+      },
+      {
+        "Name": "SE_OUT",
+        "DataType": "int",
+        "RemoteColumnSql": "SE_OUT",
+        "Description": "Outage Indicator"
+      },
+      {
+        "Name": "SE_PRO",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "SE_PRO",
+        "Description": "Problem Code"
+      },
+      {
+        "Name": "SE_RES",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "SE_RES",
+        "Description": "Resolution Code"
+      },
+      {
+        "Name": "SE_SRS",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "SE_SRS",
+        "Description": "SR Summary"
+      },
+      {
+        "Name": "SE_SSI",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "SE_SSI",
+        "Description": "Assigned Sub Technology"
+      },
+      {
+        "Name": "SE_TAC",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "SE_TAC",
+        "Description": "Contact Email"
+      },
+      {
+        "Name": "SE_TIM",
+        "DataType": "float(53)",
+        "RemoteColumnSql": "SE_TIM",
+        "Description": "Time to Close (Days)"
+      },
+      {
+        "Name": "SE_URR",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "SE_URR",
+        "Description": "Current Sev."
+      },
+      {
+        "Name": "SE_XIM",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "SE_XIM",
+        "Description": "Maximum Sev."
+      }
+    ]
+  },
+  {
+    "Name": "SE_UT",
+    "RemoteTableSql": "landscapeQuery_strategy_A.SE_UT",
+    "Description": "",
+    "Columns": [
+      {
+        "Name": "SEId",
+        "DataType": "bigint",
+        "RemoteColumnSql": "SEId",
+        "Description": ""
+      },
+      {
+        "Name": "UTId",
+        "DataType": "bigint",
+        "RemoteColumnSql": "UTId",
+        "Description": ""
+      }
+    ]
+  },
+  {
+    "Name": "SI",
+    "RemoteTableSql": "[landscapeQuery_strategy_A].[SI]",
+    "Description": "Customer Locations",
+    "Columns": [
+      {
+        "Name": "SIId",
+        "DataType": "bigint",
+        "RemoteColumnSql": "SIId",
+        "Description": ""
+      },
+      {
+        "Name": "SI_ADD",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "SI_ADD",
+        "Description": "Address"
+      },
+      {
+        "Name": "SI_CIT",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "SI_CIT",
+        "Description": "City"
+      },
+      {
+        "Name": "SI_KEY",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "SI_KEY",
+        "Description": "Key Site"
+      },
+      {
+        "Name": "SI_SIT",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "SI_SIT",
+        "Description": "Site ID"
+      },
+      {
+        "Name": "SI_STA",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "SI_STA",
+        "Description": "State"
+      },
+      {
+        "Name": "SI_LOC",
+        "DataType": "int",
+        "RemoteColumnSql": "SI_LOC",
+        "Description": "Location"
+      }
+    ]
+  },
+  {
+    "Name": "SI_UN",
+    "RemoteTableSql": "landscapeQuery_strategy_A.SI_UN",
+    "Description": "",
+    "Columns": [
+      {
+        "Name": "SIId",
+        "DataType": "bigint",
+        "RemoteColumnSql": "SIId",
+        "Description": ""
+      },
+      {
+        "Name": "UNId",
+        "DataType": "bigint",
+        "RemoteColumnSql": "UNId",
+        "Description": ""
+      }
+    ]
+  },
+  {
+    "Name": "SO",
+    "RemoteTableSql": "[landscapeQuery_strategy_A].[SO]",
+    "Description": "Software Versions",
+    "Columns": [
+      {
+        "Name": "SOId",
+        "DataType": "bigint",
+        "RemoteColumnSql": "SOId",
+        "Description": ""
+      },
+      {
+        "Name": "SO_AJO",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "SO_AJO",
+        "Description": "Major Version"
+      },
+      {
+        "Name": "SO_DAT",
+        "DataType": "datetime2(7)",
+        "RemoteColumnSql": "SO_DAT",
+        "Description": "Date First Seen"
+      },
+      {
+        "Name": "SO_DES",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "SO_DES",
+        "Description": "Version Name"
+      },
+      {
+        "Name": "SO_DIS",
+        "DataType": "float(53)",
+        "RemoteColumnSql": "SO_DIS",
+        "Description": "Disruption Index"
+      },
+      {
+        "Name": "SO_INT",
+        "DataType": "float(53)",
+        "RemoteColumnSql": "SO_INT",
+        "Description": "Maintenance Version Transformed"
+      },
+      {
+        "Name": "SO_MAI",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "SO_MAI",
+        "Description": "Maintenance Version"
+      },
+      {
+        "Name": "SO_MAJ",
+        "DataType": "float(53)",
+        "RemoteColumnSql": "SO_MAJ",
+        "Description": "Major Version Transformed"
+      },
+      {
+        "Name": "SO_OST",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "SO_OST",
+        "Description": "OS Type"
+      }
+    ]
+  },
+  {
+    "Name": "UN",
+    "RemoteTableSql": "[landscapeQuery_strategy_A].[UN]",
+    "Description": "Countries",
+    "Columns": [
+      {
+        "Name": "UNId",
+        "DataType": "bigint",
+        "RemoteColumnSql": "UNId",
+        "Description": ""
+      },
+      {
+        "Name": "UN_OFF",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "UN_OFF",
+        "Description": "Country Name"
+      },
+      {
+        "Name": "UN_REG",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "UN_REG",
+        "Description": "Region"
+      },
+      {
+        "Name": "UN_UNT",
+        "DataType": "nvarchar(30)",
+        "RemoteColumnSql": "UN_UNT",
+        "Description": "Country Code"
+      }
+    ]
+  },
+  {
+    "Name": "UT",
+    "RemoteTableSql": "[landscapeQuery_strategy_A].[UT]",
+    "Description": "Customer Value",
+    "Columns": [
+      {
+        "Name": "UTId",
+        "DataType": "bigint",
+        "RemoteColumnSql": "UTId",
+        "Description": ""
+      },
+      {
+        "Name": "UT_AYS",
+        "DataType": "float(53)",
+        "RemoteColumnSql": "UT_AYS",
+        "Description": "Days within a Week Case Free"
+      },
+      {
+        "Name": "UT_IGH",
+        "DataType": "float(53)",
+        "RemoteColumnSql": "UT_IGH",
+        "Description": "High Value Cases"
+      },
+      {
+        "Name": "UT_LEA",
+        "DataType": "float(53)",
+        "RemoteColumnSql": "UT_LEA",
+        "Description": "Lead Time"
+      },
+      {
+        "Name": "UT_NAM",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "UT_NAM",
+        "Description": "Name"
+      },
+      {
+        "Name": "UT_ODU",
+        "DataType": "float(53)",
+        "RemoteColumnSql": "UT_ODU",
+        "Description": "Productivity Savings"
+      },
+      {
+        "Name": "UT_OWV",
+        "DataType": "float(53)",
+        "RemoteColumnSql": "UT_OWV",
+        "Description": "Low Value Cases"
+      },
+      {
+        "Name": "UT_REP",
+        "DataType": "float(53)",
+        "RemoteColumnSql": "UT_REP",
+        "Description": "Replacement Cost"
+      },
+      {
+        "Name": "UT_ROD",
+        "DataType": "float(53)",
+        "RemoteColumnSql": "UT_ROD",
+        "Description": "Productivity Savings - User Volume/Hour"
+      },
+      {
+        "Name": "UT_TRA",
+        "DataType": "datetime2(7)",
+        "RemoteColumnSql": "UT_TRA",
+        "Description": "Tracking Date"
+      }
+    ]
+  },
+  {
+    "Name": "VI",
+    "RemoteTableSql": "[landscapeQuery_strategy_A].[VI]",
+    "Description": "PSIRT Vulnerability Records",
+    "Columns": [
+      {
+        "Name": "VIId",
+        "DataType": "bigint",
+        "RemoteColumnSql": "VIId",
+        "Description": ""
+      },
+      {
+        "Name": "VI_PSI",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "VI_PSI",
+        "Description": "PSIRT ID"
+      },
+      {
+        "Name": "VI_UNI",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "VI_UNI",
+        "Description": "Unique ID"
+      },
+      {
+        "Name": "VI_VUL",
+        "DataType": "nvarchar(4000)",
+        "RemoteColumnSql": "VI_VUL",
+        "Description": "Vulnerability of Device"
+      }
+    ]
+  }
+]

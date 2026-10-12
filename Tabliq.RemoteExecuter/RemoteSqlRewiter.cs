@@ -13,16 +13,9 @@ internal class RemoteSqlRewiter : ReplaceStarsRewriter
     {
         if (node.Binding is not null)
         {
-            if (node.Binding.ColumnSymbol.State is VirtualColumn vt)
+            if (node.Binding.ColumnSymbol.GetState<VirtualColumn>() is VirtualColumn vt)
             {
-                if (string.IsNullOrEmpty(node.Binding.TableSymbol.SchemaName))
-                {
-                    node = new IdentifierExpression(node.Binding.TableSymbol.TableName, vt.RemoteColumnName);
-                }
-                else
-                {
-                    node = new IdentifierExpression(node.Binding.TableSymbol.SchemaName, node.Binding.TableSymbol.TableName, vt.RemoteColumnName);
-                }
+                node = new IdentifierExpression(node.Binding.TableBinding.Alias ?? node.Binding.TableBinding.TableSymbol.TableName, vt.RemoteColumnName);
             }
         }
 
@@ -33,7 +26,7 @@ internal class RemoteSqlRewiter : ReplaceStarsRewriter
         // at this level we need to fixup missing alias prefix for virtual columns, because they are not bound to a table reference in the select projection
         if (node.Expression is IdentifierExpression idExpr)
         {
-            if (idExpr.Binding?.ColumnSymbol.State is VirtualColumn vt) //will wi rewite this one!
+            if (idExpr.Binding?.ColumnSymbol.GetState<VirtualColumn>() is VirtualColumn vt) //will wi rewite this one!
             {
                 if (node.Alias is null || node.IsSynthetic)
                 {
@@ -52,7 +45,7 @@ internal class RemoteSqlRewiter : ReplaceStarsRewriter
         {
             if (namedTable.Binding is not null)
             {
-                if (namedTable.Binding.State is VirtualTable vt)
+                if (namedTable.Binding.GetState<VirtualTable>() is VirtualTable vt)
                 {
                     if (vt.RemoteSqlTableName is not null)
                     {
@@ -66,7 +59,7 @@ internal class RemoteSqlRewiter : ReplaceStarsRewriter
                     else if (vt.RemoteSql is not null)
                     {
                         hasChanges = true;
-                        return new SelectTableReference(vt.RemoteSql, namedTable.Alias ?? namedTable.Identifer.Column)
+                        return new SelectTableReference(new SelectExpression(true, vt.RemoteSql), namedTable.Alias ?? namedTable.Identifer.Column)
                         {
                             Span = namedTable.Span
                         };

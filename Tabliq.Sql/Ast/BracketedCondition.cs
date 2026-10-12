@@ -4,12 +4,12 @@ namespace Tabliq.Sql.Ast;
 
 public class BracketedCondition : Condition
 {
-    public BracketedCondition(Expression expression)
+    public BracketedCondition(Condition expression)
     {
         Expression = expression;
     }
 
-    public Expression Expression { get; }
+    public Condition Expression { get; }
 
     public override IEnumerable<SyntaxNode> GetChildren()
     {

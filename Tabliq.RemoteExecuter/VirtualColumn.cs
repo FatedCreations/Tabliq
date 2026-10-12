@@ -16,10 +16,7 @@ public class VirtualColumn
     }
 
     public ColumnSymbol AsSymbol()
-        => new ColumnSymbol(ColumnName, DataType)
-        {
-            State = this
-        };
+        => new ColumnSymbol(ColumnName, DataType).WithState(this);
 
 
     public string RemoteColumnName { get; }

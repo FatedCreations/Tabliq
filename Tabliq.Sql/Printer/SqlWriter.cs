@@ -41,21 +41,30 @@ public class SqlWriter
 
     protected virtual void Write(Statement statement)
     {
-        if (statement is SelectStatement selectStatement)
-        {
-            Write(selectStatement);
-        }
-        else if (statement is EmptyStatement emptyStatement)
-        {
-            Write(emptyStatement);
-        }
-        else
-        {
-            throw new NotImplementedException($"Writing for {statement.GetType().Name} is not implemented.");
-        }
-    }
+             if (statement is SelectStatement selectStatement)
+             {
+                 Write(selectStatement);
+             }
+             else if (statement is EmptyStatement emptyStatement)
+             {
+                 Write(emptyStatement);
+             }
+             else if (statement is BadStatement badStatement)
+             {
+                 Write(badStatement);
+             }
+             else
+             {
+                 throw new NotImplementedException($"Writing for {statement.GetType().Name} is not implemented.");
+             }
+         }
 
-    protected virtual void Write(EmptyStatement emptyStatement)
+        protected virtual void Write(BadStatement badStatement)
+        {
+            Write("/* BAD STATEMENT */");
+        }
+
+        protected virtual void Write(EmptyStatement emptyStatement)
     {
         if (emptyStatement.HasSemicolon)
         {
@@ -151,7 +160,7 @@ public class SqlWriter
                     }
                 });
             }
-            else
+            else if (selectExpression.Projections.Count > 0)
             {
                 Write(" ");
                 Write(selectExpression.Projections.First());
@@ -326,6 +335,9 @@ public class SqlWriter
             case OrderByClause OrderByClause:
                 Write(OrderByClause);
                 break;
+            case OffsetClause OffsetClause:
+                Write(OffsetClause);
+                break;
             case IsNullCondition IsNullCondition:
                 Write(IsNullCondition);
                 break;
@@ -398,16 +410,32 @@ public class SqlWriter
             case WithinGroupClause WithinGroupClause:
                 Write(WithinGroupClause);
                 break;
-            case InExpression InExpression:
-                Write(InExpression);
-                break;
-            case UnaryOperatorExpression UnaryOperatorExpression:
-                Write(UnaryOperatorExpression);
-                break;
-            default:
-                throw new NotImplementedException($"Writing for {node.GetType().Name} is not implemented.");
-        }
-    }
+                     case InExpression InExpression:
+                         Write(InExpression);
+                         break;
+                     case UnaryOperatorExpression UnaryOperatorExpression:
+                         Write(UnaryOperatorExpression);
+                         break;
+                     case BadCondition BadCondition:
+                         Write(BadCondition);
+                         break;
+                     case BadExpression BadExpression:
+                         Write(BadExpression);
+                         break;
+                     default:
+                         throw new NotImplementedException($"Writing for {node.GetType().Name} is not implemented.");
+                 }
+             }
+
+            protected virtual void Write(BadCondition badCondition)
+            {
+                Write("/* BAD CONDITION */");
+            }
+
+            protected virtual void Write(BadExpression badExpression)
+            {
+                Write("/* BAD EXPRESSION */");
+            }
 
     protected virtual void Write(UnaryOperatorExpression unaryOperatorExpression)
     {
@@ -629,7 +657,7 @@ public class SqlWriter
     protected virtual void Write(ParameterIdentifier parameterIdentifier)
     {
         Write("@");
-        Write(parameterIdentifier.ParamterName);
+        Write(parameterIdentifier.ParameterName);
     }
     protected virtual void Write(GroupByClause groupByClause)
     {
@@ -814,6 +842,16 @@ public class SqlWriter
 
         void WriteBody()
         {
+            if (order.Entries.Count == 0)
+            {
+                if (order.OffsetClause is not null)
+                {
+                    Write(order.OffsetClause);
+                }
+
+                return;
+            }
+
             Write(order.Entries.First());
             foreach (var entry in order.Entries.Skip(1))
             {
@@ -948,7 +986,7 @@ public class SqlWriter
         for (int i = 0; i < name.Length; i++)
         {
             var c = name[i];
-            if (!(char.IsLetterOrDigit(c) || c == '_' || c == '.' || c == '@'))
+            if (!(char.IsLetterOrDigit(c) || c == '_'  || c == '@'))
             {
                 return true;
             }

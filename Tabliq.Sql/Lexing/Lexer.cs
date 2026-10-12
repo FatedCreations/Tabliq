@@ -23,16 +23,32 @@ public sealed class Lexer
     }
 
     private char Current => _position >= _text.Length ? '\0' : _text[_position];
+    private char Peek => _position + 1 >= _text.Length ? '\0' : _text[_position + 1];
 
     public int? MaxTokenLimit { get; }
 
     private void Next() => _position++;
 
+    private string DebugString
+    {
+        get
+        {
+            var startPos = Math.Max(0, _position - 5);
+
+            var end = string.Empty;
+            if (_position + 1 < _text.Length)
+            {
+                end = _text.Substring(_position + 1, Math.Min(10, _text.Length - (_position + 1)));
+            }
+            var start = _text.Substring(startPos, _position - startPos);
+            return $"{start}|>{_text[_position]}<|{end}";
+        }
+    }
     public IReadOnlyList<SyntaxToken> LexAll()
     {
         while (true)
         {
-            if(MaxTokenLimit.HasValue && _tokens.Count >= MaxTokenLimit.Value)
+            if (MaxTokenLimit.HasValue && _tokens.Count >= MaxTokenLimit.Value)
             {
                 _diagnostics.Report("MaxTokenLimitExceeded", $"Maximum token limit of {MaxTokenLimit.Value} exceeded.", _position, 0);
                 break;
@@ -224,8 +240,21 @@ public sealed class Lexer
 
                     Next();
                     var sbIdent = new StringBuilder();
-                    while (Current != closeIdent && Current != '\0')
+                    while (true)
                     {
+                        if (Current == '\0')
+                            break;
+                        if(Current == closeIdent)
+                        {
+                            if(Peek == closeIdent)
+                            {
+                                Next();
+                            }
+                            else
+                            {
+                                break;
+                            }
+                        }
                         sbIdent.Append(Current);
                         Next();
                     }
@@ -309,7 +338,7 @@ public sealed class Lexer
             "FIRST" => SyntaxKind.FirstKeyword,
             "ONLY" => SyntaxKind.OnlyKeyword,
             "MAX" => SyntaxKind.MaxKeyword,
-            
+
             // directions
             "DESC" => SyntaxKind.DescKeyword,
             "ASC" => SyntaxKind.AscKeyword,

@@ -9,11 +9,21 @@
 
   <ItemGroup>
     <None Remove="RemoteExecuter\Schemas\*.json" />
+    <None Remove="Execution\SqlServer\Schemas\*.json" />
   </ItemGroup>
 
   <ItemGroup>
     <EmbeddedResource Include="RemoteExecuter\Schemas\*.json" />
+    <EmbeddedResource Include="Execution\SqlServer\Schemas\*.json" />
   </ItemGroup>
+
+  <!--<ItemGroup>
+    <EmbeddedResource Include="Execution\SqlServer\Schemas\AnonSchema.json" />
+    <EmbeddedResource Include="Execution\SqlServer\Schemas\Default.json" />
+    <EmbeddedResource Include="Execution\SqlServer\Schemas\FriendlyNames.json" />
+    <EmbeddedResource Include="Execution\SqlServer\Schemas\SlaSchema.json" />
+    <EmbeddedResource Include="Execution\SqlServer\Schemas\WmsSchema.json" />
+  </ItemGroup>-->
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.9" />
@@ -27,6 +37,8 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Tabliq.Execution.SqlServer\Tabliq.Execution.SqlServer.csproj" />
+    <ProjectReference Include="..\Tabliq.Execution\Tabliq.Execution.csproj" />
     <ProjectReference Include="..\Tabliq.RemoteExecuter\Tabliq.RemoteExecuter.csproj" />
     <ProjectReference Include="..\Tabliq.Sql\Tabliq.Sql.csproj" />
   </ItemGroup>
